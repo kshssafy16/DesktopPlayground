@@ -1,0 +1,73 @@
+{
+  "name": "desktopplayground",
+  "productName": "DesktopPlayground",
+  "version": "1.0.0",
+  "description": "Interactive desktop pets and playground for Windows",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win"
+  },
+  "build": {
+    "appId": "com.desktopplayground.app",
+    "productName": "DesktopPlayground",
+    "directories": {
+      "buildResources": "electron-build",
+      "output": "dist-beta"
+    },
+    "files": [
+      "main.js",
+      "local-pets.js",
+      "preload.js",
+      "index.html",
+      "renderer.js",
+      "styles.css",
+      "controls.html",
+      "controls.js",
+      "controls.css",
+      "spritesheet.webp",
+      "spritesheet_2.webp",
+      "assets/icon.png",
+      "assets/pets/doge/pet.json",
+      "assets/pets/doge/spritesheet.webp",
+      "assets/pets/kirby/pet.json",
+      "assets/pets/kirby/spritesheet.webp",
+      "package.json",
+      "assets/pets/cat_brown/pet.json",
+      "assets/pets/cat_brown/spritesheet.webp",
+      "assets/pets/cat_face/pet.json",
+      "assets/pets/cat_face/spritesheet.webp",
+      "assets/pets/cat_sleepy/pet.json",
+      "assets/pets/cat_sleepy/spritesheet.webp",
+      "assets/pets/kirby_sleepy/pet.json",
+      "assets/pets/kirby_sleepy/spritesheet.webp",
+      "assets/pets/puddle/pet.json",
+      "assets/pets/puddle/spritesheet.webp",
+      "assets/pets/salary-cat/pet.json",
+      "assets/pets/salary-cat/spritesheet.webp",
+      "assets/pets/usagi/pet.json",
+      "assets/pets/usagi/spritesheet.webp"
+    ],
+    "win": {
+      "icon": "electron-build/icon.ico",
+      "executableName": "DesktopPlayground",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "DesktopPlayground.exe"
+    }
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^29.0.0",
+    "electron-builder": "^24.13.0"
+  }
+}

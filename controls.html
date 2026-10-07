@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>DesktopPlayground 조작창</title>
+  <link rel="stylesheet" href="controls.css">
+</head>
+<body>
+  <main id="control-bar" role="toolbar" aria-label="DesktopPlayground 조작창">
+    <span class="drag-handle" aria-hidden="true" title="드래그하여 이동">⋮⋮</span>
+    <button id="pc-button" class="mode-button icon-button" type="button" title="PC 모드" aria-label="PC 모드">🖥️</button>
+    <button id="pets-button" class="mode-button icon-button" type="button" title="펫 추가" aria-label="펫 추가" aria-expanded="false">🐾</button>
+    <button id="touch-button" class="mode-button icon-button" type="button" title="만지기" aria-label="만지기">✋</button>
+    <button id="draw-button" class="mode-button icon-button" type="button" title="그리기 · 다시 누르면 설정" aria-label="그리기" aria-expanded="false">✏️</button>
+    <button id="bomb-button" class="mode-button icon-button" type="button" title="폭탄" aria-label="폭탄">💣</button>
+    <button id="blackhole-button" class="mode-button icon-button" type="button" title="블랙홀" aria-label="블랙홀"><svg class="vortex-icon" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c9 0 14 6 13 13-1 8-8 13-15 12C6 27 2 21 4 14 6 7 12 5 18 7c6 2 8 8 5 13-3 5-9 6-13 3-4-3-4-8-1-11 3-3 8-2 10 1 2 3 0 6-3 6-2 0-3-2-2-3"/></svg></button>
+    <button id="structures-button" class="mode-button icon-button" type="button" title="구조물 켜기" aria-label="구조물 켜기" aria-pressed="false">🪜</button>
+    <button id="visibility-button" class="action-button icon-button" type="button" title="Playground 숨기기" aria-label="숨기기">👁</button>
+    <button id="exit-button" class="action-button icon-button" type="button" title="종료" aria-label="종료"><svg class="power-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10M6.5 5.6a9 9 0 1 0 11 0"/></svg></button>
+    <button id="collapse-button" class="action-button icon-button" type="button" title="접기" aria-label="접기"><svg class="chevron-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 9 7 7 7-7"/></svg></button>
+  </main>
+
+  <section id="control-panel" aria-label="DesktopPlayground 메뉴" hidden>
+    <div class="panel-heading">
+      <strong id="panel-title">펫</strong>
+      <button id="panel-close" type="button" aria-label="메뉴 닫기">×</button>
+    </div>
+    <div id="panel-list"></div>
+  </section>
+  <p id="error-message" role="status" aria-live="assertive"></p>
+
+  <main id="mini-controls" role="toolbar" aria-label="접힌 DesktopPlayground 조작창">
+    <button id="mini-visibility-button" type="button" title="Playground 숨기기" aria-label="숨기기">👁</button>
+    <button id="expand-button" type="button" title="펼치기" aria-label="컨트롤 펼치기">›</button>
+    <button id="mini-exit-button" type="button" title="앱 종료" aria-label="앱 종료"><svg class="power-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v10M6.5 5.6a9 9 0 1 0 11 0"/></svg></button>
+  </main>
+  <script src="controls.js"></script>
+</body>
+</html>
