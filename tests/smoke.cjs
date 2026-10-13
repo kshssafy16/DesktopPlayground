@@ -191,11 +191,131 @@ async function run() {
   assert.ok(shapes.wallX >= 250);
   assert.deepEqual(shapes.bounds,[100,260,100,180]);
   assert.ok(shapes.support && shapes.landing);
+  await controls.eval("document.getElementById('touch-button').click()");
+  await until(() => overlay.eval("currentMode === 'touch'"), 'Grab/Throw Touch mode');
+  const grabThrow = await overlay.eval(`(() => {
+    stopAnimation(); clearPlayground('pets'); clearPlayground('drawing');
+    const p=spawnPet('blob',width*.4,height-35);
+    const startX=p.x, startY=p.y, time=performance.now();
+    const input=(type,x,y,offset)=>{
+      const event=new MouseEvent(type,{button:0,clientX:x,clientY:y,bubbles:true});
+      Object.defineProperty(event,'timeStamp',{value:time+offset});
+      (type==='mouseup'?window:canvas).dispatchEvent(event);
+    };
+    input('mousedown',startX+20,startY,0);
+    const grabbed=p.x;
+    input('mousemove',startX+80,startY,50);
+    const moved=p.x;
+    input('mouseup',startX+140,startY,100);
+    const released=p.vx;
+    p.update(1);
+    const retained=p.vx;
+    input('mousedown',p.x,p.y,150);
+    input('mousemove',p.x+60,p.y,180);
+    input('mouseup',p.x,p.y,350);
+    const stopped=p.vx;
+    const other=spawnPet('blob',100,100), trash=trashRect();
+    input('mousedown',p.x,p.y,400);
+    input('mouseup',trash.x+trash.width/2,trash.y+trash.height/2,500);
+    const trashOk=petInstances.length===1 && petInstances[0]===other;
+    const shot=spawnPet('blob',width*.25,height*.4), wall=shot.x+100;
+    world.drawnColliders=shapeSegments({id:1000,kind:'line',size:1,
+      points:[{x:wall,y:20},{x:wall,y:height-20}]});
+    shot.beginThrow(54,0);for(let i=0;i<3;i++)shot.update(1);
+    return {offset:Math.abs(grabbed-startX)<1 && Math.abs(moved-startX-60)<1,
+      released,retained,stopped,trash:trashOk,wall:shot.x<wall-35 && shot.vx< -30};
+  })()`);
+  assert.ok(grabThrow.offset && grabThrow.trash && grabThrow.wall);
+  assert.ok(grabThrow.released>24 && grabThrow.released<25);
+  assert.ok(grabThrow.retained>grabThrow.released*.9 && grabThrow.retained<grabThrow.released);
+  assert.ok(Math.abs(grabThrow.stopped)<1e-8);
+  const residualStates = await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');currentMode='touch';
+    const p=spawnPet('blob',width*.4,height*.4);addBlackHole(p.x,p.y);updateBlackHoles(1);
+    const input=(type,x,y)=> (type==='mouseup'?window:canvas).dispatchEvent(
+      new MouseEvent(type,{button:0,clientX:x,clientY:y,bubbles:true}));
+    input('mousedown',p.x,p.y);
+    const detached=!p.blackHoleOrbit;
+    input('mousemove',p.x+30,p.y);const moved=p.x;updateBlackHoles(1);
+    const dragStable=p.x===moved && !p.blackHoleOrbit;
+    input('mouseup',p.x,p.y);updateBlackHoles(1);
+    const released=!p.blackHoleOrbit && Boolean(p.externalMotion);
+    clearPlayground('effects');
+    const references=p.rescuedFromHoles.size===0;
+    drawShape='freehand';drawSize=30;eraser=false;beginDrawing(160,160);activeStroke=null;
+    const painted=drawingCtx.getImageData(160,160,1,1).data[3]>0;
+    drawSize=1;eraseDrawing(186,160);
+    const erased=strokes.length===0 && world.drawnShapes.length===0 && world.drawnColliders.length===0
+      && drawingCtx.getImageData(160,160,1,1).data[3]===0;
+    p.recentStructures.set(999,0);p.targetHistory=[999];p.climbing=999;p.climbingDown=true;
+    clearPlayground('structures');
+    return {detached,dragStable,released,references,painted,erased,
+      history:p.recentStructures.size===0 && p.targetHistory.length===0 && !p.climbingDown};
+  })()`);
+  assert.ok(Object.values(residualStates).every(Boolean),JSON.stringify(residualStates));
+  console.log('PASS: Black Hole Grab rescue/release, reference cleanup, native dot erase, structure history');
+  const spriteAudit = await overlay.eval(`(async () => {
+    stopAnimation(); clearPlayground('all');
+    const definitions=[...petDefinitions.values()].filter(d=>d.renderKind==='sprite');
+    await Promise.all(definitions.map(d=>d.asset.decode()));
+    const errors=[], counts={sheets:0,clips:0,frames:0};
+    const preview=document.createElement('canvas');preview.width=840;preview.height=definitions.length*140;
+    const pc=preview.getContext('2d');pc.fillStyle='#dde6ee';pc.fillRect(0,0,preview.width,preview.height);
+    for(const [di,d] of definitions.entries()) {
+      counts.sheets++;
+      const cell=document.createElement('canvas');cell.width=192;cell.height=208;
+      const cc=cell.getContext('2d',{willReadFrequently:true});
+      if(d.asset.naturalWidth!==1536 || d.asset.naturalHeight!==(d.rows||11)*208)errors.push(d.id+': grid');
+      let restingFrame=0,restingBottom=0;
+      for(const [ci,state] of spriteStates.entries()) {
+        const clip=d.clips[state];let bottom=0,left=192,right=0;
+        if(clip.row>=(d.rows||11) || clip.frames>8)errors.push(d.id+': invalid clip '+state);
+        for(let f=0;f<clip.frames;f++) {
+          counts.frames++;cc.clearRect(0,0,192,208);
+          cc.drawImage(d.asset,f*192,clip.row*208,192,208,0,0,192,208);
+          const pixels=cc.getImageData(0,0,192,208).data;let visible=false,frameBottom=0;
+          for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(pixels[(y*192+x)*4+3]>16) {
+            visible=true;frameBottom=Math.max(frameBottom,y+1);bottom=Math.max(bottom,y+1);left=Math.min(left,x);right=Math.max(right,x+1);
+          }
+          if(state==='idle' && frameBottom>restingBottom){restingBottom=frameBottom;restingFrame=f;}
+          if(!visible)errors.push(d.id+': empty '+state+'/'+f);
+        }
+        counts.clips++;
+        const profile=spriteProfiles[d.id];
+        if(Math.abs(bottom/208-profile.feet[ci])>.0001)errors.push(d.id+': foot '+state);
+        if(profile.centers && Math.abs((left+right)/384-profile.centers[ci])>.0001)errors.push(d.id+': center '+state);
+        const p=new Pet(70+ci*140,di*140+70,d);
+        p.vx=state==='walkRight'?2:state==='walkLeft'?-2:0;p.facingRight=state!=='walkLeft';
+        p.isDragging=state==='drag';p.externalMotion=state==='fall'?{elapsedMs:0,stableMs:0}:null;
+        p.squish=state==='drag'?1.4:1;p.draw(pc);
+        pc.strokeStyle='#8a9eaf';pc.beginPath();pc.moveTo(p.x-60,p.y+p.size);pc.lineTo(p.x+60,p.y+p.size);pc.stroke();
+        pc.fillStyle='#263f53';pc.fillText(d.id+' / '+state,p.x-62,di*140+132);
+      }
+      // Native Canvas transforms must leave the visible bottom at the physical foot.
+      const p=new Pet(96,0,d);const native=document.createElement('canvas');native.width=192;native.height=208;
+      const nc=native.getContext('2d',{willReadFrequently:true});p.y=100-p.size;p.vx=0;p.advanceAnimation(0);
+      p.animationMs=restingFrame*(d.clips.idle.speed+1)*physicsFrameMs;
+      for(const squash of [1,1.4]) {
+        nc.clearRect(0,0,192,208);p.squish=squash;p.draw(nc);
+        const pixels=nc.getImageData(0,0,192,208).data;let bottom=0;
+        for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(pixels[(y*192+x)*4+3]>16)bottom=Math.max(bottom,y+1);
+        if(Math.abs(bottom-100)>1)errors.push(d.id+': rendered foot '+bottom);
+      }
+    }
+    return {errors,counts,preview:preview.toDataURL('image/png').split(',')[1]};
+  })()`);
+  assert.deepEqual(spriteAudit.errors,[]);
+  assert.deepEqual(spriteAudit.counts,{sheets:11,clips:55,frames:385});
+  console.log('PASS: native Sprite audit: 11 sheets, 55 clips, 385 nonempty frames, fixed foot under squash');
+  if(process.argv.includes('--sprite-preview')) {
+    const previewPath=path.join(os.tmpdir(),'desktopplayground-phase1c-render.png');
+    fs.writeFileSync(previewPath,Buffer.from(spriteAudit.preview,'base64'));console.log('Sprite preview: '+previewPath);
+  }
   assert.equal(await overlay.eval("performance.getEntriesByType('resource').filter(e=>/^https?:/.test(e.name)).length"),0);
   await controls.eval("document.getElementById('exit-button').click()");
   await until(() => child.exitCode !== null, 'Exit process');
   controls.close(); overlay.close();
-  console.log('PASS: 4 starters, current Pet variants, right-click PC, 3-button collapse, structure display/collision toggle, Draw collider, Hide/Show, HTTP 0, Exit');
+  console.log('PASS: 4 starters, current Pet variants, right-click PC, 3-button collapse, structure display/collision toggle, Draw collider, Grab/Throw/Trash, Hide/Show, HTTP 0, Exit');
 }
 run().catch(error => { console.error(error); process.exitCode=1; }).finally(async () => {
   if (child && child.exitCode === null) child.kill();

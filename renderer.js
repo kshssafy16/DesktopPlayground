@@ -166,10 +166,30 @@
             const rise = height - y;
             return rise < 210 ? 'low' : rise < 460 ? 'mid' : 'high';
         }
+        function pruneStructureReferences(now = world.now()) {
+            const live = new Set(world.structures.map(item => item.id));
+            for (const pet of petInstances) {
+                const active = new Set([pet.supportId, pet.climbing, pet.targetLadderId]);
+                let detached = false;
+                for (const key of ['supportId', 'climbing', 'targetLadderId']) {
+                    if (typeof pet[key] === 'number' && !live.has(pet[key])) {
+                        pet[key] = null; detached = true;
+                    }
+                }
+                if (!pet.climbing) pet.climbingDown = false;
+                if (detached) { pet.exploreX = null; pet.navigationUntil = 0; }
+                if (!live.has(pet.lastStructureId)) pet.lastStructureId = null;
+                for (const [id, visitedAt] of pet.recentStructures) {
+                    if (!live.has(id) || (!active.has(id) && now - visitedAt >= 35000)) pet.recentStructures.delete(id);
+                }
+                pet.targetHistory = pet.targetHistory.filter(id => live.has(id));
+            }
+        }
         function cleanupStructures(now = world.now()) {
-            if (!structuresEnabled) return;
             if (now - world.lastCleanupAt < 5000) return;
             world.lastCleanupAt = now;
+            pruneStructureReferences(now);
+            if (!structuresEnabled) return;
             const keep = new Set(world.structures.filter(item => now - item.lastUsedAt < structureIdleMs)
                 .map(item => item.id));
             for (const pet of petInstances) {
@@ -186,6 +206,7 @@
                 if (ladder.type === 'ladder' && keep.has(ladder.id)) keep.add(ladder.platformId);
             }
             world.structures = world.structures.filter(item => keep.has(item.id));
+            pruneStructureReferences(now);
         }
         function chooseRoamX(pet, now) {
             const current = horizontalZone(pet.x);
@@ -301,6 +322,29 @@
         let strokes = world.drawnShapes;
         let activeStroke = null;
         let pointerDown = false;
+        const physicsFrameMs = 1000 / 60;
+        const throwSampleMs = 100;
+        const maxThrowSpeed = 54; // pixels per reference (60 Hz) physics frame
+        const throwPhysics = { gravity: .22, airRetention: .996, groundRetention: .94,
+            restitution: .65, wallRestitution: .72, stopImpact: 3, maxMs: 8000, maxStep: .5 };
+
+        // Alpha >16 union bounds of each existing clip (192x208 cells).
+        // Fixed clip baselines retain authored hops; never snap each frame to its feet.
+        const spriteProfiles = {
+            cat: { feet: [.976, .9327, .9375, .976, .976] },
+            magpie: { feet: [.976, .976, .976, .976, .976] },
+            cat_brown: { feet: [.976, .8462, .8317, .976, .976] },
+            cat_face: { feet: [.8894, .9183, .9183, .8942, .9087], elasticity: .25 },
+            cat_sleepy: { feet: [.7933, .851, .851, .9279, .7981], elasticity: .4 },
+            doge: { feet: [.976, .976, .976, .976, .976] },
+            kirby: { feet: [.899, .9567, .9567, .899, .9087], elasticity: .7 },
+            kirby_sleepy: { feet: [.9423, .9471, .9471, .9423, .9375],
+                centers: [.3854, .4167, .4818, .4193, .388], elasticity: .4 },
+            puddle: { feet: [.976, .8125, .8125, .976, .976] },
+            'salary-cat': { feet: [.9038, .9567, .9567, .875, .9423], elasticity: .4 },
+            usagi: { feet: [.9712, .9663, .9663, .9712, .9663] }
+        };
+        const spriteStates = ['idle', 'walkRight', 'walkLeft', 'fall', 'drag'];
 
         class Pet {
             constructor(x, y, definition) {
@@ -318,11 +362,15 @@
                 this.friction = 0.98;
 
                 this.isDragging = false;
+                this.externalMotion = null;
+                this.blackHoleOrbit = null;
+                this.rescuedFromHoles = new Set();
                 this.squish = 1;
                 this.facingRight = true;
 
                 this.frame = 0;
-                this.tick = 0;
+                this.animationState = null;
+                this.animationMs = 0;
                 this.supportId = null;
                 this.climbing = null;
                 this.climbingDown = false;
@@ -359,10 +407,37 @@
             }
 
             remove() {
+                if (draggedPet === this) releaseDraggedPet();
+                this.blackHoleOrbit = null;
+                this.rescuedFromHoles.clear();
+                this.externalMotion = null;
                 if (this.imgElement) this.imgElement.remove();
             }
 
+            beginThrow(vx, vy) {
+                const scale = Math.min(1, maxThrowSpeed / (Math.hypot(vx, vy) || 1));
+                this.vx = vx * scale;
+                this.vy = vy * scale;
+                this.climbing = null;
+                this.climbingDown = false;
+                this.targetLadderId = null;
+                this.supportId = null;
+                this.exploreX = null;
+                this.navigationUntil = 0;
+                this.externalMotion = { elapsedMs: 0, stableMs: 0 };
+            }
+
             update(dt = 1) {
+                // Small physics steps keep fast throws consistent across refresh rates.
+                // Autonomous movement and ladder timing keep their existing update path.
+                const steps = this.externalMotion ? Math.max(1, Math.ceil(dt / throwPhysics.maxStep)) : 1;
+                for (let i = 0; i < steps; i++) this.updateStep(dt / steps);
+                if (!this.isDragging) this.squish = 1 + (this.squish - 1) * Math.pow(.85, dt);
+                this.advanceAnimation(dt * physicsFrameMs);
+                this.updateImagePosition();
+            }
+
+            updateStep(dt) {
                 if (this.isDragging) {
                     this.updateImagePosition();
                     return;
@@ -374,8 +449,9 @@
 
                 const behavior = this.definition.behavior;
                 const now = world.now();
+                const externalMotion = this.externalMotion !== null;
                 this.visitedLevels.add(verticalZone(this.y));
-                if (this.climbing && structuresEnabled) {
+                if (!externalMotion && this.climbing && structuresEnabled) {
                     const ladder = world.structures.find(item => item.id === this.climbing && item.type === 'ladder');
                     const platform = ladder && world.structures.find(item => item.id === ladder.platformId);
                     if (ladder && platform) {
@@ -407,8 +483,8 @@
                     && this.x - this.size * .5 < item.x + item.width);
                 const drawnSupport = drawnSurfaceAt(this.x, previousFoot);
                 const grounded = Math.abs(previousFoot - height) < 3 || Boolean(supportingPlatform || drawnSupport);
-                if (grounded) {
-                    if (supportingPlatform) supportingPlatform.lastUsedAt = now;
+                if (supportingPlatform) supportingPlatform.lastUsedAt = now;
+                if (grounded && !externalMotion) {
                     chooseNavigation(this, previousFoot, supportingPlatform, now);
                     const target = structuresEnabled && world.structures.find(item => item.id === this.targetLadderId && item.type === 'ladder');
                     if (target) {
@@ -438,14 +514,20 @@
                     const direction = distance > .01 ? dx / distance : (this.instanceId < other.instanceId ? -1 : 1);
                     this.vx += direction * .32 * (1 - distance / desired) * dt;
                 }
-                this.vx = Math.max(-18, Math.min(18, this.vx));
-                this.vy += this.gravity * dt;
-                if (behavior.airSteer && Math.abs(this.vy) > 1.5) this.vx += (this.facingRight ? behavior.airSteer : -behavior.airSteer) * dt;
+                const speedLimit = externalMotion ? maxThrowSpeed : 18;
+                this.vx = Math.max(-speedLimit, Math.min(speedLimit, this.vx));
+                this.vy += (externalMotion ? throwPhysics.gravity : this.gravity) * dt;
+                if (externalMotion) this.vy = Math.max(-speedLimit, Math.min(speedLimit, this.vy));
+                if (!externalMotion && behavior.airSteer && Math.abs(this.vy) > 1.5) this.vx += (this.facingRight ? behavior.airSteer : -behavior.airSteer) * dt;
                 const previousX = this.x, previousY = this.y;
                 this.x += this.vx * dt;
                 this.y += this.vy * dt;
-                this.vx *= Math.pow(this.friction, dt);
-                collideDrawnWalls(this, previousX, previousY);
+                const retention = externalMotion
+                    ? (grounded && Math.abs(this.vy) < 1.5 ? throwPhysics.groundRetention : throwPhysics.airRetention)
+                    : this.friction;
+                const drawnContact = externalMotion ? collideThrownDrawing(this, previousX, previousY, dt) : null;
+                this.vx *= Math.pow(retention, dt);
+                if (!externalMotion) collideDrawnWalls(this, previousX, previousY);
 
                 if (this.vx > 0.1) this.facingRight = true;
                 else if (this.vx < -0.1) this.facingRight = false;
@@ -454,36 +536,38 @@
                 let landed = null;
                 if (this.vy >= 0) {
                     for (const platform of structuresEnabled ? world.structures : []) {
+                        const crossing = externalMotion && this.y + this.size > previousFoot
+                            ? (platform.y - previousFoot) / (this.y + this.size - previousFoot) : 1;
+                        const landingX = externalMotion ? previousX + (this.x - previousX) * Math.max(0, Math.min(1, crossing)) : this.x;
                         if (platform.type !== 'platform' || previousFoot > platform.y + 3
-                            || this.y + this.size < platform.y || this.x + this.size * .5 <= platform.x
-                            || this.x - this.size * .5 >= platform.x + platform.width) continue;
+                            || this.y + this.size < platform.y || landingX + this.size * .5 <= platform.x
+                            || landingX - this.size * .5 >= platform.x + platform.width) continue;
                         if (!landed || platform.y < landed.y) landed = platform;
                     }
-                    const drawing = drawnLandingAt(this, previousFoot);
+                    const drawing = externalMotion ? null : drawnLandingAt(this, previousFoot);
                     if (drawing && (!landed || drawing.y < landed.y)) landed = drawing;
                 }
                 if (landed) {
                     this.y = landed.y - this.size;
-                    this.vy = 0;
-                    this.supportId = landed.id;
-                    if (!this.targetLadderId && this.exploreX === null && now >= this.ladderCooldownUntil
+                    this.reactToLanding(this.vy);
+                    this.vy = externalMotion ? throwRebound(this.vy) : 0;
+                    this.supportId = this.vy === 0 ? landed.id : null;
+                    if (!externalMotion && !this.targetLadderId && this.exploreX === null && now >= this.ladderCooldownUntil
                         && Math.random() < behavior.turnChance * dt) {
                         this.vx = (Math.random() - .5) * behavior.moveSpeed;
                     }
-                } else this.supportId = null;
-                if (landed && now >= this.ladderCooldownUntil && Math.random() < behavior.jumpChance * dt) {
+                } else this.supportId = drawnContact;
+                if (!externalMotion && landed && now >= this.ladderCooldownUntil && Math.random() < behavior.jumpChance * dt) {
                     this.vy = -behavior.jumpSpeed - Math.random() * 4;
                 }
                 // 바닥 충돌
                 if (this.y + this.size >= height) {
                     this.y = height - this.size;
-                    this.vy *= this.bounce;
-
-                    // 강하게 부딪히면 찌그러짐
-                    if (Math.abs(this.vy) > 2) this.squish = 1.4;
+                    this.reactToLanding(this.vy);
+                    this.vy = externalMotion ? throwRebound(this.vy) : this.vy * this.bounce;
 
                     // 바닥에서 무작위 이동 (가끔 점프)
-                    if (Math.abs(this.vy) < 1.5) {
+                    if (!externalMotion && Math.abs(this.vy) < 1.5) {
                         if (Math.random() < behavior.turnChance * dt && !this.targetLadderId && this.exploreX === null) {
                             this.vx = (Math.random() - 0.5) * behavior.moveSpeed;
                             this.squish = 0.8;
@@ -499,17 +583,64 @@
                 // 양옆 벽 충돌
                 if (this.x - this.size <= 0) {
                     this.x = this.size;
-                    this.vx *= -1;
+                    this.vx = externalMotion ? throwRebound(this.vx, throwPhysics.wallRestitution) : -this.vx;
                 }
                 if (this.x + this.size >= width) {
                     this.x = width - this.size;
-                    this.vx *= -1;
+                    this.vx = externalMotion ? throwRebound(this.vx, throwPhysics.wallRestitution) : -this.vx;
+                }
+                if (externalMotion && this.y < this.size && this.vy < 0) {
+                    this.y = this.size;
+                    this.vy = throwRebound(this.vy, throwPhysics.wallRestitution);
                 }
 
-                // 모양 원래대로 복구
-                this.squish += (1 - this.squish) * 0.15;
+                if (externalMotion) {
+                    const motion = this.externalMotion;
+                    const elapsedMs = dt * physicsFrameMs;
+                    motion.elapsedMs += elapsedMs;
+                    const settled = ((landed && this.vy === 0) || drawnContact || this.y + this.size >= height - .5)
+                        && Math.abs(this.vx) <= 2.8 && Math.abs(this.vy) <= 1.5;
+                    motion.stableMs = settled ? motion.stableMs + elapsedMs : 0;
+                    // Stable landing returns control to AI; the deadline also covers airborne/stuck cases.
+                    if ((motion.elapsedMs >= 200 && motion.stableMs >= 120) || motion.elapsedMs >= throwPhysics.maxMs) {
+                        this.externalMotion = null;
+                    }
+                }
 
                 this.updateImagePosition();
+            }
+
+            reactToLanding(speed) {
+                // Ignore resting gravity contact; cap strong landings without touching velocity.
+                const amount = Math.min(.4, Math.max(0, (speed - 2) * .018));
+                this.squish = Math.max(this.squish, 1 + amount);
+            }
+
+            spriteClip() {
+                const clips = this.definition.clips || {};
+                const requested = this.isDragging ? 'drag'
+                    : this.externalMotion || Math.abs(this.vy) > 1.5 ? 'fall'
+                    : Math.abs(this.vx) > .5 ? (this.facingRight ? 'walkRight' : 'walkLeft') : 'idle';
+                const valid = clip => clip && Number.isInteger(clip.row) && clip.row >= 0
+                    && clip.row < (this.definition.rows || 11) && Number.isInteger(clip.frames)
+                    && clip.frames > 0 && clip.frames <= 8 && Number.isFinite(clip.speed) && clip.speed >= 0;
+                const state = valid(clips[requested]) ? requested : 'idle';
+                return valid(clips[state]) ? { state, clip: clips[state] } : null;
+            }
+
+            advanceAnimation(elapsedMs) {
+                if (this.definition.renderKind !== 'sprite') return;
+                const selected = this.spriteClip();
+                if (!selected) return;
+                if (this.animationState !== selected.state) {
+                    this.animationState = selected.state;
+                    this.animationMs = 0;
+                    this.frame = 0;
+                }
+                this.animationMs += elapsedMs;
+                // Preserve the old 60Hz cadence (tick > speed), independently of draw calls.
+                const frameMs = (selected.clip.speed + 1) * physicsFrameMs;
+                this.frame = Math.floor((this.animationMs + 1e-7) / frameMs) % selected.clip.frames;
             }
 
             updateImagePosition() {
@@ -529,22 +660,26 @@
                 if (this.definition.renderKind === 'sprite') {
                     const image = this.definition.asset;
                     if (image.complete && image.naturalWidth > 0) {
-                        const clips = this.definition.clips;
-                        const clip = this.isDragging ? clips.drag
-                            : Math.abs(this.vy) > 1.5 ? clips.fall
-                            : Math.abs(this.vx) > .5 ? (this.facingRight ? clips.walkRight : clips.walkLeft) : clips.idle;
-                        // Rows 1 and 2 are already right/left facing on both sheets.
-                        this.frame %= clip.frames;
-                        this.tick++;
-                        if (this.tick > clip.speed) { this.tick = 0; this.frame = (this.frame + 1) % clip.frames; }
+                        this.advanceAnimation(0); // Input can change state between update and draw.
+                        const selected = this.spriteClip();
+                        if (!selected) { ctx.restore(); return; }
+                        const { state, clip } = selected;
+                        const profile = spriteProfiles[this.definitionId] || {};
+                        const index = spriteStates.indexOf(state);
+                        const foot = profile.feet?.[index] ?? .976;
+                        const center = profile.centers?.[index] ?? .5;
                         const fw = image.naturalWidth / 8;
                         const fh = image.naturalHeight / (this.definition.rows || 11);
                         const renderSize = this.size * 2.5;
-                        const offsetY = this.definitionId === 'magpie' ? 15 : 10;
+                        const squash = 1 + (this.squish - 1) * (profile.elasticity ?? .55);
+                        // Rows 1/2 already face right/left. Scale about the fixed visible foot.
+                        ctx.translate(0, this.size);
+                        ctx.scale(squash, 1 / squash);
                         ctx.drawImage(image, this.frame * fw, clip.row * fh, fw, fh,
-                            -renderSize / 2, -renderSize / 2 - offsetY, renderSize, renderSize);
+                            -renderSize * center, -renderSize * foot, renderSize, renderSize);
                     }
                 } else if (['basic', 'ghost', 'star', 'cloud'].includes(this.definition.renderKind)) {
+                    ctx.translate(0, this.size * (1 - 1 / this.squish));
                     const kind = this.definition.renderKind;
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
@@ -579,6 +714,7 @@
                     ctx.arc(8, 1, 2.5, 0, Math.PI * 2); ctx.fill();
                     ctx.beginPath(); ctx.arc(0, 7, 4, 0, Math.PI); ctx.stroke();
                 } else if (this.definition.renderKind === 'robot') {
+                    ctx.translate(0, this.size * (1 - 1 / this.squish));
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
                     ctx.fillStyle = '#7bd8da';
@@ -596,6 +732,7 @@
                     ctx.fillStyle = '#44617c';
                     ctx.fillRect(-19, 21, 12, 7); ctx.fillRect(7, 21, 12, 7);
                 } else if (this.definition.renderKind === 'bug') {
+                    ctx.translate(0, this.size * (1 - 1 / this.squish));
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
                     ctx.strokeStyle = '#375c52';
@@ -614,6 +751,7 @@
                     ctx.strokeStyle = '#253b43';
                     ctx.beginPath(); ctx.arc(0, 4, 5, 0, Math.PI); ctx.stroke();
                 } else if (this.definition.renderKind === 'slime') {
+                    ctx.translate(0, this.size * (1 - 1 / this.squish));
                     ctx.scale(this.squish, 1 / this.squish);
 
                     // 귀
@@ -642,8 +780,8 @@
                     ctx.strokeStyle = '#2D3748';
                     ctx.lineWidth = 2.5;
                     ctx.lineCap = 'round';
-                    if(this.isDragging) {
-                        // 잡혔을 때 벌린 입
+                    if (this.isDragging || this.externalMotion) {
+                        // 잡히거나 던져졌을 때 기존 당황 표정
                         ctx.beginPath(); ctx.arc(0, this.size/4, this.size/6, 0, Math.PI, true); ctx.stroke();
                         // 땀방울
                         ctx.fillStyle = '#63B3ED';
@@ -708,17 +846,25 @@
 
         const blackHoleConsumeRadius = 22;
         let nextBlackHoleId = 1;
+        function pruneBlackHoleReferences() {
+            const live = new Set(blackHoles.filter(hole => hole.life > 0).map(hole => hole.id));
+            for (const pet of petInstances) {
+                if (pet.blackHoleOrbit && !live.has(pet.blackHoleOrbit.holeId)) pet.blackHoleOrbit = null;
+                for (const id of pet.rescuedFromHoles) if (!live.has(id)) pet.rescuedFromHoles.delete(id);
+            }
+        }
         function addBlackHole(x, y) {
             blackHoles.push({ id: nextBlackHoleId++, x, y, radius: 190, life: 540, angle: 0 });
             if (blackHoles.length > 2) {
-                const removed = blackHoles.shift();
-                for (const pet of petInstances) if (pet.blackHoleOrbit?.holeId === removed.id) pet.blackHoleOrbit = null;
+                blackHoles.shift();
+                pruneBlackHoleReferences();
             }
         }
 
         function updateBlackHoles(dt = 1) {
             for (const hole of blackHoles) {
                 hole.life -= dt;
+                if (hole.life <= 0) continue;
                 hole.angle += .07 * dt;
                 const glow = ctx.createRadialGradient(hole.x, hole.y, 8, hole.x, hole.y, hole.radius);
                 glow.addColorStop(0, 'rgba(10,8,23,.98)');
@@ -744,13 +890,21 @@
                     ctx.beginPath(); ctx.arc(hole.x + Math.cos(a) * r, hole.y + Math.sin(a) * r, 1.4, 0, Math.PI * 2); ctx.fill();
                 }
                 for (const pet of petInstances) {
-                    if (pet.isDragging) continue;
+                    if (pet.isDragging || pet.absorbed) continue;
                     if (pet.blackHoleOrbit && pet.blackHoleOrbit.holeId !== hole.id) continue;
                     const dx = pet.x - hole.x, dy = pet.y - hole.y;
                     const distance = Math.hypot(dx, dy);
+                    // Grab owns position. A rescued Pet must leave this hole before fresh capture.
+                    if (pet.rescuedFromHoles.has(hole.id)) {
+                        if (distance < hole.radius) continue;
+                        pet.rescuedFromHoles.delete(hole.id);
+                    }
                     if (!pet.blackHoleOrbit && distance < hole.radius) {
                         pet.blackHoleOrbit = { holeId: hole.id, angle: Math.atan2(dy, dx),
                             startRadius: Math.max(34, distance), turns: 0 };
+                        // Orbit supersedes Throw/AI; release never resumes a stale throw timer.
+                        pet.externalMotion = null;
+                        pet.climbingDown = false;
                         pet.climbing = null; pet.targetLadderId = null; pet.supportId = null;
                     }
                     const orbit = pet.blackHoleOrbit;
@@ -770,10 +924,8 @@
                 }
             }
             petInstances = petInstances.filter(pet => !pet.absorbed);
-            for (const pet of petInstances) {
-                if (pet.blackHoleOrbit && !blackHoles.some(hole => hole.id === pet.blackHoleOrbit.holeId && hole.life > 0)) pet.blackHoleOrbit = null;
-            }
             blackHoles = blackHoles.filter(hole => hole.life > 0);
+            pruneBlackHoleReferences();
         }
 
         function shapeSegments(shape) {
@@ -841,8 +993,12 @@
 
         function eraseDrawing(x, y) {
             const radius = Math.max(12, drawSize * 2);
-            const kept = strokes.filter(shape => !shapeSegments(shape).some(segment =>
-                distanceToSegment(x, y, segment) <= radius));
+            const kept = strokes.filter(shape => {
+                const segments = shapeSegments(shape);
+                // Match redrawDrawing's dot fallback, including its visible painted radius.
+                if (!segments.length) return Math.hypot(x - shape.points[0].x, y - shape.points[0].y) > radius + shape.size / 2;
+                return !segments.some(segment => distanceToSegment(x, y, segment) <= radius);
+            });
             if (kept.length === strokes.length) return;
             strokes = world.drawnShapes = kept;
             rebuildDrawnColliders(); redrawDrawing();
@@ -898,6 +1054,80 @@
                     && (!landing || y < landing.y)) landing = { y, id: `draw:${segment.shapeId}` };
             }
             return landing;
+        }
+
+        function throwRebound(velocity, restitution = throwPhysics.restitution) {
+            return Math.abs(velocity) <= throwPhysics.stopImpact ? 0 : -velocity * restitution;
+        }
+
+        // Sweep the thrown Pet's circular body against each stroke capsule (line + endpoints).
+        // Closed shapes block both sides; open horizontal strokes remain one-way surfaces.
+        function sweptStrokeHit(x, y, dx, dy, radius, segment) {
+            const sx = segment.x2 - segment.x1, sy = segment.y2 - segment.y1;
+            const length = Math.hypot(sx, sy);
+            if (length < .001) return null;
+            const tx = sx / length, ty = sy / length;
+            const nx = -ty, ny = tx;
+            let best = null;
+            const accept = (time, normalX, normalY, depth = 0) => {
+                if (time < -1e-8 || time > 1 || dx * normalX + dy * normalY >= -1e-8) return;
+                if (!segment.closed && normalY >= -.25 && Math.abs(normalX) <= .75) return;
+                if (!best || time < best.time) best = { time: Math.max(0, time), nx: normalX, ny: normalY, depth };
+            };
+            const projection = Math.max(0, Math.min(length, (x - segment.x1) * tx + (y - segment.y1) * ty));
+            const ox = x - segment.x1 - projection * tx, oy = y - segment.y1 - projection * ty;
+            const distance = Math.hypot(ox, oy);
+            if (distance > .001 && distance < radius) accept(0, ox / distance, oy / distance, radius - distance);
+            const signed = (x - segment.x1) * nx + (y - segment.y1) * ny;
+            const travel = dx * nx + dy * ny;
+            if (Math.abs(travel) > 1e-8) {
+                for (const sign of [-1, 1]) {
+                    const time = (sign * radius - signed) / travel;
+                    const along = (x + dx * time - segment.x1) * tx + (y + dy * time - segment.y1) * ty;
+                    if (along >= 0 && along <= length) accept(time, nx * sign, ny * sign);
+                }
+            }
+            const a = dx * dx + dy * dy;
+            if (a > 1e-8) for (const [ex, ey] of [[segment.x1, segment.y1], [segment.x2, segment.y2]]) {
+                const px = x - ex, py = y - ey;
+                const b = 2 * (px * dx + py * dy), c = px * px + py * py - radius * radius;
+                const discriminant = b * b - 4 * a * c;
+                if (discriminant < 0) continue;
+                const time = (-b - Math.sqrt(discriminant)) / (2 * a);
+                const hx = px + dx * time, hy = py + dy * time;
+                const norm = Math.hypot(hx, hy);
+                if (norm > .001) accept(time, hx / norm, hy / norm);
+            }
+            return best;
+        }
+
+        function collideThrownDrawing(pet, previousX, previousY, dt) {
+            let x = previousX, y = previousY, remaining = dt, support = null;
+            for (let pass = 0; pass < 4 && remaining > 1e-6; pass++) {
+                const dx = pet.vx * remaining, dy = pet.vy * remaining;
+                let first = null;
+                for (const segment of world.drawnColliders) {
+                    const radius = pet.size + segment.thickness / 2;
+                    if (Math.max(x, x + dx) + radius < Math.min(segment.x1, segment.x2)
+                        || Math.min(x, x + dx) - radius > Math.max(segment.x1, segment.x2)
+                        || Math.max(y, y + dy) + radius < Math.min(segment.y1, segment.y2)
+                        || Math.min(y, y + dy) - radius > Math.max(segment.y1, segment.y2)) continue;
+                    const hit = sweptStrokeHit(x, y, dx, dy, radius, segment);
+                    if (hit && (!first || hit.time < first.time)) first = { ...hit, segment };
+                }
+                if (!first) { x += dx; y += dy; break; }
+                x += dx * first.time + first.nx * (first.depth + .01);
+                y += dy * first.time + first.ny * (first.depth + .01);
+                const normalSpeed = pet.vx * first.nx + pet.vy * first.ny;
+                if (first.ny < -.5) pet.reactToLanding(-normalSpeed);
+                const bounce = Math.abs(normalSpeed) > throwPhysics.stopImpact ? throwPhysics.restitution : 0;
+                pet.vx -= (1 + bounce) * normalSpeed * first.nx;
+                pet.vy -= (1 + bounce) * normalSpeed * first.ny;
+                if (first.ny < -.5 && bounce === 0) support = `draw:${first.segment.shapeId}`;
+                remaining *= 1 - first.time;
+            }
+            pet.x = x; pet.y = y;
+            return support;
         }
 
         function collideDrawnWalls(pet, previousX, previousY) {
@@ -980,7 +1210,52 @@
         }
 
         let draggedPet = null;
-        let mouseX = 0, mouseY = 0, lastMouseX = 0, lastMouseY = 0;
+        let mouseX = 0, mouseY = 0;
+        let dragOffsetX = 0, dragOffsetY = 0;
+        let dragSamples = [];
+
+        function recordDragSample(event) {
+            const timestamp = Number.isFinite(event.timeStamp) ? event.timeStamp : performance.now();
+            const time = Math.max(timestamp, dragSamples.at(-1)?.time ?? timestamp);
+            const sample = { x: mouseX, y: mouseY, time };
+            if (dragSamples.at(-1)?.time === time) dragSamples[dragSamples.length - 1] = sample;
+            else dragSamples.push(sample);
+            // Keep one sample before the window for interpolation, including a stationary mouseup.
+            while (dragSamples.length > 2 && dragSamples[1].time <= time - throwSampleMs) dragSamples.shift();
+        }
+
+        function dragThrowVelocity() {
+            if (dragSamples.length < 2) return { vx: 0, vy: 0 };
+            const end = dragSamples.at(-1);
+            const estimate = windowMs => {
+                let start = dragSamples[0];
+                const cutoff = end.time - windowMs;
+                for (let i = 1; i < dragSamples.length; i++) {
+                    const next = dragSamples[i];
+                    if (next.time <= cutoff) { start = next; continue; }
+                    if (start.time < cutoff) {
+                        const fraction = (cutoff - start.time) / (next.time - start.time);
+                        start = { time: cutoff, x: start.x + (next.x - start.x) * fraction,
+                            y: start.y + (next.y - start.y) * fraction };
+                    }
+                    break;
+                }
+                const elapsedMs = end.time - start.time;
+                return elapsedMs < 1 ? { vx: 0, vy: 0 } : {
+                    vx: (end.x - start.x) / elapsedMs * physicsFrameMs,
+                    vy: (end.y - start.y) / elapsedMs * physicsFrameMs };
+            };
+            // Keep 100ms of history, but let a short final flick outweigh a preceding hold.
+            const recent = estimate(40), full = estimate(throwSampleMs);
+            if (Math.hypot(recent.vx, recent.vy) < .01) return { vx: 0, vy: 0 };
+            const vx = recent.vx * .75 + full.vx * .25;
+            const vy = recent.vy * .75 + full.vy * .25;
+            const speed = Math.hypot(vx, vy);
+            // Slow gestures retain their scale; faster gestures gain a little extra reach.
+            const gain = 1 + .35 * Math.max(0, Math.min(1, (speed - 6) / 24));
+            const scale = Math.min(gain, maxThrowSpeed / (speed || 1));
+            return { vx: vx * scale, vy: vy * scale };
+        }
 
         function spawnPet(id, x, y) {
             const definition = petDefinitions.get(id);
@@ -1039,7 +1314,6 @@
             if (!enabled || currentMode === 'pc' || e.button !== 0) return;
             pointerDown = true;
             mouseX = e.clientX; mouseY = e.clientY;
-            lastMouseX = mouseX; lastMouseY = mouseY;
 
             if (currentMode === 'spawn') {
                 spawnPet(selectedPetId, mouseX, mouseY);
@@ -1054,7 +1328,14 @@
                     const p = petInstances[i];
                     if (Math.hypot(p.x - mouseX, p.y - mouseY) < p.size + 25) {
                         draggedPet = p;
+                        dragOffsetX = p.x - mouseX; dragOffsetY = p.y - mouseY;
+                        dragSamples = [];
+                        recordDragSample(e);
+                        if (p.blackHoleOrbit) p.rescuedFromHoles.add(p.blackHoleOrbit.holeId);
+                        p.blackHoleOrbit = null;
+                        p.externalMotion = null;
                         p.climbing = null; p.targetLadderId = null; p.supportId = null;
+                        p.climbingDown = false;
                         p.isDragging = true;
                         p.squish = 1.4; // 잡힐 때 길어짐
                         p.vy = 0; p.vx = 0;
@@ -1065,32 +1346,38 @@
         });
 
         canvas.addEventListener('mousemove', (e) => {
-            lastMouseX = mouseX; lastMouseY = mouseY;
             mouseX = e.clientX; mouseY = e.clientY;
 
             if (draggedPet) {
-                draggedPet.x = mouseX;
-                draggedPet.y = mouseY;
+                recordDragSample(e);
+                draggedPet.x = mouseX + dragOffsetX;
+                draggedPet.y = mouseY + dragOffsetY;
                 draggedPet.updateImagePosition();
             }
             if (pointerDown && currentMode === 'draw' && (activeStroke || eraser)) extendDrawing(mouseX, mouseY);
         });
 
-        window.addEventListener('mouseup', () => {
+        window.addEventListener('mouseup', (e) => {
             pointerDown = false;
             activeStroke = null;
             if (draggedPet) {
+                mouseX = e.clientX; mouseY = e.clientY;
+                recordDragSample(e);
+                draggedPet.x = mouseX + dragOffsetX;
+                draggedPet.y = mouseY + dragOffsetY;
                 if (inTrash(draggedPet.x, draggedPet.y)) {
-                    draggedPet.remove();
-                    petInstances = petInstances.filter(pet => pet !== draggedPet);
+                    const removedPet = draggedPet;
+                    removedPet.remove();
+                    petInstances = petInstances.filter(pet => pet !== removedPet);
                 } else {
-                    // 마우스 던지는 속도 반영
-                    draggedPet.vx = (mouseX - lastMouseX) * 0.9;
-                    draggedPet.vy = (mouseY - lastMouseY) * 0.9;
+                    const { vx, vy } = dragThrowVelocity();
+                    draggedPet.beginThrow(vx, vy);
                     draggedPet.isDragging = false;
                     draggedPet.squish = 1;
+                    draggedPet.updateImagePosition();
                 }
                 draggedPet = null;
+                dragSamples = [];
             }
         });
         window.addEventListener('contextmenu', event => {
@@ -1141,6 +1428,7 @@
         }
 
         function releaseDraggedPet() {
+            dragSamples = [];
             if (!draggedPet) return;
             draggedPet.isDragging = false;
             draggedPet.squish = 1;
@@ -1158,6 +1446,7 @@
             if (kind === 'effects' || kind === 'all') {
                 holes = [];
                 blackHoles = [];
+                pruneBlackHoleReferences();
                 particles = [];
                 rings = [];
                 impacts = [];
@@ -1172,6 +1461,7 @@
                     pet.supportId = null; pet.climbing = null; pet.targetLadderId = null;
                     pet.vy = Math.max(.5, pet.vy);
                 }
+                pruneStructureReferences();
             }
             if (kind === 'pets' || kind === 'all') {
                 releaseDraggedPet();
