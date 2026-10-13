@@ -305,6 +305,7 @@
         }
         let definitionsLoaded = false;
 
+        let auxiliaryEffectsEnabled = true;
         let enabled = false;
         let currentMode = 'pc';
         let selectedPetId = null;
@@ -328,23 +329,199 @@
         const throwPhysics = { gravity: .22, airRetention: .996, groundRetention: .94,
             restitution: .65, wallRestitution: .72, stopImpact: 3, maxMs: 8000, maxStep: .5 };
 
-        // Alpha >16 union bounds of each existing clip (192x208 cells).
-        // Fixed clip baselines retain authored hops; never snap each frame to its feet.
+        // Bomb retains ordinary gravity/air drag; only the protected collision path is shared.
+        const bombPhysics = { ...throwPhysics, gravity: .5, airRetention: .98, groundRetention: .98,
+            restitution: .6, wallRestitution: 1, maxMs: 5000 };
+
+        // Local profiles are explicit, alpha-audited frame lists; rows have no global meaning.
+        // Original assets remain unchanged. Legacy Cat/Magpie keep their old adapter.
         const spriteProfiles = {
             cat: { feet: [.976, .9327, .9375, .976, .976] },
             magpie: { feet: [.976, .976, .976, .976, .976] },
-            cat_brown: { feet: [.976, .8462, .8317, .976, .976] },
-            cat_face: { feet: [.8894, .9183, .9183, .8942, .9087], elasticity: .25 },
-            cat_sleepy: { feet: [.7933, .851, .851, .9279, .7981], elasticity: .4 },
-            doge: { feet: [.976, .976, .976, .976, .976] },
-            kirby: { feet: [.899, .9567, .9567, .899, .9087], elasticity: .7 },
-            kirby_sleepy: { feet: [.9423, .9471, .9471, .9423, .9375],
-                centers: [.3854, .4167, .4818, .4193, .388], elasticity: .4 },
-            puddle: { feet: [.976, .8125, .8125, .976, .976] },
-            'salary-cat': { feet: [.9038, .9567, .9567, .875, .9423], elasticity: .4 },
-            usagi: { feet: [.9712, .9663, .9663, .9712, .9663] }
+            "cat_brown": {
+                rows: 11,
+                origin: "feet",
+                elasticity: 0.55,
+                sleeping: false,
+                clips: {
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.976},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8462},
+                    walkLeft: {"mirrorOf": "walkRight"},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
+                    drag: {"row": 5, "frames": [0, 1, 2, 6, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.976},
+                    rest: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.4974, "foot": 0.976},
+                    sleep: {"row": 5, "frames": [3, 4], "frameMs": 500, "center": 0.5, "foot": 0.8606},
+                    look: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 160, "center": 0.4948, "foot": 0.976},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "cat_face": {
+                rows: 11,
+                origin: "center",
+                elasticity: 0.25,
+                sleeping: false,
+                clips: {
+                    walkLeft: {"mirrorOf": "walkRight"},
+                    walkRight: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 110, "center": 0.5026, "foot": 0.8894, "scale": 1.035, "tilt": 0.035, "bob": 0.025, "bobMs": 360, "centerY": 0.5},
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.8894, "centerY": 0.4976},
+                    jump: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.9038, "centerY": 0.5},
+                    fall: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.9038, "centerY": 0.5},
+                    drag: {"row": 5, "frames": [0, 1, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.9038, "centerY": 0.4976},
+                    rest: {"row": 8, "frames": [0, 1, 5], "frameMs": 400, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
+                    sleep: {"row": 8, "frames": [1, 5], "frameMs": 500, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
+                    look: {"row": 8, "frames": [0, 1, 4, 5], "frameMs": 216.6666666667, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "cat_sleepy": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.4,
+                sleeping: true,
+                clips: {
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.7933},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.851},
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.851},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.9279},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.9279},
+                    drag: {"row": 5, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.7981},
+                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 400, "center": 0.5, "foot": 0.7837},
+                    sleep: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 483.3333333333, "center": 0.5, "foot": 0.7933},
+                    look: {"row": 8, "frames": [0, 1, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.8173},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "doge": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.55,
+                sleeping: false,
+                clips: {
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.4974, "foot": 0.976},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.976},
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.976},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
+                    drag: {"row": 5, "frames": [0, 1, 5, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.976},
+                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.4974, "foot": 0.976},
+                    sleep: {"row": 5, "frames": [3, 4], "frameMs": 500, "center": 0.5, "foot": 0.9519},
+                    look: {"row": 8, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.976},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "puddle": {
+                rows: 11,
+                origin: "feet",
+                elasticity: 0.55,
+                sleeping: false,
+                clips: {
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8125, "scale": 1.1},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8125, "scale": 1.1},
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.976},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
+                    drag: {"row": 5, "frames": [0, 1, 2, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.976},
+                    rest: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 383.3333333333, "center": 0.5, "foot": 0.976},
+                    sleep: {"row": 5, "frames": [4, 5], "frameMs": 500, "center": 0.5, "foot": 0.8173},
+                    look: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 180, "center": 0.5391, "foot": 0.976},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "salary-cat": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.4,
+                sleeping: false,
+                clips: {
+                    fall: {"row": 4, "frames": [2], "frameMs": 125, "center": 0.5, "foot": 0.875, "loop": false},
+                    jump: {"row": 4, "frames": [2], "frameMs": 100, "center": 0.5, "foot": 0.875, "loop": false},
+                    walkLeft: {"mirrorOf": "walkRight"},
+                    walkRight: {"row": 4, "frames": [2], "frameMs": 180, "center": 0.5, "foot": 0.875, "tilt": 0.025, "bob": 0.018, "bobMs": 420},
+                    idle: {"row": 8, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.9327},
+                    drag: {"row": 5, "frames": [0, 1, 4, 5], "frameMs": 116.6666666667, "scale": 0.9, "center": 0.5, "foot": 0.9327},
+                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.5, "foot": 0.8413},
+                    look: {"row": 8, "frames": [0, 1, 4, 5], "frameMs": 216.6666666667, "center": 0.5, "foot": 0.9327},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "kirby": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.7,
+                sleeping: false,
+                clips: {
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.899},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.9567},
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.9567},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.899},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.899},
+                    drag: {"row": 5, "frames": [0, 1, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.9087},
+                    rest: {"row": 6, "frames": [2, 3, 4], "frameMs": 400, "center": 0.5, "foot": 0.8894},
+                    sleep: {"row": 6, "frames": [3], "frameMs": 500, "center": 0.5, "foot": 0.8606},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "kirby_sleepy": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.4,
+                sleeping: true,
+                clips: {
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.3854, "foot": 0.9423},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4167, "foot": 0.9471},
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4818, "foot": 0.9471},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.4297, "foot": 0.9038},
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.4297, "foot": 0.9038},
+                    drag: {"row": 5, "frames": [0, 1, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.388, "foot": 0.9375},
+                    rest: {"row": 5, "frames": [1, 2, 3, 4, 5], "frameMs": 400, "center": 0.388, "foot": 0.9375},
+                    sleep: {"row": 5, "frames": [2, 3, 4], "frameMs": 516.6666666667, "center": 0.3906, "foot": 0.9375},
+                    look: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.4036, "foot": 0.9375},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
+            "usagi": {
+                rows: 9,
+                origin: "feet",
+                elasticity: 0.55,
+                sleeping: false,
+                clips: {
+                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "center": 0.4974, "foot": 0.9327, "loop": false, "scale": 1.25, "frameAdjustments": {"1": {"foot": 0.8894}, "2": {"foot": 0.7356}, "3": {"foot": 0.9327}}},
+                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "center": 0.4974, "foot": 0.9327, "loop": false, "scale": 1.25, "frameAdjustments": {"1": {"foot": 0.8894}, "2": {"foot": 0.7356}, "3": {"foot": 0.9327}}},
+                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.4974, "foot": 0.9712},
+                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4974, "foot": 0.9663},
+                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4974, "foot": 0.9663},
+                    drag: {"row": 5, "frames": [0, 1, 2, 4, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.9663},
+                    rest: {"row": 0, "frames": [1, 3], "frameMs": 350, "center": 0.4974, "foot": 0.9712},
+                    look: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.9712},
+                },
+                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
+            },
         };
+        // Resolve mirror declarations once, never rebuild frame arrays during rendering.
+        for (const profile of Object.values(spriteProfiles)) for (const [name, clip] of Object.entries(profile.clips || {})) {
+            if (clip.mirrorOf) {
+                const source = profile.clips[clip.mirrorOf];
+                if (!source || source.mirrorOf) { delete profile.clips[name]; continue; }
+                profile.clips[name] = { ...source, flip: !source.flip, mirrorOf: clip.mirrorOf };
+            }
+        }
         const spriteStates = ['idle', 'walkRight', 'walkLeft', 'fall', 'drag'];
+
+        // Durations are milliseconds of stable autonomous time, never render frame counts.
+        const activityProfiles = {
+            sleepy: { roam: [1800,3500], idle: [1800,3200], rest: [6500,12000], look: [900,1800], restChance: .8, lookChance: .15, jump: .05, turn: .35 },
+            calm: { roam: [2500,4500], idle: [1500,2500], rest: [4000,7500], look: [800,1500], restChance: .7, lookChance: .2, jump: .12, turn: .6 },
+            normal: { roam: [2500,4500], idle: [1000,2200], rest: [3000,5500], look: [700,1400], restChance: .55, lookChance: .25, jump: .2, turn: .8 },
+            lively: { roam: [3500,5500], idle: [800,1600], rest: [2000,4000], look: [600,1100], restChance: .5, lookChance: .3, jump: .25, turn: 1 },
+            active: { roam: [4500,6500], idle: [600,1400], rest: [1000,2200], look: [500,1000], restChance: .45, lookChance: .35, jump: .3, turn: 1.2 },
+            veryActive: { roam: [5000,7500], idle: [400,1000], rest: [800,1600], look: [400,900], restChance: .35, lookChance: .45, jump: .4, turn: 1.4 }
+        };
+        const activityById = { cat_brown: 'calm', cat_face: 'normal', cat_sleepy: 'sleepy',
+            'salary-cat': 'calm', doge: 'active', puddle: 'normal', usagi: 'veryActive',
+            kirby: 'lively', kirby_sleepy: 'sleepy', blob: 'normal' };
+        const activityByCategory = { cat: 'calm', dog: 'normal' };
+        const autonomousEvent = (chance, multiplier, dt) => Math.random() < 1 - Math.exp(-chance * multiplier * dt);
 
         class Pet {
             constructor(x, y, definition) {
@@ -363,10 +540,17 @@
 
                 this.isDragging = false;
                 this.externalMotion = null;
+                this.motionCause = null;
                 this.blackHoleOrbit = null;
                 this.rescuedFromHoles = new Set();
                 this.squish = 1;
                 this.facingRight = true;
+
+                this.activity = activityProfiles[activityById[definition.id] || activityByCategory[definition.category] || 'normal'];
+                this.autonomy = { state: 'roam', remainingMs: 0, lookTurned: false };
+                this.autonomyHoldMs = 0;
+                this.isAutonomouslyStill = false;
+                this.enterAutonomy('roam');
 
                 this.frame = 0;
                 this.animationState = null;
@@ -411,10 +595,43 @@
                 this.blackHoleOrbit = null;
                 this.rescuedFromHoles.clear();
                 this.externalMotion = null;
+                this.motionCause = null;
                 if (this.imgElement) this.imgElement.remove();
             }
 
+            enterAutonomy(state) {
+                const [min, max] = this.activity[state];
+                this.autonomy = { state, remainingMs: min + Math.random() * (max - min), lookTurned: false };
+                this.autonomy.durationMs = this.autonomy.remainingMs;
+            }
+
+            interruptAutonomy(holdMs = 0) {
+                this.enterAutonomy('roam');
+                this.autonomyHoldMs = holdMs;
+                this.isAutonomouslyStill = false;
+            }
+
+            updateAutonomy(elapsedMs) {
+                let remaining = elapsedMs;
+                while (remaining + 1e-7 >= this.autonomy.remainingMs) {
+                    remaining = Math.max(0, remaining - this.autonomy.remainingMs);
+                    if (this.autonomy.state === 'roam') {
+                        const choice = Math.random();
+                        this.enterAutonomy(choice < this.activity.lookChance ? 'look'
+                            : choice < this.activity.lookChance + this.activity.restChance ? 'rest' : 'idle');
+                    } else this.enterAutonomy('roam');
+                }
+                this.autonomy.remainingMs -= remaining;
+                if (this.autonomy.state === 'look' && !this.autonomy.lookTurned
+                    && this.autonomy.remainingMs <= this.autonomy.durationMs / 2 + 1e-7) {
+                    this.facingRight = !this.facingRight;
+                    this.autonomy.lookTurned = true;
+                }
+                return this.autonomy.state === 'roam';
+            }
+
             beginThrow(vx, vy) {
+                this.interruptAutonomy();
                 const scale = Math.min(1, maxThrowSpeed / (Math.hypot(vx, vy) || 1));
                 this.vx = vx * scale;
                 this.vy = vy * scale;
@@ -424,7 +641,26 @@
                 this.supportId = null;
                 this.exploreX = null;
                 this.navigationUntil = 0;
-                this.externalMotion = { elapsedMs: 0, stableMs: 0 };
+                this.externalMotion = { source: 'throw', elapsedMs: 0, stableMs: 0 };
+                this.motionCause = 'throw';
+            }
+
+            beginAutonomousJump(vy) {
+                if (this.isDragging || this.blackHoleOrbit || this.externalMotion || this.climbing) return;
+                this.motionCause = 'autonomous-jump';
+                this.vy = vy;
+            }
+
+            finishAutonomousJump() {
+                if (this.motionCause !== 'autonomous-jump') return;
+                this.motionCause = null;
+                // Let the landing read as a landing before another autonomous decision.
+                this.autonomyHoldMs = Math.max(this.autonomyHoldMs, 200);
+            }
+
+            beginImpact() {
+                this.motionCause = 'bomb';
+                this.externalMotion = { source: 'bomb', elapsedMs: 0, stableMs: 0 };
             }
 
             update(dt = 1) {
@@ -438,6 +674,8 @@
             }
 
             updateStep(dt) {
+                this.isAutonomouslyStill = false;
+                this.autonomyHoldMs = Math.max(0, this.autonomyHoldMs - dt * physicsFrameMs);
                 if (this.isDragging) {
                     this.updateImagePosition();
                     return;
@@ -450,6 +688,7 @@
                 const behavior = this.definition.behavior;
                 const now = world.now();
                 const externalMotion = this.externalMotion !== null;
+                const motionPhysics = this.externalMotion?.source === 'bomb' ? bombPhysics : throwPhysics;
                 this.visitedLevels.add(verticalZone(this.y));
                 if (!externalMotion && this.climbing && structuresEnabled) {
                     const ladder = world.structures.find(item => item.id === this.climbing && item.type === 'ladder');
@@ -484,7 +723,14 @@
                 const drawnSupport = drawnSurfaceAt(this.x, previousFoot);
                 const grounded = Math.abs(previousFoot - height) < 3 || Boolean(supportingPlatform || drawnSupport);
                 if (supportingPlatform) supportingPlatform.lastUsedAt = now;
-                if (grounded && !externalMotion) {
+                const stableAutonomy = grounded && !externalMotion && this.autonomyHoldMs === 0
+                    && Math.abs(this.vy) <= 1.5 && Math.abs(this.vx) <= 3 && this.squish <= 1.12;
+                const roaming = stableAutonomy && this.updateAutonomy(dt * physicsFrameMs);
+                if (stableAutonomy && !roaming) {
+                    this.isAutonomouslyStill = true;
+                    this.vx *= Math.pow(.7, dt); // Gradual stop; never brake an external impulse.
+                }
+                if (roaming) {
                     chooseNavigation(this, previousFoot, supportingPlatform, now);
                     const target = structuresEnabled && world.structures.find(item => item.id === this.targetLadderId && item.type === 'ladder');
                     if (target) {
@@ -502,30 +748,21 @@
                         this.vx = Math.max(-2.8, Math.min(2.8, this.vx));
                     }
                     if (!drawnSupport && Math.random() < (supportingPlatform ? .006 : .002) * dt) buildRoute(this);
-                } else if (this.supportId !== null && !this.climbing) {
+                } else if (!grounded && this.supportId !== null && !this.climbing) {
                     this.targetLadderId = null;
                 }
-                for (const other of petInstances) {
-                    if (other === this || other.isDragging) continue;
-                    const dx = this.x - other.x, dy = this.y - other.y;
-                    const distance = Math.hypot(dx, dy);
-                    const desired = (this.size + other.size) * .76;
-                    if (distance >= desired) continue;
-                    const direction = distance > .01 ? dx / distance : (this.instanceId < other.instanceId ? -1 : 1);
-                    this.vx += direction * .32 * (1 - distance / desired) * dt;
-                }
-                const speedLimit = externalMotion ? maxThrowSpeed : 18;
+                const speedLimit = externalMotion && this.externalMotion.source !== 'bomb' ? maxThrowSpeed : 18;
                 this.vx = Math.max(-speedLimit, Math.min(speedLimit, this.vx));
-                this.vy += (externalMotion ? throwPhysics.gravity : this.gravity) * dt;
-                if (externalMotion) this.vy = Math.max(-speedLimit, Math.min(speedLimit, this.vy));
+                this.vy += (externalMotion ? motionPhysics.gravity : this.gravity) * dt;
+                if (externalMotion) this.vy = Math.max(-maxThrowSpeed, Math.min(maxThrowSpeed, this.vy));
                 if (!externalMotion && behavior.airSteer && Math.abs(this.vy) > 1.5) this.vx += (this.facingRight ? behavior.airSteer : -behavior.airSteer) * dt;
                 const previousX = this.x, previousY = this.y;
                 this.x += this.vx * dt;
                 this.y += this.vy * dt;
                 const retention = externalMotion
-                    ? (grounded && Math.abs(this.vy) < 1.5 ? throwPhysics.groundRetention : throwPhysics.airRetention)
+                    ? (grounded && Math.abs(this.vy) < 1.5 ? motionPhysics.groundRetention : motionPhysics.airRetention)
                     : this.friction;
-                const drawnContact = externalMotion ? collideThrownDrawing(this, previousX, previousY, dt) : null;
+                const drawnContact = externalMotion ? collideThrownDrawing(this, previousX, previousY, dt, motionPhysics) : null;
                 this.vx *= Math.pow(retention, dt);
                 if (!externalMotion) collideDrawnWalls(this, previousX, previousY);
 
@@ -550,30 +787,32 @@
                 if (landed) {
                     this.y = landed.y - this.size;
                     this.reactToLanding(this.vy);
-                    this.vy = externalMotion ? throwRebound(this.vy) : 0;
+                    this.vy = externalMotion ? throwRebound(this.vy, motionPhysics.restitution) : 0;
+                    if (!externalMotion) this.finishAutonomousJump();
                     this.supportId = this.vy === 0 ? landed.id : null;
-                    if (!externalMotion && !this.targetLadderId && this.exploreX === null && now >= this.ladderCooldownUntil
-                        && Math.random() < behavior.turnChance * dt) {
+                    if (roaming && !this.targetLadderId && this.exploreX === null && now >= this.ladderCooldownUntil
+                        && autonomousEvent(behavior.turnChance, this.activity.turn, dt)) {
                         this.vx = (Math.random() - .5) * behavior.moveSpeed;
                     }
                 } else this.supportId = drawnContact;
-                if (!externalMotion && landed && now >= this.ladderCooldownUntil && Math.random() < behavior.jumpChance * dt) {
-                    this.vy = -behavior.jumpSpeed - Math.random() * 4;
+                if (roaming && !this.autonomyHoldMs && landed && now >= this.ladderCooldownUntil && autonomousEvent(behavior.jumpChance, this.activity.jump, dt)) {
+                    this.beginAutonomousJump(-behavior.jumpSpeed - Math.random() * 4);
                 }
                 // 바닥 충돌
                 if (this.y + this.size >= height) {
                     this.y = height - this.size;
                     this.reactToLanding(this.vy);
-                    this.vy = externalMotion ? throwRebound(this.vy) : this.vy * this.bounce;
+                    this.vy = externalMotion ? throwRebound(this.vy, motionPhysics.restitution) : 0;
+                    if (!externalMotion) this.finishAutonomousJump();
 
                     // 바닥에서 무작위 이동 (가끔 점프)
-                    if (!externalMotion && Math.abs(this.vy) < 1.5) {
-                        if (Math.random() < behavior.turnChance * dt && !this.targetLadderId && this.exploreX === null) {
+                    if (roaming && Math.abs(this.vy) < 1.5) {
+                        if (autonomousEvent(behavior.turnChance, this.activity.turn, dt) && !this.targetLadderId && this.exploreX === null) {
                             this.vx = (Math.random() - 0.5) * behavior.moveSpeed;
                             this.squish = 0.8;
                         }
-                        if (Math.random() < behavior.jumpChance * dt && !this.targetLadderId) {
-                            this.vy = -behavior.jumpSpeed - Math.random() * 6;
+                        if (!this.autonomyHoldMs && autonomousEvent(behavior.jumpChance, this.activity.jump, dt) && !this.targetLadderId) {
+                            this.beginAutonomousJump(-behavior.jumpSpeed - Math.random() * 6);
                             this.squish = 0.6;
                         }
                     }
@@ -583,15 +822,15 @@
                 // 양옆 벽 충돌
                 if (this.x - this.size <= 0) {
                     this.x = this.size;
-                    this.vx = externalMotion ? throwRebound(this.vx, throwPhysics.wallRestitution) : -this.vx;
+                    this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
                 }
                 if (this.x + this.size >= width) {
                     this.x = width - this.size;
-                    this.vx = externalMotion ? throwRebound(this.vx, throwPhysics.wallRestitution) : -this.vx;
+                    this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
                 }
                 if (externalMotion && this.y < this.size && this.vy < 0) {
                     this.y = this.size;
-                    this.vy = throwRebound(this.vy, throwPhysics.wallRestitution);
+                    this.vy = throwRebound(this.vy, motionPhysics.wallRestitution);
                 }
 
                 if (externalMotion) {
@@ -602,8 +841,9 @@
                         && Math.abs(this.vx) <= 2.8 && Math.abs(this.vy) <= 1.5;
                     motion.stableMs = settled ? motion.stableMs + elapsedMs : 0;
                     // Stable landing returns control to AI; the deadline also covers airborne/stuck cases.
-                    if ((motion.elapsedMs >= 200 && motion.stableMs >= 120) || motion.elapsedMs >= throwPhysics.maxMs) {
+                    if ((motion.elapsedMs >= 200 && motion.stableMs >= 120) || motion.elapsedMs >= motionPhysics.maxMs) {
                         this.externalMotion = null;
+                        this.motionCause = null;
                     }
                 }
 
@@ -612,35 +852,87 @@
 
             reactToLanding(speed) {
                 // Ignore resting gravity contact; cap strong landings without touching velocity.
+                if (speed >= 6) this.autonomyHoldMs = Math.max(this.autonomyHoldMs, 300);
                 const amount = Math.min(.4, Math.max(0, (speed - 2) * .018));
                 this.squish = Math.max(this.squish, 1 + amount);
             }
 
+            quietAutonomy() {
+                return this.isAutonomouslyStill && !this.isDragging && !this.externalMotion
+                    && !this.blackHoleOrbit && !this.climbing && Math.abs(this.vy) <= 1.5;
+            }
+
             spriteClip() {
-                const clips = this.definition.clips || {};
+                const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
+                const clips = profile.clips || this.definition.clips || {};
+                const quiet = this.quietAutonomy();
                 const requested = this.isDragging ? 'drag'
-                    : this.externalMotion || Math.abs(this.vy) > 1.5 ? 'fall'
-                    : Math.abs(this.vx) > .5 ? (this.facingRight ? 'walkRight' : 'walkLeft') : 'idle';
-                const valid = clip => clip && Number.isInteger(clip.row) && clip.row >= 0
-                    && clip.row < (this.definition.rows || 11) && Number.isInteger(clip.frames)
-                    && clip.frames > 0 && clip.frames <= 8 && Number.isFinite(clip.speed) && clip.speed >= 0;
-                const state = valid(clips[requested]) ? requested : 'idle';
-                return valid(clips[state]) ? { state, clip: clips[state] } : null;
+                    : this.externalMotion || (this.blackHoleOrbit && profile.clips) ? 'fall'
+                    : this.climbing ? 'climb'
+                    : this.motionCause === 'autonomous-jump' ? (this.vy <= 0 ? 'jump' : 'fall')
+                    : Math.abs(this.vy) > 1.5 ? 'fall'
+                    : quiet && this.autonomy.state === 'rest' && profile.sleeping ? 'sleep'
+                    : quiet && this.autonomy.state !== 'idle' ? this.autonomy.state
+                    : !this.isAutonomouslyStill && Math.abs(this.vx) >
+                        (profile.clips && this.animationState?.startsWith('walk') ? .15 : .5)
+                        ? (this.facingRight ? 'walkRight' : 'walkLeft') : 'idle';
+                const valid = clip => {
+                    if (!clip || !Number.isInteger(clip.row) || clip.row < 0 || clip.row >= (this.definition.rows || 11)) return false;
+                    const framesValid = Array.isArray(clip.frames)
+                        ? clip.frames.length > 0 && clip.frames.every(column => Number.isInteger(column) && column >= 0 && column < 8)
+                        : Number.isInteger(clip.frames) && clip.frames > 0 && Number.isInteger(clip.start ?? 0)
+                            && (clip.start ?? 0) >= 0 && (clip.start ?? 0) + clip.frames <= 8;
+                    if (clip.center !== undefined && (!Number.isFinite(clip.center) || clip.center < 0 || clip.center > 1)) return false;
+                    if (clip.foot !== undefined && (!Number.isFinite(clip.foot) || clip.foot < 0 || clip.foot > 1)) return false;
+                    if (profile.origin === 'center' && (!Number.isFinite(clip.centerY) || clip.centerY < 0 || clip.centerY > 1)) return false;
+                    if (clip.scale !== undefined && (!Number.isFinite(clip.scale) || clip.scale <= 0 || clip.scale > 4)) return false;
+                    if (clip.loop !== undefined && typeof clip.loop !== 'boolean') return false;
+                    if (clip.tilt !== undefined && (!Number.isFinite(clip.tilt) || Math.abs(clip.tilt) > .25)) return false;
+                    if (clip.bob !== undefined && (!Number.isFinite(clip.bob) || clip.bob < 0 || clip.bob > .1
+                        || !Number.isFinite(clip.bobMs) || clip.bobMs <= 0)) return false;
+                    if (clip.frameAdjustments !== undefined) {
+                        if (!clip.frameAdjustments || typeof clip.frameAdjustments !== 'object' || Array.isArray(clip.frameAdjustments)) return false;
+                        for (const [column, adjustment] of Object.entries(clip.frameAdjustments)) {
+                            if (!/^[0-7]$/.test(column) || !adjustment || typeof adjustment !== 'object') return false;
+                            for (const key of ['center','foot','centerY']) if (adjustment[key] !== undefined
+                                && (!Number.isFinite(adjustment[key]) || adjustment[key] < 0 || adjustment[key] > 1)) return false;
+                            if (adjustment.scale !== undefined && (!Number.isFinite(adjustment.scale) || adjustment.scale <= 0 || adjustment.scale > 4)) return false;
+                            for (const key of ['offsetX','offsetY']) if (adjustment[key] !== undefined
+                                && (!Number.isFinite(adjustment[key]) || Math.abs(adjustment[key]) > .5)) return false;
+                        }
+                    }
+                    return framesValid && (Number.isFinite(clip.frameMs) ? clip.frameMs > 0
+                        : Number.isFinite(clip.speed) && clip.speed >= 0);
+                };
+                let state = requested, clip;
+                // Bounded fallback traversal also makes cyclic/malformed future profiles safe.
+                for (let i = 0; i < 10; i++) {
+                    clip = clips[state];
+                    if (valid(clip)) break;
+                    state = profile.fallback?.[state] || (state === 'idle' ? null : 'idle');
+                    if (!state) return null;
+                }
+                if (!valid(clip)) return null;
+                return { state: profile.clips ? requested : state, clip };
             }
 
             advanceAnimation(elapsedMs) {
                 if (this.definition.renderKind !== 'sprite') return;
                 const selected = this.spriteClip();
                 if (!selected) return;
-                if (this.animationState !== selected.state) {
+                const { clip } = selected;
+                const frameCount = Array.isArray(clip.frames) ? clip.frames.length : clip.frames;
+                const clipKey = `${selected.state}:${clip.row}:${clip.start || 0}:${clip.frameMs ?? clip.speed}:${frameCount}`;
+                if (this.animationClipKey !== clipKey) {
+                    this.animationClipKey = clipKey;
                     this.animationState = selected.state;
                     this.animationMs = 0;
                     this.frame = 0;
                 }
                 this.animationMs += elapsedMs;
-                // Preserve the old 60Hz cadence (tick > speed), independently of draw calls.
-                const frameMs = (selected.clip.speed + 1) * physicsFrameMs;
-                this.frame = Math.floor((this.animationMs + 1e-7) / frameMs) % selected.clip.frames;
+                const frameMs = clip.frameMs ?? (clip.speed + 1) * physicsFrameMs;
+                const frame = Math.floor((this.animationMs + 1e-7) / frameMs);
+                this.frame = clip.loop === false ? Math.min(frame, frameCount - 1) : frame % frameCount;
             }
 
             updateImagePosition() {
@@ -653,9 +945,34 @@
                 }
             }
 
+            spriteGeometry(selected = this.spriteClip()) {
+                if (!selected) return null;
+                const { state, clip } = selected;
+                const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
+                const column = Array.isArray(clip.frames) ? clip.frames[this.frame] : this.frame + (clip.start || 0);
+                const adjustment = clip.frameAdjustments?.[column];
+                const index = spriteStates.indexOf(clip.anchor || state);
+                const foot = adjustment?.foot ?? clip.foot ?? profile.feet?.[index] ?? .976;
+                const center = adjustment?.center ?? clip.center ?? profile.centers?.[index] ?? .5;
+                const scale = (clip.scale ?? 1) * (adjustment?.scale ?? 1);
+                return { column, center, foot, scale,
+                    anchorY: profile.origin === 'center' ? (adjustment?.centerY ?? clip.centerY) : foot,
+                    offsetX: (adjustment?.offsetX ?? 0) * this.size * 2.5,
+                    offsetY: (adjustment?.offsetY ?? 0) * this.size * 2.5,
+                    tilt: clip.tilt ?? 0,
+                    bob: clip.bob ? -Math.abs(Math.sin(this.animationMs * Math.PI * 2 / clip.bobMs)) * clip.bob * this.size : 0 };
+            }
+
             draw(ctx) {
                 ctx.save();
                 ctx.translate(this.x, this.y);
+                const quiet = this.quietAutonomy();
+                const looking = quiet && this.autonomy.state === 'look';
+                const resting = quiet && this.autonomy.state === 'rest';
+                const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
+                const sleeping = resting && profile.sleeping;
+                const restPhase = (this.autonomy.durationMs - this.autonomy.remainingMs) / 1000;
+                const breath = resting ? 1 + Math.sin(restPhase * Math.PI * .8) * (sleeping ? .012 : .006) : 1;
 
                 if (this.definition.renderKind === 'sprite') {
                     const image = this.definition.asset;
@@ -663,20 +980,20 @@
                         this.advanceAnimation(0); // Input can change state between update and draw.
                         const selected = this.spriteClip();
                         if (!selected) { ctx.restore(); return; }
-                        const { state, clip } = selected;
-                        const profile = spriteProfiles[this.definitionId] || {};
-                        const index = spriteStates.indexOf(state);
-                        const foot = profile.feet?.[index] ?? .976;
-                        const center = profile.centers?.[index] ?? .5;
+                        const { clip } = selected;
+                        const geometry = this.spriteGeometry(selected);
                         const fw = image.naturalWidth / 8;
                         const fh = image.naturalHeight / (this.definition.rows || 11);
-                        const renderSize = this.size * 2.5;
+                        const renderSize = this.size * 2.5 * geometry.scale;
                         const squash = 1 + (this.squish - 1) * (profile.elasticity ?? .55);
-                        // Rows 1/2 already face right/left. Scale about the fixed visible foot.
-                        ctx.translate(0, this.size);
-                        ctx.scale(squash, 1 / squash);
-                        ctx.drawImage(image, this.frame * fw, clip.row * fh, fw, fh,
-                            -renderSize * center, -renderSize * foot, renderSize, renderSize);
+                        // Only verified overrides mirror a source row; pivot at visible feet.
+                        ctx.translate(geometry.offsetX, (profile.origin === 'center' ? 0 : this.size) + geometry.offsetY + geometry.bob);
+                        ctx.scale(squash / breath, breath / squash);
+                        if (clip.flip) ctx.scale(-1, 1);
+                        if (geometry.tilt) ctx.rotate(geometry.tilt);
+                        if (looking) ctx.rotate(this.facingRight ? .035 : -.035);
+                        ctx.drawImage(image, geometry.column * fw, clip.row * fh, fw, fh,
+                            -renderSize * geometry.center, -renderSize * geometry.anchorY, renderSize, renderSize);
                     }
                 } else if (['basic', 'ghost', 'star', 'cloud'].includes(this.definition.renderKind)) {
                     ctx.translate(0, this.size * (1 - 1 / this.squish));
@@ -752,6 +1069,9 @@
                     ctx.beginPath(); ctx.arc(0, 4, 5, 0, Math.PI); ctx.stroke();
                 } else if (this.definition.renderKind === 'slime') {
                     ctx.translate(0, this.size * (1 - 1 / this.squish));
+                    ctx.translate(0, this.size);
+                    ctx.scale(1 / breath, breath);
+                    ctx.translate(0, -this.size);
                     ctx.scale(this.squish, 1 / this.squish);
 
                     // 귀
@@ -771,10 +1091,16 @@
 
                     // 까만 콩 눈
                     ctx.fillStyle = '#2D3748';
-                    const ex = Math.max(-2, Math.min(2, this.vx * 1.5));
+                    const ex = looking ? (this.facingRight ? 2 : -2) : Math.max(-2, Math.min(2, this.vx * 1.5));
                     const ey = Math.max(-2, Math.min(2, this.vy * 0.5));
-                    ctx.beginPath(); ctx.arc(-this.size/3 + ex, -this.size/6 + ey, this.size/7, 0, Math.PI*2); ctx.fill();
-                    ctx.beginPath(); ctx.arc(this.size/3 + ex, -this.size/6 + ey, this.size/7, 0, Math.PI*2); ctx.fill();
+                    if (resting) {
+                        ctx.lineWidth = 2.5; ctx.strokeStyle = '#2D3748';
+                        ctx.beginPath();ctx.moveTo(-this.size/3-4,-this.size/6);ctx.lineTo(-this.size/3+4,-this.size/6);
+                        ctx.moveTo(this.size/3-4,-this.size/6);ctx.lineTo(this.size/3+4,-this.size/6);ctx.stroke();
+                    } else {
+                        ctx.beginPath(); ctx.arc(-this.size/3 + ex, -this.size/6 + ey, this.size/7, 0, Math.PI*2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(this.size/3 + ex, -this.size/6 + ey, this.size/7, 0, Math.PI*2); ctx.fill();
+                    }
 
                     // 입 모양
                     ctx.strokeStyle = '#2D3748';
@@ -784,8 +1110,10 @@
                         // 잡히거나 던져졌을 때 기존 당황 표정
                         ctx.beginPath(); ctx.arc(0, this.size/4, this.size/6, 0, Math.PI, true); ctx.stroke();
                         // 땀방울
-                        ctx.fillStyle = '#63B3ED';
-                        ctx.beginPath(); ctx.arc(this.size/2, -this.size/1.2, 5, 0, Math.PI*2); ctx.fill();
+                        if (auxiliaryEffectsEnabled) {
+                            ctx.fillStyle = '#63B3ED';
+                            ctx.beginPath(); ctx.arc(this.size/2, -this.size/1.2, 5, 0, Math.PI*2); ctx.fill();
+                        }
                     } else {
                         // 고양이/먼작귀 입 (w 모양)
                         ctx.beginPath();
@@ -795,6 +1123,7 @@
                     }
                 }
                 ctx.restore();
+
             }
         }
 
@@ -830,7 +1159,7 @@
             addParticles(x, y, '#f28a53', 50, 8);
             body.classList.remove('shake-bomb');
             void body.offsetWidth;
-            body.classList.add('shake-bomb');
+            if (auxiliaryEffectsEnabled) body.classList.add('shake-bomb');
             for (const pet of petInstances) {
                 if (pet.isDragging || pet.blackHoleOrbit) continue;
                 const dx = pet.x - x, dy = pet.y - y;
@@ -841,6 +1170,9 @@
                 pet.vx = Math.max(-19, Math.min(19, pet.vx + Math.cos(angle) * force));
                 pet.vy = Math.max(-19, Math.min(19, pet.vy + Math.sin(angle) * force));
                 pet.squish = 1.3;
+                pet.interruptAutonomy(700);
+                pet.beginImpact();
+                pet.climbing = null; pet.climbingDown = false; pet.targetLadderId = null; pet.supportId = null;
             }
         }
 
@@ -904,6 +1236,8 @@
                             startRadius: Math.max(34, distance), turns: 0 };
                         // Orbit supersedes Throw/AI; release never resumes a stale throw timer.
                         pet.externalMotion = null;
+                        pet.motionCause = null;
+                        pet.interruptAutonomy();
                         pet.climbingDown = false;
                         pet.climbing = null; pet.targetLadderId = null; pet.supportId = null;
                     }
@@ -1101,7 +1435,7 @@
             return best;
         }
 
-        function collideThrownDrawing(pet, previousX, previousY, dt) {
+        function collideThrownDrawing(pet, previousX, previousY, dt, physics = throwPhysics) {
             let x = previousX, y = previousY, remaining = dt, support = null;
             for (let pass = 0; pass < 4 && remaining > 1e-6; pass++) {
                 const dx = pet.vx * remaining, dy = pet.vy * remaining;
@@ -1120,7 +1454,7 @@
                 y += dy * first.time + first.ny * (first.depth + .01);
                 const normalSpeed = pet.vx * first.nx + pet.vy * first.ny;
                 if (first.ny < -.5) pet.reactToLanding(-normalSpeed);
-                const bounce = Math.abs(normalSpeed) > throwPhysics.stopImpact ? throwPhysics.restitution : 0;
+                const bounce = Math.abs(normalSpeed) > physics.stopImpact ? physics.restitution : 0;
                 pet.vx -= (1 + bounce) * normalSpeed * first.nx;
                 pet.vy -= (1 + bounce) * normalSpeed * first.ny;
                 if (first.ny < -.5 && bounce === 0) support = `draw:${first.segment.shapeId}`;
@@ -1179,28 +1513,34 @@
             }
             holes = holes.filter(hole => hole.life > 0);
             for (const ring of rings) {
-                const progress = 1 - ring.life / ring.maxLife;
-                ctx.strokeStyle = ring.color;
-                ctx.globalAlpha = Math.max(0, ring.life / ring.maxLife);
-                ctx.lineWidth = 3 + (1 - progress) * 4;
-                ctx.beginPath(); ctx.arc(ring.x, ring.y, Math.max(1, ring.radius * progress), 0, Math.PI * 2); ctx.stroke();
-                ctx.globalAlpha = 1;
+                if (auxiliaryEffectsEnabled) {
+                    const progress = 1 - ring.life / ring.maxLife;
+                    ctx.strokeStyle = ring.color;
+                    ctx.globalAlpha = Math.max(0, ring.life / ring.maxLife);
+                    ctx.lineWidth = 3 + (1 - progress) * 4;
+                    ctx.beginPath(); ctx.arc(ring.x, ring.y, Math.max(1, ring.radius * progress), 0, Math.PI * 2); ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
                 ring.life--;
             }
             rings = rings.filter(ring => ring.life > 0);
             for (const impact of impacts) {
-                ctx.fillStyle = impact.color;
-                ctx.globalAlpha = impact.life / impact.maxLife;
-                ctx.beginPath(); ctx.arc(impact.x, impact.y, 5 + (impact.maxLife - impact.life) * 2, 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 1;
+                if (auxiliaryEffectsEnabled) {
+                    ctx.fillStyle = impact.color;
+                    ctx.globalAlpha = impact.life / impact.maxLife;
+                    ctx.beginPath(); ctx.arc(impact.x, impact.y, 5 + (impact.maxLife - impact.life) * 2, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
                 impact.life--;
             }
             impacts = impacts.filter(impact => impact.life > 0);
             for (const particle of particles) {
-                ctx.fillStyle = particle.color;
-                ctx.globalAlpha = Math.min(1, particle.life / 15);
-                ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
-                ctx.globalAlpha = 1;
+                if (auxiliaryEffectsEnabled) {
+                    ctx.fillStyle = particle.color;
+                    ctx.globalAlpha = Math.min(1, particle.life / 15);
+                    ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = 1;
+                }
                 particle.x += particle.vx;
                 particle.y += particle.vy;
                 particle.vy += .09;
@@ -1275,7 +1615,7 @@
                 const image = new Image(); image.src = entry.asset;
                 petDefinitions.set(entry.id, {
                     id: entry.id, name: entry.name, category: entry.category, renderKind: 'sprite', asset: image,
-                    clips: sheetClips, rows: entry.rows, defaultSize: entry.id.startsWith('kirby') ? 34 : 39,
+                    clips: sheetClips, animation: spriteProfiles[entry.id], rows: entry.rows, defaultSize: entry.id.startsWith('kirby') ? 34 : 39,
                     enabled: true,
                     behavior: { turnChance: .025, jumpChance: .012, moveSpeed: 8, jumpSpeed: 9 }
                 });
@@ -1333,7 +1673,9 @@
                         recordDragSample(e);
                         if (p.blackHoleOrbit) p.rescuedFromHoles.add(p.blackHoleOrbit.holeId);
                         p.blackHoleOrbit = null;
+                        p.interruptAutonomy();
                         p.externalMotion = null;
+                        p.motionCause = null;
                         p.climbing = null; p.targetLadderId = null; p.supportId = null;
                         p.climbingDown = false;
                         p.isDragging = true;
@@ -1474,6 +1816,8 @@
             if (!nextState || typeof nextState.enabled !== 'boolean') return;
             const changedMode = currentMode !== nextState.mode;
             enabled = nextState.enabled;
+            auxiliaryEffectsEnabled = nextState.auxiliaryEffectsEnabled !== false;
+            if (!auxiliaryEffectsEnabled) body.classList.remove('shake-bomb');
             const wasStructuresEnabled = structuresEnabled;
             structuresEnabled = nextState.structuresEnabled === true;
             if (wasStructuresEnabled && !structuresEnabled) {

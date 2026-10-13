@@ -57,7 +57,7 @@ async function connect(portNumber, suffix) {
           params: { expression, awaitPromise: true, returnByValue: true }
         }));
       }).then(result => {
-        if (result.exceptionDetails) throw new Error(result.exceptionDetails.text);
+        if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description || result.exceptionDetails.text);
         return result.result.value;
       });
     },
@@ -79,6 +79,27 @@ async function run() {
     "const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');",
     "app.setPath('appData', process.env.SMOKE_APPDATA);\nconst USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');"
   ));
+  fs.writeFileSync(mainPath,fs.readFileSync(mainPath,'utf8').replace('tray.setContextMenu(menu);','smokeTrayMenu=menu;tray.setContextMenu(menu);'));
+  fs.appendFileSync(mainPath, `
+let smokeTrayMenu;
+ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  const item=smokeTrayMenu.getMenuItemById('auxiliary-effects');
+  if(item.checked!==enabled)item.click(item);await petWriteChain;return state.auxiliaryEffectsEnabled;
+});
+`);
+  const preloadPath=path.join(appDir,'preload.js');
+  fs.writeFileSync(preloadPath,fs.readFileSync(preloadPath,'utf8').replace(
+    "getState: () =>", "smokeAuxiliaryEffects: enabled => ipcRenderer.invoke('smoke:auxiliary-effects',enabled),\n  getState: () =>"));
+  // Legacy schema 1 has no effects field: retain all old settings and default ON.
+  const settingsFile=path.join(appData,'desktop-playground','playground','settings.json');
+  fs.mkdirSync(path.dirname(settingsFile),{recursive:true});
+  const icon=fs.readFileSync(path.join(project,'assets','icon.png'));
+  const legacyCustom={id:'11111111-1111-1111-1111-111111111111',name:'Preserved fixture',extension:'.png',
+    width:icon.readUInt32BE(16),height:icon.readUInt32BE(20),enabled:false};
+  const savedAsset=path.join(path.dirname(settingsFile),'assets',legacyCustom.id+'.png');
+  fs.mkdirSync(path.dirname(savedAsset),{recursive:true});fs.writeFileSync(savedAsset,icon);
+  fs.writeFileSync(settingsFile,JSON.stringify({schemaVersion:1,defaultPets:{cat_brown:false},customPets:[legacyCustom]}));
   const debugPort = await port();
   child = spawn(path.join(project,'node_modules/electron/dist/electron.exe'),
     [appDir,'--remote-debugging-port=' + debugPort,'--host-resolver-rules=MAP * ~NOTFOUND'],
@@ -99,7 +120,7 @@ async function run() {
   assert.deepEqual(await overlay.eval("petInstances.map(p=>p.definitionId)"), ['blob','cat_brown','doge','kirby']);
   assert.equal(await controls.eval("document.querySelectorAll('.pet-category').length"), 4);
   assert.deepEqual(await controls.eval("Array.from(document.querySelectorAll('.pet-category')).map(row=>[row.querySelector('.category-label').textContent,Array.from(row.querySelectorAll('[data-pet-id]')).map(p=>p.dataset.petId)])"), [
-    ['기본',['blob','robot','ghost','star','cloud']],
+    ['기본',['blob']],
     ['고양이',['cat_brown','cat_face','cat_sleepy','salary-cat']],
     ['강아지',['puddle','doge']],['캐릭터',['usagi','kirby','kirby_sleepy']]
   ]);
@@ -109,6 +130,7 @@ async function run() {
   assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight <= document.getElementById('panel-list').clientHeight"), true);
   await controls.eval("document.getElementById('pets-button').click();document.getElementById('pets-button').click()");
   assert.equal(await controls.eval("globalThis.__petChoice===document.querySelector('.pet-choice')"), true);
+  assert.deepEqual(await controls.eval("['cat_brown','cat_face','cat_sleepy','salary-cat'].map(id=>document.querySelector('[data-pet-id=\"'+id+'\"]').textContent.trim())"),['🐈 황색냥','🐈 얼굴냥','🐈 실눈냥','🐈 영업냥']);
   await controls.eval("document.querySelector('[data-pet-id=cat_brown]').click()");
   await until(() => overlay.eval("selectedPetId === 'cat_brown' && currentMode === 'spawn'"), 'local variant selection');
   for (const [button, mode] of [['touch-button','touch'],['draw-button','draw'],
@@ -254,6 +276,20 @@ async function run() {
   })()`);
   assert.ok(Object.values(residualStates).every(Boolean),JSON.stringify(residualStates));
   console.log('PASS: Black Hole Grab rescue/release, reference cleanup, native dot erase, structure history');
+  const autonomy = await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');
+    const p=spawnPet('cat_brown',width*.5,height-39);p.vx=0;p.vy=0;
+    p.enterAutonomy('rest');p.autonomy.remainingMs=p.autonomy.durationMs=2000;
+    for(let i=0;i<60;i++)p.update(1);p.draw(ctx);
+    const quiet=p.autonomy.state==='rest' && Math.abs(p.vx)<.01 && p.animationState==='rest';
+    const remaining=p.autonomy.remainingMs;
+    fireBomb(p.x-40,p.y);const vx=p.vx;p.update(1);
+    const impulse=p.vx>vx*.9 && p.autonomy.state==='roam' && p.autonomyHoldMs>0;
+    return {quiet,remaining,impulse,profile:p.activity===activityProfiles.calm};
+  })()`);
+  assert.ok(autonomy.quiet && autonomy.impulse && autonomy.profile);
+  assert.ok(Math.abs(autonomy.remaining-1000)<1e-6);
+  console.log('PASS: native rest/idle Sprite, elapsed state timer, Bomb interrupts rest');
   const spriteAudit = await overlay.eval(`(async () => {
     stopAnimation(); clearPlayground('all');
     const definitions=[...petDefinitions.values()].filter(d=>d.renderKind==='sprite');
@@ -282,7 +318,7 @@ async function run() {
         }
         counts.clips++;
         const profile=spriteProfiles[d.id];
-        if(Math.abs(bottom/208-profile.feet[ci])>.0001)errors.push(d.id+': foot '+state);
+        if(profile.feet && Math.abs(bottom/208-profile.feet[ci])>.0001)errors.push(d.id+': foot '+state);
         if(profile.centers && Math.abs((left+right)/384-profile.centers[ci])>.0001)errors.push(d.id+': center '+state);
         const p=new Pet(70+ci*140,di*140+70,d);
         p.vx=state==='walkRight'?2:state==='walkLeft'?-2:0;p.facingRight=state!=='walkLeft';
@@ -295,7 +331,7 @@ async function run() {
       const p=new Pet(96,0,d);const native=document.createElement('canvas');native.width=192;native.height=208;
       const nc=native.getContext('2d',{willReadFrequently:true});p.y=100-p.size;p.vx=0;p.advanceAnimation(0);
       p.animationMs=restingFrame*(d.clips.idle.speed+1)*physicsFrameMs;
-      for(const squash of [1,1.4]) {
+      for(const squash of spriteProfiles[d.id].feet ? [1,1.4] : []) {
         nc.clearRect(0,0,192,208);p.squish=squash;p.draw(nc);
         const pixels=nc.getImageData(0,0,192,208).data;let bottom=0;
         for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(pixels[(y*192+x)*4+3]>16)bottom=Math.max(bottom,y+1);
@@ -306,15 +342,176 @@ async function run() {
   })()`);
   assert.deepEqual(spriteAudit.errors,[]);
   assert.deepEqual(spriteAudit.counts,{sheets:11,clips:55,frames:385});
-  console.log('PASS: native Sprite audit: 11 sheets, 55 clips, 385 nonempty frames, fixed foot under squash');
+  console.log('PASS: native Sprite audit: 11 original sheets / 55 legacy row selections / 385 nonempty cells, legacy foot checks');
   if(process.argv.includes('--sprite-preview')) {
     const previewPath=path.join(os.tmpdir(),'desktopplayground-phase1c-render.png');
     fs.writeFileSync(previewPath,Buffer.from(spriteAudit.preview,'base64'));console.log('Sprite preview: '+previewPath);
   }
+  const expressionAudit=await overlay.eval(`(() => {
+    const errors=[];let frames=0,clips=0;
+    const cell=document.createElement('canvas');cell.width=192;cell.height=208;
+    const c=cell.getContext('2d',{willReadFrequently:true});
+    const states=['idle','walkRight','walkLeft','jump','fall','drag','rest','sleep','look'];
+    function pose(p,state) {
+      p.vx=0;p.vy=0;p.isDragging=false;p.externalMotion=null;p.motionCause=null;p.climbing=null;
+      p.isAutonomouslyStill=['idle','rest','sleep','look'].includes(state);
+      p.autonomy={state,remainingMs:4000,durationMs:4000};
+      if(state==='walkRight'||state==='walkLeft'){p.vx=state==='walkRight'?2:-2;p.facingRight=p.vx>0;}
+      if(state==='jump'){p.motionCause='autonomous-jump';p.vy=-6;}
+      if(state==='fall'){p.externalMotion={source:'throw',elapsedMs:0,stableMs:0};p.vy=6;}
+      if(state==='drag')p.isDragging=true;
+    }
+    for(const [id,profile] of Object.entries(spriteProfiles))if(profile.clips) {
+      const d=petDefinitions.get(id);
+      for(const state of states) {
+        const q=new Pet(96,100-d.defaultSize,d);pose(q,state);q.advanceAnimation(0);
+        const clip=q.spriteClip().clip;let left=192,right=0,top=208,bottom=0;clips++;
+        for(const column of clip.frames) {
+          c.clearRect(0,0,192,208);c.drawImage(d.asset,column*192,clip.row*208,192,208,0,0,192,208);
+          const data=c.getImageData(0,0,192,208).data;let visible=false;frames++;
+          for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(data[(y*192+x)*4+3]>16) {
+            visible=true;left=Math.min(left,x);right=Math.max(right,x+1);top=Math.min(top,y);bottom=Math.max(bottom,y+1);
+          }
+          if(!visible)errors.push(id+': empty '+state+'/'+column);
+          if(id==='cat_face' && clip.row===8 && [2,3].includes(column))errors.push('forbidden glasses');
+          if(id==='puddle' && state==='walkRight' && clip.row!==1)errors.push('lost original right gait');
+          if(id==='puddle' && state==='walkLeft' && clip.row!==2)errors.push('lost original left gait');
+          if(id==='salary-cat' && [0,1,2,3,7].includes(clip.row))errors.push('forbidden salary pose');
+        }
+        if(Math.abs(bottom/208-clip.foot)>.0001)errors.push(id+': feet '+state);
+        if(Math.abs((left+right)/384-clip.center)>.0001)errors.push(id+': center '+state);
+        if(profile.origin==='center' && Math.abs((top+bottom)/416-clip.centerY)>.0001)errors.push(id+': centerY '+state);
+        // Compare the deepest authored frame with the fixed foot (or portrait center), at two scales and squash values.
+        let peakFrame=0,peak=0;
+        for(let f=0;f<clip.frames.length;f++) {
+          c.clearRect(0,0,192,208);c.drawImage(d.asset,clip.frames[f]*192,clip.row*208,192,208,0,0,192,208);
+          const data=c.getImageData(0,0,192,208).data;let b=0;
+          for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(data[(y*192+x)*4+3]>16)b=Math.max(b,y+1);
+          if(b>peak){peak=b;peakFrame=f;}
+        }
+        const checks=clip.frames.map((_,f)=>[f,1,1]);
+        checks.push([peakFrame,2,1],[peakFrame,1,1.4],[peakFrame,2,1.4]);
+        for(const [frame,scale,squash] of checks) {
+          const out=document.createElement('canvas');out.width=384;out.height=416;const oc=out.getContext('2d',{willReadFrequently:true});
+          q.x=192/scale;q.y=200/scale-q.size;q.squish=squash;
+          q.animationMs=frame*clip.frameMs;q.autonomy.remainingMs=q.autonomy.durationMs;
+          oc.scale(scale,scale);q.draw(oc);const data=oc.getImageData(0,0,384,416).data;
+          let drawnBottom=0;for(let y=0;y<416;y++)for(let x=0;x<384;x++)if(data[(y*384+x)*4+3]>16)drawnBottom=Math.max(drawnBottom,y+1);
+          c.clearRect(0,0,192,208);c.drawImage(d.asset,clip.frames[frame]*192,clip.row*208,192,208,0,0,192,208);
+          const source=c.getImageData(0,0,192,208).data;let sourceBottom=0;
+          for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(source[(y*192+x)*4+3]>16)sourceBottom=Math.max(sourceBottom,y+1);
+          const stretch=1+(squash-1)*profile.elasticity;
+          const g=q.spriteGeometry();
+          const expected=scale*(q.y+(profile.origin==='center'?0:q.size)+g.offsetY+g.bob+
+            (sourceBottom/208-g.anchorY)*q.size*2.5*g.scale/stretch);
+          const tilt=(state==='look'?.035:0)+Math.abs(g.tilt);
+          const tolerance=2+scale*q.size*2.5*g.scale*Math.sin(tilt)/2/stretch;
+          if(Math.abs(drawnBottom-expected)>tolerance)errors.push(id+': rendered baseline '+state+'/'+frame+'/'+scale+'/'+squash+': '+drawnBottom+' vs '+expected);
+        }
+      }
+    }
+    // Every rendered Brown left frame must equal the mirrored intact right frame.
+    const brown=petDefinitions.get('cat_brown'),p=new Pet(96,0,brown);
+    p.size=192/2.5;p.y=100-p.size; // integer horizontal destination removes GPU subpixel sampling variance
+    for(let f=0;f<8;f++) {
+      p.vx=2;p.facingRight=true;p.advanceAnimation(0);p.animationMs=f*5*physicsFrameMs;
+      c.clearRect(0,0,192,208);p.draw(c);const right=c.getImageData(0,0,192,208).data;
+      p.vx=-2;p.facingRight=false;p.advanceAnimation(0);p.animationMs=f*5*physicsFrameMs;
+      c.clearRect(0,0,192,208);p.draw(c);const left=c.getImageData(0,0,192,208).data;
+      let bad=0;for(let y=0;y<208;y++)for(let x=0;x<192;x++) {
+        const li=(y*192+x)*4,ri=(y*192+191-x)*4;
+        if(Math.abs(left[li+3]-right[ri+3])>1)bad++;
+        for(let k=0;k<3;k++)if(Math.abs(left[li+k]*left[li+3]/255-right[ri+k]*right[ri+3]/255)>2)bad++;
+      }
+      if(bad)errors.push('Brown mirror frame '+f+': '+bad);
+    }
+    const ids=['cat_brown','cat_face','cat_sleepy','salary-cat','doge','puddle','usagi','kirby','kirby_sleepy'];
+    const preview=document.createElement('canvas');preview.width=1400;preview.height=ids.length*180;
+    const pc=preview.getContext('2d');
+    const pets=ids.map((id,i)=>[...states,'transition'].map((state,j)=>{
+      const d=petDefinitions.get(id),q=new Pet(70+j*140,i*180+140-d.defaultSize,d);pose(q,state==='transition'?'idle':state);return q;
+    }));
+    const movie=[];
+    const transition=['idle','walkRight','walkLeft','jump','fall','idle','rest','drag'];
+    const samples=${process.argv.includes('--sprite-preview') ? 32 : 1};
+    for(let t=0;t<samples;t++) {
+      pc.fillStyle='#edf2f6';pc.fillRect(0,0,preview.width,preview.height);
+      for(let i=0;i<ids.length;i++)for(let j=0;j<pets[i].length;j++) {
+        const q=pets[i][j];if(j===states.length && t%4===0)pose(q,transition[Math.floor(t/4)%8]);
+        if(j===states.length) {
+          const phase=Math.floor(t/4)%8,progress=(t%4)/3,baseY=i*180+140-q.size;
+          q.x=70+j*140-12+(phase===1?24*progress:phase===2?24*(1-progress):0);
+          q.y=baseY-(phase===3?24*progress:phase===4?24*(1-progress):0);
+          q.squish=phase===5?1+.2*Math.pow(.85,(t%4)*6):1;
+        }
+        q.autonomy.remainingMs=4000-t*100;q.advanceAnimation(t?100:0);q.draw(pc);
+        pc.strokeStyle='#a9b7c5';pc.beginPath();pc.moveTo(q.x-55,i*180+140);pc.lineTo(q.x+55,i*180+140);pc.stroke();
+        pc.fillStyle='#263f53';pc.font='11px sans-serif';pc.fillText(ids[i],j*140+5,i*180+162);
+        pc.fillText(j===states.length?'transition: '+q.animationState:states[j],j*140+5,i*180+176);
+      }
+      if(samples>1)movie.push(preview.toDataURL('image/png'));
+    }
+    return {errors,clips,frames,preview:preview.toDataURL('image/png').split(',')[1],movie};
+  })()`);
+  assert.deepEqual(expressionAudit.errors,[]);assert.equal(expressionAudit.clips,81);assert.ok(expressionAudit.frames>350);
+  console.log('PASS: 9 profiles / '+expressionAudit.clips+' runtime states / '+expressionAudit.frames+' frames, anchors, native 1x/2x baselines, forbidden poses and Brown mirror');
+  if(process.argv.includes('--sprite-preview')) {
+    const previewPath=path.join(os.tmpdir(),'desktopplayground-sprite-quality.png');
+    fs.writeFileSync(previewPath,Buffer.from(expressionAudit.preview,'base64'));console.log('Expression preview: '+previewPath);
+    const moviePath=path.join(os.tmpdir(),'desktopplayground-sprite-quality-preview.html');
+    fs.writeFileSync(moviePath,'<!doctype html><meta charset="utf-8"><title>Native Sprite QA</title><style>body{margin:12px;background:#edf2f6;font:14px sans-serif}img{transform-origin:top left}</style><p>Native Pet.draw capture — 9 pets × 9 poses + transitions; 3.2 seconds, 100ms samples. <button onclick="sprite.style.transform=\'scale(1)\'">1x</button> <button onclick="sprite.style.transform=\'scale(2)\'">2x</button> <button onclick="paused=!paused">Pause</button></p><img id="sprite"><script>const frames='+JSON.stringify(expressionAudit.movie)+';let frame=0,paused=false;const sprite=document.getElementById("sprite");sprite.src=frames[0];setInterval(()=>{if(!paused)sprite.src=frames[(++frame)%frames.length]},100)</script>');
+    console.log('Animated native preview: '+moviePath);
+    if(process.argv.includes('--qa-before') || process.argv.includes('--qa-after')) {
+      const label=process.argv.includes('--qa-before')?'before':'after';
+      const qaDir=path.join(project,'docs','v1.1','qa','sprite-final');fs.mkdirSync(qaDir,{recursive:true});
+      fs.writeFileSync(path.join(os.tmpdir(),'desktopplayground-sprite-qa-frames.json'),JSON.stringify(expressionAudit.movie));
+      const profiles=await overlay.eval('Object.fromEntries(Object.entries(spriteProfiles).filter(([id,p])=>p.clips))');
+      const crypto=require('node:crypto');
+      const manifest={label,samples:32,frameMs:100,rendererSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(project,'renderer.js'))).digest('hex'),profiles};
+      fs.writeFileSync(path.join(qaDir,label+'-profiles.json'),JSON.stringify(manifest,null,2)+'\n');
+      console.log('QA capture frames ready: '+label);
+    }
+  }
+  assert.ok(await overlay.eval(`(() => {
+    clearPlayground('effects');ctx.clearRect(0,0,width,height);
+    addRing(60,60,'#ff0000',15,20);rings[0].life=10;
+    addImpact(60,60,'#ff0000',20);addParticles(60,60,'#ff0000',5);
+    auxiliaryEffectsEnabled=false;drawEffects();
+    const hidden=ctx.getImageData(20,20,80,80).data.every((v,i)=>i%4!==3 || v===0);
+    const aging=rings[0].life===9 && impacts[0].life===19 && particles.every(p=>p.life<32);
+    auxiliaryEffectsEnabled=true;drawEffects();
+    const visible=ctx.getImageData(20,20,80,80).data.some((v,i)=>i%4===3 && v>0);
+    clearPlayground('effects');return hidden && aging && visible;
+  })()`));
+  assert.equal(await controls.eval("playground.getState().then(s=>s.auxiliaryEffectsEnabled)"),true);
+  assert.equal(await controls.eval("playground.smokeAuxiliaryEffects(false)"),false);
+  await until(()=>overlay.eval("auxiliaryEffectsEnabled===false"),'Tray effects broadcast');
+  const persisted=JSON.parse(fs.readFileSync(settingsFile,'utf8'));
+  assert.equal(persisted.auxiliaryEffectsEnabled,false);
+  assert.equal(persisted.defaultPets.cat_brown,false);
+  assert.equal(persisted.schemaVersion,1);
+  assert.deepEqual(persisted.customPets,[legacyCustom]);
+  assert.deepEqual(fs.readFileSync(savedAsset),icon);
   assert.equal(await overlay.eval("performance.getEntriesByType('resource').filter(e=>/^https?:/.test(e.name)).length"),0);
   await controls.eval("document.getElementById('exit-button').click()");
   await until(() => child.exitCode !== null, 'Exit process');
   controls.close(); overlay.close();
+  const restartPort=await port();
+  child=spawn(path.join(project,'node_modules/electron/dist/electron.exe'),
+    [appDir,'--remote-debugging-port='+restartPort,'--host-resolver-rules=MAP * ~NOTFOUND'],
+    {cwd:appDir,env:{...process.env,SMOKE_APPDATA:appData},stdio:'ignore'});
+  const restored=await connect(restartPort,'controls.html');
+  const restoredOverlay=await connect(restartPort,'index.html');
+  await until(()=>restoredOverlay.eval("definitionsLoaded && enabled"),'restart ready');
+  assert.equal(await restored.eval("playground.getState().then(s=>s.auxiliaryEffectsEnabled)"),false);
+  assert.equal(await restoredOverlay.eval("auxiliaryEffectsEnabled"),false);
+  assert.equal(await restored.eval("playground.smokeAuxiliaryEffects(true)"),true);
+  await until(()=>restoredOverlay.eval("auxiliaryEffectsEnabled===true"),'effects re-enable');
+  assert.equal(JSON.parse(fs.readFileSync(settingsFile,'utf8')).auxiliaryEffectsEnabled,true);
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsFile,'utf8')).customPets,[legacyCustom]);
+  await restored.eval("document.getElementById('exit-button').click()");
+  await until(()=>child.exitCode!==null,'restart exit');restored.close();restoredOverlay.close();
+  console.log('PASS: legacy effects fallback, native Tray toggle/broadcast, atomic settings persistence and restart');
   console.log('PASS: 4 starters, current Pet variants, right-click PC, 3-button collapse, structure display/collision toggle, Draw collider, Grab/Throw/Trash, Hide/Show, HTTP 0, Exit');
 }
 run().catch(error => { console.error(error); process.exitCode=1; }).finally(async () => {

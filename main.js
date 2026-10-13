@@ -48,6 +48,7 @@ let quitPromise = null;
 let state = {
   enabled: true,
   structuresEnabled: false,
+  auxiliaryEffectsEnabled: true,
   mode: 'pc',
   petId: null,
   drawColor: '#30384c',
@@ -67,7 +68,8 @@ let petWriteChain = Promise.resolve();
 let petSettings = defaultPetSettings();
 
 function defaultPetSettings() {
-  return { schemaVersion: 1, defaultPets: Object.fromEntries(DEFAULT_PET_IDS.map(id => [id, true])), customPets: [] };
+  return { schemaVersion: 1, auxiliaryEffectsEnabled: true,
+    defaultPets: Object.fromEntries(DEFAULT_PET_IDS.map(id => [id, true])), customPets: [] };
 }
 
 function isAllowedPet(id) {
@@ -93,6 +95,7 @@ if (!hasSingleInstance) {
   app.whenReady().then(async () => {
     await loadUiState();
     await loadPetSettings();
+    state.auxiliaryEffectsEnabled = petSettings.auxiliaryEffectsEnabled;
     registerPetAssetProtocol();
     createWindows();
     createTray();
@@ -299,7 +302,8 @@ async function loadPetSettings() {
         width: pet.width, height: pet.height, enabled: pet.enabled !== false
       });
     }
-    petSettings = { schemaVersion: 1, defaultPets: defaults, customPets };
+    petSettings = { schemaVersion: 1, auxiliaryEffectsEnabled: parsed.auxiliaryEffectsEnabled !== false,
+      defaultPets: defaults, customPets };
   } catch (error) {
     if (error.code !== 'ENOENT') {
       const backup = `${file}.corrupt-${Date.now()}`;
@@ -342,6 +346,18 @@ function queuePetChange(action) {
   const result = petWriteChain.catch(() => {}).then(action);
   petWriteChain = result.catch(() => {});
   return result;
+}
+
+function setAuxiliaryEffectsEnabled(enabled) {
+  return queuePetChange(async () => {
+    const next = { ...petSettings, auxiliaryEffectsEnabled: enabled };
+    await writePetSettings(next);
+    petSettings = next;
+    setState({ auxiliaryEffectsEnabled: enabled });
+  }).catch(error => {
+    console.warn('Could not save auxiliary effects setting:', error);
+    updateTrayMenu();
+  });
 }
 
 function applyPetSettings(next) {
@@ -650,6 +666,9 @@ function updateTrayMenu() {
     { label: 'PC 모드', click: () => setState({ mode: 'pc' }) },
     { label: state.enabled ? 'Playground 숨기기' : 'Playground 보이기', click: () => setState({ enabled: !state.enabled }) },
     { label: '조작창 보이기', click: showControls },
+    { id: 'auxiliary-effects', label: '보조 효과 표시', type: 'checkbox',
+      checked: state.auxiliaryEffectsEnabled,
+      click: item => setAuxiliaryEffectsEnabled(item.checked) },
     { label: '정리', submenu: [
       { label: '효과 지우기', click: () => clear('effects') },
       { label: '그림 지우기', click: () => clear('drawing') },

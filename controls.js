@@ -11,9 +11,7 @@ const controls = {
 };
 const categories = [
   { id: 'basic', name: '기본', icon: '✦', builtin: [
-    { id: 'blob', label: '슬라임' }, { id: 'robot', label: '로봇' },
-    { id: 'ghost', label: '유령' }, { id: 'star', label: '별' },
-    { id: 'cloud', label: '구름' }
+    { id: 'blob', label: '슬라임' }
   ] },
   { id: 'cat', name: '고양이', icon: '🐈', builtin: [] },
   { id: 'dog', name: '강아지', icon: '🐕', builtin: [] },
@@ -75,7 +73,7 @@ function buildPetPanel() {
             : category.id === 'character' ? ['usagi', 'kirby', 'kirby_sleepy'] : [];
           return order.indexOf(a.id) - order.indexOf(b.id);
         })
-        .map(pet => ({ id: pet.id, label: pet.label, name: pet.name }))
+        .map(pet => ({ id: pet.id, label: pet.label, name: pet.label }))
     ];
     if (!choices.length) continue;
     const row = document.createElement('div');

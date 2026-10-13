@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<title>Phase 2-B Sprite 전후 QA</title>
+<style>
+body { margin: 16px; font: 14px system-ui; color: #243747; background: #f4f7fa; }
+nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+main { display: flex; gap: 16px; align-items: start; }
+figure { margin: 0; }
+figcaption { margin: 6px 0; font-weight: bold; }
+.viewport { width: 1400px; height: 1620px; overflow: hidden; background: #edf2f6; }
+img { display: block; width: 1400px; transform-origin: top left; }
+button, select { padding: 6px 10px; }
+</style>
+<h1>Phase 2-B Sprite 전후 비교</h1>
+<p>실제 Electron Pet.draw 캡처 · 9종 × 9개 포즈 + 마지막 열의 전환 · 32프레임/3.2초 반복.
+전환 열의 이동 궤적은 표시 비교용이며 실제 물리 궤적이 아닙니다.</p>
+<nav>
+  <label>자료 <select id="which"><option value="after">수정 후</option><option value="before">수정 전</option><option value="both">전후 나란히</option></select></label>
+  <label>캐릭터 <select id="pet"><option value="-1">9종 전체</option><option value="0">황색냥</option><option value="1">얼굴냥</option><option value="2">실눈냥</option><option value="3">영업냥</option><option value="4">시바</option><option value="5">푸들</option><option value="6">우사기</option><option value="7">커비</option><option value="8">커비(잠)</option></select></label>
+  <label>배율 <select id="zoom"><option value="1">1x</option><option value="2">2x</option></select></label>
+  <button id="motion">정지 첫 프레임 보기</button>
+</nav>
+<main>
+  <figure id="before"><figcaption>수정 전</figcaption><div class="viewport"><img src="before.webp" alt="수정 전 9종 렌더링"></div></figure>
+  <figure id="after"><figcaption>수정 후</figcaption><div class="viewport"><img src="after.webp" alt="수정 후 9종 렌더링"></div></figure>
+</main>
+<p>열 순서: idle / walkRight / walkLeft / jump / fall / drag / rest / sleep / look / transition.
+마지막 열은 대기→우측→좌측→점프→낙하→착지 squash→휴식→잡힘 순서입니다.</p>
+<p>실제 앱은 <code>npm start</code>에서 별도로 확인하세요. 이 자료는 물리·DPI·장시간 성능 합격을 의미하지 않습니다.</p>
+<script>
+const which=document.getElementById('which'),pet=document.getElementById('pet'),zoom=document.getElementById('zoom');
+let moving=true;
+function show() {
+  const row=Number(pet.value),scale=Number(zoom.value);
+  for(const id of ['before','after']) {
+    const figure=document.getElementById(id),viewport=figure.querySelector('.viewport'),img=figure.querySelector('img');
+    figure.hidden=which.value!=='both' && which.value!==id;
+    viewport.style.width=1400*scale+'px';viewport.style.height=(row<0?1620:180)*scale+'px';
+    img.style.transform=`scale(${scale}) translateY(${-Math.max(0,row)*180}px)`;
+  }
+}
+for(const control of [which,pet,zoom])control.addEventListener('change',show);
+document.getElementById('motion').addEventListener('click',event=>{
+  moving=!moving;
+  for(const id of ['before','after'])document.querySelector('#'+id+' img').src=id+(moving?'.webp':'.png');
+  event.target.textContent=moving?'정지 첫 프레임 보기':'반복 재생';
+});
+show();
+</script>
+</html>

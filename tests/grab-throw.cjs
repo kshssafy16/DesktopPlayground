@@ -61,7 +61,7 @@ function throwRight(y = 400) {
 
 // Reproducible before/after trajectories: no boundaries, other Pets or AI randomness.
 // Supply PHYSICS_SOURCE only in --measure mode to measure a saved renderer snapshot.
-if (process.argv.includes('--measure')) {
+if (require.main === module && process.argv.includes('--measure')) {
   const metrics = [];
   for (const hz of [30, 60, 144]) for (const speed of [.3, 1.2, 3.6]) {
     evaluate(`clearPlayground('all');width=100000;height=100000;enabled=true;currentMode='touch';Math.random=()=>.5;`);
@@ -582,3 +582,6 @@ test('Throw collision landing and autonomous recovery remain finite through rapi
   }
 });
 console.log(`PASS: ${passed} Grab/Throw renderer regression cases (mock DOM/clock)`);
+
+// Share the real renderer/input harness; importing also runs the complete legacy suite.
+module.exports = { evaluate, pet, event, tick, test, sandbox, passed: () => passed };

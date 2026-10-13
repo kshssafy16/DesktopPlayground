@@ -47,8 +47,8 @@
 | Phase | 상태 | 완료/보류 내용 |
 | --- | --- | --- |
 | 0. baseline | 완료 (수동 QA 별도) | v1.0.0 동일 소스 확인, 구문/local/Electron smoke 통과, 후보 결함 격리 재현. 아래 2026-10-12 Phase 0 기록 참고 |
-| 1. 물리/반응 | 1-A/B/C/D 구현·자동 검증 완료 | 1-D orbit/점 지우개/구조물 이력 정리 완료. 실제 마우스·동적 시각·장시간 QA는 별도, Phase2 미착수 |
-| 2. 활동성/성격 | 대기 | |
+| 1. 물리/반응 | 1-A/B/C/D 구현·자동 검증 완료 | 1-D orbit/점 지우개/구조물 이력 정리 완료. 실제 마우스·동적 시각·장시간 QA는 별도 |
+| 2. 활동성/성격 | 2-A/B 구현·자동 검증 완료 | 2-A 활동성 유지, 2-B 표현/원본 보존 Sprite 보완/겹침/Tray 보조 효과 저장 완료. 실제 Windows QA 별도, 특수 스킬은 향후 |
 | 3. Bomb/Hammer/Gun/Black Hole | 대기 | |
 | 4. Toolbar/Pet 관리 | 대기 | |
 | 5. 새 캐릭터/구조물/Import | 대기 | |
@@ -291,6 +291,241 @@ VM 조사 스크립트는 TEMP의 일회성 도구로 저장소 테스트를 변
 - 단일 점과 도형 지우기 경계의 실제 DPI 체감, 사다리 등반·발판 지지 중 구조물 삭제/OFF·ON, 실제 click-through/Tray 복구 및 장시간 다수 펫 상태·메모리 검증은 이번에 직접 수행하지 않았다. 자동 회귀의 finite 좌표 검증은 모든 가능한 NaN 입력을 처리하는 새 validation 계층을 의미하지 않는다.
 - TTL과 참조 정리는 기존 cleanup 주기에서 수행하므로 임의 삭제 뒤 오래된 이력은 다음 활성 렌더 cleanup까지 최대 약5초 남을 수 있다. 명시적 전체 구조물 삭제/효과 삭제는 즉시 정리한다. 동작 중인 플랫폼/사다리의 구조·생성 밀도/외형은 변경하지 않았다.
 - 1-C의 모든 동적 프레임/DPI 시각 QA와 1-B 실제 손맛 재검증도 미검증 상태를 유지한다. 이번 작업은 Phase1-D 종료이며 Phase2 이후 작업을 시작하지 않았다.
+
+## 2026-10-13 / Phase 2-A / 캐릭터별 활동성과 기본 자율 행동
+
+### 범위 및 결정
+
+- 시작 작업 트리: `feature/v1.1`, HEAD `c465470`(사용자가 보존한 Phase1 완료 커밋), `AGENTS.md`만 untracked. 해당 변경과 v1.0.0 태그/배포를 유지했다. 현재 지침/명세/계획/진행·QA/캐릭터 가이드, README/ASSET_SOURCES/history 및 실제 renderer/테스트를 기준으로 구현했다.
+- 기존 chooseNavigation/chooseRoamX와 경로 탐색/구조물 생성 알고리즘은 Roam에서 호출한다. Roam 시간이 끝나면 Look/Rest/Idle 중 하나를 선택하고, 정지 상태 종료 뒤 반드시 Roam으로 돌아간다. Roam→Roam 무한 선택은 하지 않는다. 초기 시간은 인스턴스별 랜덤으로 시작하여 같은 종의 전환이 동기화되지 않게 한다.
+- 사용자 최신 요청에 따라 **푸들은 보통**, **커비(잠)는 매우 차분함**으로 명세/가이드의 이전 방향을 보완했다. 이는 사용자 요구 반영이며 임의 성격 변경이 아니다. 수면·특수 행동, 새 이미지/캐릭터/장난감/UI, 전체 Phase2의 Canvas 메뉴 축소는 이번에 구현하지 않았다.
+
+### 설정 데이터 (초기 밸런스)
+
+ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 순서다. 이동 속도·점프 높이를 캐릭터별로 높이지 않고, 안정된 지상에서의 시간 배분과 기존 점프/방향 전환 빈도를 조정한다.
+
+| profile / 대상 | Roam 초 | Idle 초 | Rest 초 | Look 초 | Roam 종료 시 Look/Rest/Idle 확률 | 기존 점프/회전 빈도 배율 |
+| --- | --- | --- | --- | --- | --- | --- |
+| sleepy / Sleepy고양이·커비(잠) | 1.8~3.5 | 1.8~3.2 | 6.5~12 | .9~1.8 | 15/80/5% | .05/.35 |
+| calm / Brown·Salary | 2.5~4.5 | 1.5~2.5 | 4~7.5 | .8~1.5 | 20/70/10% | .12/.6 |
+| normal / Face·푸들·슬라임 | 2.5~4.5 | 1~2.2 | 3~5.5 | .7~1.4 | 25/55/20% | .2/.8 |
+| lively / 커비 | 3.5~5.5 | .8~1.6 | 2~4 | .6~1.1 | 30/50/20% | .25/1 |
+| active / 시바 | 4.5~6.5 | .6~1.4 | 1~2.2 | .5~1 | 35/45/20% | .3/1.2 |
+| veryActive / 우사기 | 5~7.5 | .4~1 | .8~1.6 | .4~.9 | 45/35/20% | .4/1.4 |
+
+- 상태 선택 확률은 프레임마다가 아니라 Roam 유지시간 종료 시 적용한다. 점프/무작위 방향 전환은 `1-exp(-기존chance×profile배율×dt)`로 elapsed time 기반 확률을 적용한다. 기존 chooseNavigation/구조물 생성 조건·위치·제한·cooldown은 그대로이며 호출은 Roam에서만 한다.
+- 처음 높은 점프 배율로 측정했을 때 체공 중 자율 시계가 양보하므로 휴식 진입이 너무 늦었다(시바 Roam93.88%, 우사기96.32%). 프로필의 배회·휴식 시간과 **자율 점프 빈도**를 줄여 조용한 방치 목표에 맞췄다. 중력/점프 impulse/Throw 상수를 조정하지 않았다.
+
+### 상태와 물리 우선순위
+
+- Grab/orbit은 기존 early-return, Throw는 기존 externalMotion 물리를 유지한다. 등반도 기존 상승/하강 경로를 먼저 실행한다. 이 동안 자율 시계가 멈추며 자율 감속/점프/목적지 steering을 실행하지 않는다.
+- 자율 행동은 grounded, |vy|≤1.5, |vx|≤3, squish≤1.12, 외부 상태/반응 hold 없음일 때만 진행한다. 시간은 `dt×1000/60`ms로 누적하고 경계 오차 epsilon을 둔다. 공중 이동·큰 속도·강한 반응을 정지 상태가 덮어쓰지 않는다. 정상 점프의 체공도 타이머에서 제외하므로 표의 시간은 전체 관찰 벽시계와 다르다. 기존 RAF dt clamp/Hide 동안 정지 정책 유지.
+- Idle/Rest/Look은 작은 기존 속도에만 `.7^dt` 감속을 적용해 서서히 멈춘다. 중력/마찰/충돌/펫 간 밀림은 계속 처리하고 기존 탐색 목적지는 보존하여 복귀 후 재검사한다. 휴식 중 발판/사다리 lastUsedAt·현재 지지 보호는 유지한다.
+- 강한 착지(충돌 전 속도≥6)는 자율 제어만300ms 양보하며 기존 squash/반발은 유지한다. Bomb는 기존 impulse 수식 그대로, 자율 상태를 Roam으로 깨우고700ms 양보한다. Bomb가 등반에 덮어쓰이지 않도록 등반/탐색 참조를 해제한다. Grab/Throw 시작과 orbit 포획도 Roam으로 초기화하여 이전 휴식에 고착하지 않는다. Bomb를 Throw 전용 물리로 바꾸지는 않았다.
+- 정지 Sprite는 기존 idle, Grab/Throw는 기존 drag/fall. Look 중간에 한 번 방향을 바꾸며 Sprite는 발 기준 ±.035rad(약2도) 기울임, 슬라임은 기존 눈의 ±2px 시선으로 보완한다. 새로운 행이나 sleep 클립을 참조하지 않는다. Phase1 clip/발/탄성/프레임 시간과 squash 복원 상수는 유지한다.
+
+### 3분 관찰 측정
+
+`node tests/autonomy.cjs --measure`: 현재 renderer 전체를 VM 실행, 시계/DOM stub, LCG seed731. 60Hz, 1600×900, 구조물OFF/다른 펫·외부 입력 없음, 각 캐릭터1마리를 바닥에 놓아180초 관찰. 물리/탐색/확률은 실제 코드다. 실제 수평 이동=|vx|>.5, 정지=|vx|<.5 및 |vy|<1.5. 이는 화면 이동/정지의 대리 지표이며 점프·느린 이동 때문에 둘의 합은100%가 아니다. Roam 비율은 상태의 관찰 벽시계 비율로, 실제 걷기와 같지 않다.
+
+| 대상 | Roam 상태 | Rest 상태 | 실제 수평 이동 | 정지 | 최장 연속 수평 이동 | 상태 전환 횟수 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Brown | 49.64% | 44.84% | 45.07% | 53.38% | 5.25초 | 40 |
+| Face | 64.68% | 21.78% | 55.92% | 41.17% | 5.13초 | 54 |
+| Sleepy고양이 | 25.49% | 71.95% | 24.62% | 75.02% | 4.72초 | 30 |
+| Salary | 49.64% | 44.84% | 45.07% | 53.38% | 5.25초 | 40 |
+| 시바 | 86.78% | 7.08% | 71.04% | 23.96% | 7.13초 | 40 |
+| 푸들 | 64.68% | 21.78% | 55.92% | 41.17% | 5.13초 | 54 |
+| 우사기 | 90.85% | 4.91% | 70.20% | 21.50% | 7.90초 | 34 |
+| 커비 | 75.06% | 19.06% | 64.48% | 32.06% | 7.88초 | 46 |
+| 커비(잠) | 25.49% | 71.95% | 24.62% | 75.02% | 4.72초 | 30 |
+| 슬라임 | 63.56% | 25.77% | 57.56% | 40.25% | 5.72초 | 52 |
+
+- 같은 profile/seed/behavior의 일부 펫은 결과가 같다. 이는 실제 앱에서 동시에 같은 난수를 공유하거나 동기화한다는 뜻이 아니다. 나머지 시간은 Idle/Look이며 CLI JSON에 전체 상태 비율을 출력한다.
+- 우사기는 높은 점프 빈도로 수평 이동률 자체가 시바보다 약간 낮지만 Roam 비중과 점프 배율이 높다. 활동성을 수평 이동률 하나로 순위화하지 않는다. 모든10종에 정지/전환이 관찰됐고, 자동 검사는 최장 연속 수평 이동<30초를 요구한다. 단일 seed·단독 환경의 초기 밸런스이며 실화면 만족도/다수 상호작용 통계는 아니다.
+
+### 검증 결과 및 파일
+
+- `node tests/autonomy.cjs --measure`: **새12개 + 기존55개 =67개 PASS**. 데이터 mapping/fallback, 휴식 감속·탐색 재개, 30/60/144Hz의 Idle/Rest/Look1초 유지·중간 방향(오차<1e-6ms), 공중/지상 큰 충격, 휴식·등반 중 Bomb, 사다리 양방향, Grab/Throw/orbit 복귀, 강한 착지·복원, 기존 idle 사용,25마리20초 상태·유한 좌표·공유 구조물, Roam 자동 생성/Rest 생성 중지,10종180초 활동 비교.
+- `node tests/grab-throw.cjs`: 기존 **55개 PASS**, 기존 assertion/기대값 유지. 테스트 harness만 export하여 새 autonomy 테스트가 기존 전체 검사를 함께 실행하게 했다. `--measure`는 직접 실행할 때만 처리하여 import 시 프로세스 종료를 방지한다. 새 테스트 전용 제품 API/의존성 없음.
+- `node tests/smoke.cjs`: **PASS**, 격리 userData Electron. 새 Brown rest/idle clip/1초 타이머/Bomb 반응 검사와 Phase1 전체 기능·Sprite11시트55클립385프레임 검사 유지. `node tests/local-pets.cjs`: **PASS**, invalid/missing fixture skip 경고는 예상 결과.
+- `node tests/grab-throw.cjs --measure`의 현재 결과와 수정 전 `%TEMP%/desktopplayground-phase1d-renderer.js`를 PHYSICS_SOURCE로 지정한 결과는 **30/60/144Hz 전체 JSON 동일**. Throw의 느림/보통/빠름 이동 거리·최고 높이 차이 보존. 환경변수는 측정 후 해제.
+- main/preload/renderer/controls/local-pets 및 grab-throw/smoke/local-pets/autonomy 총9개 `node --check`, `git diff --check`와 신규 파일 공백/충돌 마커 검사 **PASS**. Node24.18.1/Electron29.4.6, Windows x64.
+- 개발 중144Hz의 반초 경계 부동소수점 오차를 발견해 epsilon 처리했고, 신규 테스트의 category/VM 변수 fixture 오류와 import 시 기존 --measure 종료를 수정 후 전체 재실행했다. 기존 회귀 기대값을 바꾸지 않았다.
+- 수정: `renderer.js`, `tests/grab-throw.cjs`, `tests/smoke.cjs`, 신규 `tests/autonomy.cjs`, `docs/v1.1/V1_1_SPEC.md`, `CHARACTER_GUIDE.md`, `IMPLEMENTATION_PLAN.md`, `QA_CHECKLIST.md`, 이 기록. 메뉴/목록/시작4종/무제한 생성, Draw/홀/Bomb 시각효과, PC·툴바·IPC·보안·설정·기존 자산 유지. build/commit/push/버전 변경 없음. Phase2-B 미착수.
+
+### 실제 사용자 확인 및 남은 위험
+
+- 실제 Windows에서 대표 펫3종 이상3분 관찰: Brown/Sleepy의 충분한 쉼과 시바/우사기의 활동 차이, Look 기울임과 시선, 클립 전환/발 접촉, 쉬던 펫의 Bomb·Grab/Throw 반응을 확인해야 한다. Rest는 기존 idle를 재사용하며 본격 수면 표현은 아직 없다.
+- 구조물ON·25마리·DPI/60·144Hz·Hide/Show 환경에서 실제 탐색/등반 복귀·새 경로 생성 빈도·CPU/메모리/FPS를 확인해야 한다. Roam에서만 기존 생성 알고리즘을 호출하므로 시간당 경로 생성량이 줄 수 있으나 생성 밀도 설정/geometry 규칙은 변경하지 않았다.
+- 타이머는 안전한 자율 시간에만 진행하므로 체공/충격/혼잡한 밀림/등반이 잦으면 벽시계로 본 Roam이 길어진다. 이번 단독 측정에서 연속 이동 고착은 없었지만 실제 다수 펫 장시간 관찰은 별도다. Hold300/700ms와 profile 시간은 실제 방치 피드백으로 조정할 수 있는 초기값이다.
+
+## 2026-10-13 / Phase 2-B / 펫 표현·Sprite 품질·겹침·보조 효과 설정
+
+이 절은 최초2-B의 당시 결과다. 공통행/전체Look 선택·Zzz 표현과 활동 측정은 아래 **Phase 2-B 품질 보완** 기록이 최신이며 해당 항목을 대체한다.
+
+### 범위와 사용자 결정
+
+- Phase1 및2-A의 현재 미커밋 변경을 보존하고 Phase2-B만 구현했다. 사용자의 이번 요청으로 펫 간 밀어내기 제거, 고양이 표시 이름 한글화, 기본슬라임만 메뉴 노출, 기존 시트의 휴식 표현, 공통 보조 효과 ON/OFF를 확정했다. 추가 승인 없이 요청 범위 안에서 처리했다.
+- 내부 ID/경로/pet.json, 시작4마리(blob/cat_brown/doge/kirby), 생성 무제한, 기존 물리 상수·활동성 프로필, Draw·Platform·사다리·Bomb·Black Hole최대2개/흡입삭제·Touch/Trash·PC/툴바/보안경계·userData 경로는 보존한다. build/버전변경/commit/push 없음.
+
+### 확인한 원인과 최소 변경
+
+- `Pet.updateStep`의 매 substep 전체펫 순회가 가까운 펫에 `.32*(1-distance/desired)*dt`의 밀어내기 vx를 가했다. 이 루프를 제거했다. 겹친 펫에도 분리 힘·강제 위치 보정이 없다. 구조물 탐색의 zone/경로 혼잡 점수는 탐색 선택 시에만 유지하며 물리 충돌 검사와 구분한다. 지형·Draw·Platform one-way와 등반 코드는 유지했다.
+- 실제9개 로컬pet.json과11시트(legacy2개 포함)를 확인했다. 모두8열/셀192×208, 9행 또는11행이고 앱 clip metadata는 없으므로 실물을 기준으로 판단했다. 1-C의 nonempty/anchor 검사는 이미지 내부 분절을 판별하는 검사가 아니므로 이번 확대 점검에서 새로 확인된 황색냥 문제를 보완한다.
+- **황색냥 원본2행 좌측walk, 특히5~7열에 얼굴/발 분절 조각이 셀 내부에 존재한다.** 1행은 정상이며 양 행 bbox의 좌우 투명 경계5px와 고정crop은 정상이다. crop을 넓히거나 자산을 재제작하지 않고, profile의 `walkLeft`만1행8프레임+flip+우측anchor로 교체한다. 원본11시트/9개pet.json은 전혀 수정하지 않았다. 정상인 다른 좌측클립은 유지한다.
+- 표시 이름/tooltip: Brown→황색냥, Face→얼굴냥, Sleepy→실눈냥, Salary→영업냥. sourceId/name metadata와 저장된 ID는 유지한다. 기본/고양이/강아지/캐릭터4카테고리 유지, 기본선택지만blob1개로 축소한다. 숨긴 legacy 정의/이미지는 삭제하지 않는다.
+- 공통 `spriteProfiles.clips`에 row/start/frames/speed/anchor/foot/center 지원. 황색냥Rest7행0~5(그루밍), 얼굴냥Look8행0~5(표정/소품), 푸들Rest7행0~5, 커비(잠)Rest5행2~4(실제 눈 감은3장)를 연결한다. 실눈냥Rest는 이미 웅크린0행을 느리게 재생한다. 없는 펫은 기존idle를 느리게 재생하며 Look 기울임·시선/기존탄성을 유지한다.
+- Rest의 호흡은 일반±0.6%, 수면±1.2%, 발pivot에서만 렌더 변형한다. 슬라임은 Rest에 선형 감은 눈을 그린다. 실눈냥/커비(잠)의 수면은 **기존 Rest 표현**이며 영구sleep 상태/새 활동성 확률을 추가하지 않는다. Grab/Throw/orbit/등반/불안정공중은 quiet 표현보다 우선한다. clip/cadence 전환 시frame/time 초기화, 실제 경과시간 재생 유지. 수면Zzz는 프레임당 직접 그리며 persistent particle을 만들지 않는다.
+
+### 보조 효과 설정과 호환성
+
+- Tray **보조 효과 표시** checkbox→기존 직렬`petWriteChain`→atomic설정 저장→app:state broadcast. schemaVersion1에 선택 필드`auxiliaryEffectsEnabled`만 추가하며 누락/잘못된 값은ON, 명시false는OFF다. 기존 파일/경로/펫설정/사용자이미지는 그대로 유지한다. 새 production IPC/preload API나 toolbar 변경이 없다. 저장 실패 시 state는 바꾸지 않고 Tray를 실제 state로 복원하며 경고를 기록한다.
+- OFF: 새Zzz, Canvas땀방울, Bomb보조링/섬광/파티클/화면흔들림만 숨긴다. 기본표정·시트에 그려진 소품/효과·호흡·squash, Draw, 폭탄자국·블랙홀본체, 물리/충돌/흡입/삭제는 유지한다. 기존 효과 수명/이동은 OFF에서도 갱신하여 재활성화 시 오래된 효과가 정지해 남지 않는다. 폭탄의 기존 난수/impulse 흐름도 그대로다.
+- 향후 말풍선/데미지숫자/피격이펙트는 이 공통flag를 따른다. 이번에는 해당 도구나 효과를 새로 구현하지 않았다.
+
+### 실행한 검증과 측정
+
+환경: Windows x64, Node24.18.1, Electron29.4.6. VM은 mock DOM/시계, Electron은 TEMP 복사본·격리userData·외부HTTP차단·합성입력이다.
+
+- `node tests/pet-expression.cjs`: **새9개+기존Grab/Throw55개+autonomy12개=76개 PASS**. 101마리 완전겹침2초 뒤x/y/vx동일,20이웃 유무 Throw경로동일, 황색냥행/반전/foot, 검증된표현·fallback,5종30/60/144Hz frame/time 일치·draw불변, Grab/Throw/orbit/ladder/공중우선, OFF의Zzz숨김·기본pose유지, Bomb/Throw물리동일,41마리휴식persistent효과0.
+- `node tests/grab-throw.cjs`: **55개 PASS**, 기존 물리/입력/지형/Trash/orbit/구조물이력 검사 기대값 유지.
+- `node tests/autonomy.cjs --measure`: **기존55+12=67개 PASS**, 10종×180초 단독가상관찰·25마리20초·구조물공유/등반·상태복귀 유지. 아래 비율은2-A와 동일하다(60Hz,1600×900,구조물OFF,seed731). 같은 프로필의 결과가 같은 이유와 단독가상환경의 한계는2-A 기록 참고.
+
+| 펫 | Roam 상태 | Rest 상태 | 실제 수평 이동(속력>.5) |
+| --- | --- | --- | --- |
+| 황색냥 | 49.64% | 44.84% | 45.07% |
+| 얼굴냥 | 64.68% | 21.78% | 55.92% |
+| 실눈냥 | 25.49% | 71.95% | 24.62% |
+| 영업냥 | 49.64% | 44.84% | 45.07% |
+| 시바 | 86.78% | 7.08% | 71.04% |
+| 푸들 | 64.68% | 21.78% | 55.92% |
+| 우사기 | 90.85% | 4.91% | 70.20% |
+| 커비 | 75.06% | 19.06% | 64.48% |
+| 커비(잠) | 25.49% | 71.95% | 24.62% |
+| 슬라임 | 63.56% | 25.77% | 57.56% |
+
+- `node tests/smoke.cjs --sprite-preview` 및 최종`node tests/smoke.cjs`: **PASS**. 기존전체smoke+한글4이름/4카테고리/기본슬라임,11시트55기본클립385프레임·5override29프레임의native decode/alpha/anchor, 황색냥8장반전렌더, 보조효과OFF Canvas alpha0/aging·ON표시, 실제Tray checkbox콜백/broadcast, legacy schema필드없음ON→OFF저장→**프로세스재시작OFF**→ON저장, 기존defaultPets false/유효customPet·이미지바이트 보존 확인. 테스트용IPC/preload hook은TEMP 테스트앱에만 추가하며 production에는 없다.
+- 황색냥 반전 픽셀비교는 수평1:1목적지에서 수행하여 GPU subpixel sampling 차이를 분리했다(alpha허용1/255, premultiplied RGB허용2/255). 일반표시크기의 native11종×5자세 및10종×Idle/Rest/Look contact sheet를 직접 열어 확인했다. 첫preview의상단여백부족을 테스트산출물에서만 수정한 뒤 다시 확인했다.
+- `node tests/local-pets.cjs`: **PASS**, 로컬9개 유효패키지/한글label/ID와 기존invalid JSON/WebP/누락skip 유지. invalid/missing fixture 경고는 예상 결과.
+- `node tests/grab-throw.cjs --measure`: 수정 전2-A renderer TEMP snapshot(PHYSICS_SOURCE)과 현재 **30/60/144Hz 전체JSON 동일**. 60Hz 느림/보통/빠름 입력 .3/1.2/3.6px/ms에서 초기vx5/24.083/54,0.5초 수평거리141.47/681.44/1527.92px,상승55.55/1312.18/6613.78px. 경계없는가상공간이며 실제화면밖이동이아님. 기존throwPhysics/cap/물리단위는 재조정하지 않았다.
+- main/preload/renderer/controls/local-pets 및grab-throw/autonomy/pet-expression/smoke/local-pets 총10개`node --check`, `git diff --check` PASS. 신규테스트/문서 공백도 확인한다.
+
+### 변경 파일과 남은 위험
+
+- 이번2-B 수정: `renderer.js`, `main.js`, `controls.js`, `local-pets.js`, 신규`tests/pet-expression.cjs`, `tests/smoke.cjs`, `tests/local-pets.cjs`, v1.1의SPEC/CHARACTER_GUIDE/IMPLEMENTATION_PLAN/QA_CHECKLIST/이기록. 기존2-A의grab-throw harness/autonomy테스트 등 작업트리는 보존했다. README/ASSET_SOURCES/history/원본이미지/패키지파일/버전은 수정하지 않았다.
+- 실제Windows 수동조작/방치 QA는 미실행: 황색냥좌측8장·방향전환·발·깜빡임, 실눈냥/커비(잠)수면/기상·새그루밍/Look자연스러움, 실제TrayON/OFF/재시작·Grab/Throw/Bomb/홀/등반중전환,60/144Hz·DPI/화면가장자리·PCclick-through/Hide/Show.
+- 101마리겹침·41마리조용한표현은가상상태검사이며 실제FPS/CPU/메모리측정이 아니다. 다수겹친펫/구조물ON/30분방치 성능·보이는선택대상구분은추가수동확인대상이다. 원본을훼손하지않은우회이므로 향후다른렌더러가 원본황색냥2행을직접쓰면같은결함이보일수있다.
+
+### 향후 구현 후보 (이번에는 미구현)
+
+- 개인용캐릭터: **파닥몬, 테리어몬, 치이카와, 쿠리만쥬, 우소우소**. 별도package/권리·자산준비후 연결하며 공개배포자산과 분리한다.
+- 캐릭터별특수스킬: 예를들어 **커비가 전방 부채꼴 범위의 다른 펫을 빨아들이는 스킬**. 발동조건/대상·흡입후처리/상태우선순위/쿨다운/효과OFF동작은 별도설계가 필요하며 아직 결정하거나 구현하지 않았다. 기본펫끼리충돌제거와 능동스킬상호작용은 구분한다.
+- 다음범위는 사용자후속요청에따른다. Phase3의망치/총/BH10개, 신규캐릭터, 구조물디자인, 툴바전면개편은 진행하지 않았다.
+
+## 2026-10-13 / Phase 2-B 품질 보완 / 개별 애니메이션과 움직임 원인 분리
+
+### 요구와 범위
+
+사용자가 제공한 새 SPRITE_INVENTORY/PET_ANIMATION_PLATFORM/SPRITE_REWORK_PLAN, 기존 QA/진행 기록, 실제 코드와9종 원본을 대조했다. feature/v1.1의 기존 미커밋 작업과 새 사용자 문서/INSTALL.txt/AGENTS.md를 보존했다. 이번 요청에 따라 최초2-B의 Look/Zzz/공통클립 가정을 수정하고 자율 점프 착지와 외부 충격을 분리했다. 활동성 preset 숫자, Throw 입력·물리 상수, 시작4종/한글명/무제한 생성, 펫 간 비충돌, 도구/구조물/UI/설정·IPC/보안/원본 자산을 보존한다. 신규 캐릭터·스킬·망치·총·구조물 디자인·툴바/build/버전변경/commit/push는 진행하지 않았다.
+
+### 자율 점프 반발 원인과 수정
+
+- 화면 바닥은 externalMotion이 없어도 `vy * bounce(-.6)`를 적용했다. 자율 점프를 시작하는 두 경로에 원인 표시가 없었으므로 정상 포물선 이후 또 튀었고, Platform/Draw의 일반 착지vy0와도 달랐다. Bomb은 순간속도·700ms행동보호만 적용하여 외부 충격 소유권 없이 일반 충돌 경로를 탔다.
+- `motionCause`를 null/`autonomous-jump`/`throw`/`bomb`으로 관리한다. 실제 floor/Platform 자율 점프는 beginAutonomousJump, 사용자 Throw는 beginThrow, Bomb은 기존 impulse 직후 beginImpact를 사용한다. 외부 소유권은 source/elapsedMs/stableMs를 가진 기존 externalMotion 구조로 관리하며 자율 점프 중 Bomb도 우선한다.
+- 외부 소유권이 없는 일반 낙하·자율 점프는 바닥/Platform/Draw 착지vy0와 squash만 적용한다. 자율 점프 원인을 해제하고 최소200ms 착지 보호(기존 강한착지300ms와max)를 두어 같은 프레임 재점프를 막는다. 보호 후 기존 자율 행동으로 돌아간다. 전역 restitution을 낮추지 않았다.
+- Throw는 기존 gravity .22/air .996/ground .94/restitution .65/wall .72/max54/8초 및 안정화 조건을 유지한다. Bomb은 이전 일반 gravity .5/friction .98/floor .6/wall1/초기 성분cap19·갱신vxcap18을 유지하면서 보호된 swept Draw/Platform 경로를 사용한다. 외부 vy의 안전 상한54와 substep은 공유한다. 안정접촉120ms·경과200ms 또는 최대5초 뒤 Bomb 소유권을 종료한다. Grab/orbit/삭제도 이전 원인을 정리한다.
+- 자율점프 상승·최고점은jump, 작은 양수vy의 하강부터fall을 선택해 최고점 근처의idle 깜빡임을 막는다. Jump/Fall의비반복clip은 마지막프레임을 유지하며 물리 착지시 정상표현으로 돌아간다.
+
+### 스프라이트 원인과 공통 구현
+
+- 9개 WebP hash가 새 Inventory와 모두 일치한다. 각 pet.json/sourceId/1536너비/8열/192×208셀/9·11행과 실제 원본프레임을 확인했으며 WebP/pet.json은 수정하지 않았다. 원본 이미지 변경·백업이 필요한 상황은 없었다.
+- 기존 로컬9종이 대부분 공유 sheetClips를 사용해 동작 의미가 다른 행을 선택했다. 첫2-B의 얼굴냥Look도8행 전체를 반복하여 실제안경·손가락2/3열이 재생됐다. 여기서 **row8=0-based, Inventory의9행=1-based**다. 원본의row/column을 명시한 최신 확정표를 Inventory6절에 추가했다.
+- 공통 렌더러를 유지하고9종별profile을 definition.animation으로 참조한다. frames 배열(비연속/되돌아보기 허용), frameMs, loop:false, 직접mirrorOf, 명시fallback, 고정center/foot/centerY와 선택적scale을 지원한다. mirror는초기화때한번해결하고 이미지·프레임배열은렌더중재생성하지않는다. legacyCat/Magpie만기존count/speedadapter를유지한다. 새animation.json파일로더나플러그인시스템은만들지않았다.
+- row/column/목록/양수시간/유한anchor/scale/loop를검증하고 최대10회fallback후표시불가상태는안전하게건너뛴다. 시계는실제경과시간이며draw횟수와무관하다. 기준점은선택한프레임alpha>16 union에서클립단위로고정한다. bbox를프레임마다같은크기로강제확대하지않는다. 얼굴냥만center origin,나머지는physical foot이다.
+
+| 펫 | 실제 품질 보완 |
+| --- | --- |
+| 황색냥 | 손상2행 대신정상1행반전유지.11행시트idle7장활용,4행중간공중·5행일부drag·7행그루밍·9행Look. 눕고일어나는drag변형셀제외 |
+| 얼굴냥 | 안경/손가락8행2/3과치아7행제외. Look0/1/4/5·Rest0/1/5·Sleep1/5선택. 입벌림보행대신idle fallback,표정별center origin보정 |
+| 실눈냥 | 기존좌우/웅크린수면보존.4행공중·6행Rest·0행Sleep·8행일부Look을개별선택 |
+| 영업냥 | 분절1/2행·다른캐릭터3행·전복책상0행·과장7행제외.8행노트북기본·6행키보드Rest·5행일부drag(고정scale .9). 실제보행/공중은idle fallback |
+| 시바 | 정상좌우유지.4행중간jump/fall·5행누움제외drag·6행Rest·8행Look |
+| 푸들 | 푸른소품1/2행제외.3행앞발동작보행fallback·좌반전,4행공중·5행일부drag·7행Rest·9행Look |
+| 커비 | 정상좌우와탄성 .7유지.4행중간공중·5행납작셀제외drag·6행일부Rest/Sleep,Look idle fallback |
+| 커비(잠) | 기존좌우유지.4행중간공중·5행일부drag/Rest/눈감은Sleep·6행Look.7행하품/흡입기본재생제외 |
+| 우사기 | 기존좌우유지.4행중간공중·5행누움3열제외drag·0행감은눈Rest/Sleep·7행Look |
+
+- 생성 Zzz를 제거했다. 이모지/안경/말풍선/임의소품 오버레이는 추가하지 않는다. 원본 소품도 명시선택한clip에서만 쓴다. 보조 효과 ON/OFF와 저장/Tray는 그대로이며 기존 Canvas땀방울·Bomb보조렌더·향후승인효과에 적용한다.
+- 활동성 preset 값은 그대로다. Rest/Sleep은표현이며새자율Sleep상태는없다. 실제보행이없는얼굴냥/영업냥은idle,소품없는측면보행이없는푸들은앞발동작fallback을사용한다. 영업냥이책상과함께이동하는한계는원본부족으로남기며새이미지를만들지않았다.
+
+### 실행한 검증
+
+환경: Windows x64, Node24.18.1/Electron29.4.6. VM은 mock DOM/시계, Electron은TEMP복사앱·격리userData·합성입력·외부HTTP차단이다.
+
+- `node tests/grab-throw.cjs`: 기존55개PASS. Throw물리/거리·높이/offset/Trash/지형/사다리/orbit/정리검사는기대수치변경없이유지했다.
+- `node tests/autonomy.cjs --measure`: 기존55+12=67개PASS. 최신검증된BrownLook을사용하도록표현기대값1개만갱신했다. 성격mapping·시간·충격우선·등반·25마리·공유탐색과3분관찰유지.
+- `node tests/pet-expression.cjs`: 기존67+13=80개PASS. 기존겹침/물리독립/우선순위·5종시계에9종전클립30/60/144Hz2초검사,금지프레임,최고점·저속하강/비반복hold,잘못된목록/순환fallback/Canvas균형을추가했다. Look/frame리스트/Zzz관련기대값은이번명시요구대로수정했다.
+- `node tests/jump-landing.cjs`: 기존55+새8=63개PASS. floor/Platform/Draw×30/60/144Hz1회자율점프→추가반발없음/복원,실제자율결정의원인표시,일반낙하안정,빠른Throw반복반발,Throw/Bomb세지형반발,점프중Bomb우선/종료/AI복귀,5초기한,Bomb화면/Draw벽,Grab/Throw/orbit원인정리. VM사례중복제외총88개다.
+- `node tests/smoke.cjs --sprite-preview`및최종`node tests/smoke.cjs`: PASS. 기존PC/도구/구조물/삭제/Grab/홀/Tray·설정·재시작회귀와11원본시트55legacy행선택385nonempty셀검사를유지했다. 별도로**실제9프로필81상태428프레임선택**의alpha/anchor/금지셀,1x/2x·squash기준점및Brown8장반전을검사했다.428은fallback/반복을포함한선택횟수이며서로다른원본셀수가아니다.
+- Preview는실제Pet.draw로32장/100ms간격,3.2초의9종×9상태+전환을캡처했다. `%TEMP%/desktopplayground-sprite-quality-preview.html`(약40.5MB,1x/2x/Pause)과PNG를생성하고0/1/2/3초정적캡처를직접비교했다. TEMP QA산출물만있으며배포/저장소자산추가가아니다. 포즈반복·전환프리뷰이지실제Throw물리영상은아니다.
+- `node tests/local-pets.cjs`: PASS.9종ID/한글명·정상metadata/invalid JSON·WebP·누락skip유지. fixture경고는예상결과다.
+- `node tests/grab-throw.cjs --measure`: 수정전2-B TEMP snapshot(PHYSICS_SOURCE)과현재30/60/144Hz 초기속도·0.5초거리·최고높이전체JSON동일.60Hz 느림/보통/빠름의초기vx5/24.083/54,거리141.47/681.44/1527.92px,상승55.55/1312.18/6613.78px로유지했다. 경계없는가상공간이며실제화면밖이동이아니다.
+- 제품5개+테스트6개총11개`node --check`, `git diff --check`, 새테스트/문서공백·충돌마커검사PASS. 원본9개SHA-256은Inventory앞12자리와전부일치하며`git diff -- assets/pets`는없다.
+
+### 활동성 관찰과 영향
+
+2-A의profile 범위·확률·점프배율은변경하지않았다. 자율점프착지반발을없애면공중/반응보호시간과안정된자율시계진행이달라지므로 같은seed에서도실제벽시계활동률은달라진다. 60Hz·1600×900·구조물OFF·단독180초·seed731의현재측정은다음과같다. 계속걷기고착이나차분/활발경향역전은없었으며실제방치만족도는수동QA다.
+
+| 펫 | 수정전 수평이동 | 수정후 수평이동 | 수정후 Roam / Rest |
+| --- | --- | --- | --- |
+| 황색냥 / 영업냥 | 45.07% | 41.46% | 47.19% / 48.07% |
+| 얼굴냥 / 푸들 | 55.92% | 46.64% | 54.87% / 39.98% |
+| 실눈냥 / 커비(잠) | 24.62% | 24.79% | 25.67% / 72.65% |
+| 시바 | 71.04% | 68.80% | 83.34% / 12.63% |
+| 우사기 | 70.20% | 73.36% | 90.57% / 5.31% |
+| 커비 | 64.48% | 65.15% | 73.44% / 21.84% |
+| 슬라임 | 57.56% | 46.98% | 57.87% / 38.07% |
+
+### 변경 파일 / 남은 확인
+
+이번보완수정: `renderer.js`; `tests/autonomy.cjs`, `tests/pet-expression.cjs`, `tests/smoke.cjs`, 신규`tests/jump-landing.cjs`; v1.1의SPRITE_INVENTORY/PET_ANIMATION_PLATFORM/SPRITE_REWORK_PLAN/V1_1_SPEC/CHARACTER_GUIDE/IMPLEMENTATION_PLAN/QA_CHECKLIST/이기록. main/preload/controls/local-pets/README/ASSET_SOURCES/history/package/원본자산은이번보완에서수정하지않았고이전작업트리변경은보존했다.
+
+실제Windows마우스/DPI/투명오버레이동적QA는미실행이다. 9종좌우·발/크기·깜빡임,영업냥/푸들fallback자연스러움,자율점프vsThrow/Bomb반발,쉬는펫의Grab/등반/흡입/삭제/보조효과전환,PCclick-through/Hide/Show·Tray를확인해야한다. Native1x/2x와합성30/60/144Hz는실제DPI/성능을대체하지않는다. 다수펫30분CPU/메모리/FPS도미측정이다. 신규개인캐릭터·특수스킬후보는기존기록대로향후별도단계이며구현하지않았다.
+
+## 2026-10-13 / Phase 2-B 최종 시각 보완 / 실제 프리뷰 피드백 반영
+
+### 사용자 요구와 확인한 원인
+
+직전자동PASS를시각적최종합격으로간주하지않는다.사용자의이번피드백을우선해9종원본과이전프리뷰를다시비교했다.푸들앞발fallback은보행감이부족했고,얼굴냥idle이동은방향성이없었다.영업냥은노트북포즈가이동에도재생됐다.우사기의중간공중3장은높이146/147/148px로idle196px보다작고,소스2열의발은y153인데clip foot은y194여서셀안에구워진공중높이가물리점프에중복되어보였다.
+
+최신사용자요구에따라푸들의원본소품포함보행복원을확정했다.이는직전단계의소품보행제외선택을대체하는명시적요구변경이며새소품생성이아니다.원본시트수정금지를준수했고자산수정이필요한상황은없었다.기존작업트리/사용자추가이미지/INSTALL/AGENTS도보존했다.
+
+### 표시 변경과 공통 구조
+
+- 푸들: 원본1/2행좌우8장과83.33ms cadence복원. 고정scale1.1로가이트/head 표시비율보완,원본좌측을그대로사용해이중반전없음. 푸른소품과낮은측면자세는원본의일부로남긴다. crop으로소품/몸을자르지않았다.
+- 얼굴냥:9행[1,2,3,4,5,6,5,4,3,2]시선전환110ms와좌측반전,scale1.035·tilt .035rad·상향bob .025×size/360ms. center origin을유지해얼굴만있는특성을살린다.안경/손가락8행2/3과치아7행제외유지,다리/장식생성없음.
+- 영업냥: 이동/공중을4행2열단일기립fallback으로분리하고,정지/Look은8행노트북·Rest는6행키보드를유지한다. 좌측기립반전과이동tilt .025rad·bob .018×size/420ms만적용한다. **실제보행프레임부족은남는다.** 무관한자세를걸음으로반복시키지않고기립대체표현임을문서화했다.업무/기립사이에소품이달라지는원본자세차이는남는다.
+- 우사기: jump/fall의표시scale1.25,source-column1/2/3 foot .8894/.7356/.9327. 공중가시높이는idle의약74~76%에서약93~94%로보완된다. 중앙프레임의이중상승/발위치점프를제거하고귀/몸의의도된포즈차이는보존한다. collider/size/속도는변경하지않았다.
+- 황색냥/실눈냥/시바/커비/커비(잠)는원본·프리뷰를검토하고정상프로필을변경하지않았다. 5종프로필JSON수정전후동일을검증했다. 황색냥정상우측반전과기존애니메이션유지.
+- 공통Pet.spriteGeometry와source-column frameAdjustments를추가했다. 정규화center/foot/centerY,clip배율에곱하는frame scale,기본표시상자에대한offsetX/Y를지원한다.유한값/범위/타입검증,invalid clip의fallback,render-only·경과시간기반tilt/bob를사용한다.프레임배열/이미지/파티클을매draw마다생성하지않고runtime bbox자동정규화도없다.
+- 로컬Sprite의walk진입>.5/유지>.15 표시전용hysteresis로감속경계의idle/업무깜빡임을줄인다. 안정휴식/Grab/Throw/orbit/등반우선순위와물리속도는그대로다. 임의이모지/안경/소품/Zzz/말풍선추가없음.
+
+### 전후 QA와 실행 결과
+
+- 프로젝트`docs/v1.1/qa/sprite-final`에before/after PNG·무손실animatedWebP(각32장/100ms/3.2초),프로필/rendererSHA와offline index.html을보존했다.동일캡처프로토콜의9종×9포즈+대기→좌우→점프→낙하→착지squash→Rest→Grab전환열이다.전환궤적은표시비교용합성으로실제물리영상이아니다.원본이미지복사/교체가아닌QA캡처이며제품package allowlist에들어가지않는다.
+- `node tests/smoke.cjs --sprite-preview --qa-before`,after명령과Pillow개발용인코더실행: PASS.직전기준428선택프레임에서최신418선택프레임/81상태로변경됐다.모든선택프레임의native1x기준점·대표2x/강한squash·alpha/원본보행행/금지셀·Brown반전검사와기존PC/도구/구조물/Grab/Trash/홀/Tray·저장·재시작회귀유지.
+- 브라우저에서전후반복재생을열어푸들/얼굴냥/영업냥/우사기와9종전체의여러시점캡처를직접비교했다.원본보행·방향성·업무분리·공중크기보완을확인했지만10fps캡처비교는실제npm start의시각적최종합격을대체하지않는다.
+- `node tests/pet-expression.cjs`: 기존67+표현/품질19=86개PASS.원본gait/얼굴방향·미세움직임/기립분리/우사기크기와foot/공통보정재사용·invalid값/hysteresis의새6개포함.기존푸들금지행기대값은최신원본보행복원요구대로변경하고Face금지셀은유지했다.
+- `node tests/grab-throw.cjs`55개, `node tests/jump-landing.cjs`63개, `node tests/autonomy.cjs`67개, `node tests/local-pets.cjs`PASS.중복제외VM94개.예상invalid/missing fixture경고는기존검증결과다.
+- `node tests/grab-throw.cjs --measure`:이번수정전renderer TEMP snapshot과30/60/144Hz 초기속도/0.5초거리/최고높이전체JSON동일.물리상수·업데이트/impulse·활동성코드바이트동일을별도확인했다.9원본시트SHA와캡처rendererSHA도일치한다.
+- 제품5개/테스트6개JS구문검사,Python인코더구문,`git diff --check`·새문서/테스트공백검사PASS.환경Windows x64/Node24.18.1/Electron29.4.6.실제userdata는사용하지않았으며빌드/commit/push/버전변경없음.
+
+### 파일과 남은 확인
+
+이번수정은renderer.js,tests/pet-expression.cjs·smoke.cjs·신규encode-sprite-preview.py,관련v1.1매핑/플랫폼/계획/캐릭터가이드/SPEC/QA/이기록과프로젝트QA자료다.물리·활동성·펫간비충돌/한글명/시작4종·무제한생성/Draw/구조물/도구/IPC/UI/설정/원본자산은유지했다.신규펫/망치/총/툴바/구조물디자인미구현.
+
+사용자가실제`npm start`에서9종의대기→좌우→실제자율점프/착지→Rest,Grab/Throw,발판/Draw접촉과60/144Hz·DPI를확인해야한다.상세순서는qa/sprite-final/README.md에기록했다.특히푸들의원본소품보행선호,영업냥의실제발걸음부재·업무/기립전환,우사기의실제투명화면공중크기가남은시각확인사항이다.사용자가정한완성도를자동수치만으로통과처리하지않는다.
 
 ## 변경 기록 템플릿
 

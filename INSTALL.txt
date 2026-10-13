@@ -1,0 +1,8 @@
+DesktopPlayground v1.1 Sprite Platform 문서 패키지
+
+1. 이 ZIP을 D:\DesktopPlayground 프로젝트 루트에 압축 해제합니다.
+2. docs/v1.1/ 아래에 Markdown 4개가 추가됩니다. 기존 문서를 덮어쓰지 않습니다.
+3. Codex에게 docs/v1.1/CODEX_SPRITE_PROMPT.md 파일 내용 또는 그 파일 경로를 전달합니다.
+4. 작업 범위는 Phase 2-B 품질 보완이며 새 자산을 덮어쓰거나 빌드/commit/push하지 않습니다.
+
+기준: 사용자가 업로드한 pets.zip의 9개 패키지. 최신 feature/v1.1 renderer는 직접 받지 못했으므로 Codex가 로컬 현재 소스를 대조해야 합니다.

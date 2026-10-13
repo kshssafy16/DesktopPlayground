@@ -2,6 +2,59 @@
 
 체크 표시 규칙: `[ ]` 미검증, `[x]` 실제 실행 및 통과. 자동 검사와 실제 Windows 수동 확인을 구분한다. 아래 전체 v1.1 항목은 해당 단계가 구현·검증될 때 갱신한다.
 
+## Phase 2-B 최종 시각 보완 (2026-10-13, 최신)
+
+- [x] 실제9종원본/이전프리뷰를비교. 푸들원본1/2행8장복원(scale1.1),얼굴냥9행방향시선·좌반전·미세기울임/상향bob,영업냥4행2열기립이동/공중과업무/Rest분리,우사기공중scale1.25·소스1/2/3발보정. 정상5종프로필JSON동일.
+- [x] `node tests/pet-expression.cjs`: 기존67+표현/품질19=86개PASS. 새6개는원본gait/방향·기울임/기립분리/우사기크기·foot/공통보정유효성/표시hysteresis검사. 기존금지푸들행기대값은최신원본보행복원요구에맞게변경하고얼굴냥금지셀은유지.
+- [x] `node tests/jump-landing.cjs`63개,`node tests/autonomy.cjs`67개,`node tests/grab-throw.cjs`55개,`node tests/local-pets.cjs`PASS. 중복제외VM94개.
+- [x] `node tests/smoke.cjs --sprite-preview --qa-before/--qa-after`PASS.9종81상태418선택프레임의모든native1x기준점·대표2x/squash·alpha/방향/금지셀·기존전체Electron회귀유지.
+- [x] `qa/sprite-final`에동일조건전후PNG/무손실animatedWebP·프로필/rendererSHA보존. 브라우저반복재생에서여러시점과9종전체/주요4종을시각비교. 전환열은합성표시궤적이며실제물리/60·144Hz영상이아님.
+- [x] 원본9시트SHA동일,물리상수/업데이트·impulse·활동성코드바이트동일,30/60/144Hz Throw측정JSON동일. 제품5개/JS테스트6개구문·Python인코더구문·`git diff --check`PASS.
+- [ ] 실제`npm start`: 푸들원본소품포함보행이원하는표현인지,얼굴냥방향/미세동작,영업냥기립fallback과업무전환,우사기실제점프크기/발위치,9종Grab/Throw/착지/Rest를사용자가확인한다.
+- [ ] 실제60/144Hz·100/125/150%DPI·투명화면·장시간다수펫의시각/성능확인. 시각적최종합격은자동수치만으로확정하지않는다.상세수동순서는qa/sprite-final/README.md참고.
+
+## Phase 2-B 품질 보완 검증 (2026-10-13, 최신)
+
+- [x] `node tests/jump-landing.cjs`: 기존55+새8=63개PASS. 바닥/Platform/Draw×30/60/144Hz 자율점프1회→착지vy0→추가반발없음·squash복원, 실제자율floor/Platform 결정이원인표시, 일반낙하안정,Throw반복반발,Throw/Bomb지형반발,점프중Bomb우선·AI복귀,5초deadline,Bomb화면/Draw벽,Grab/Throw/orbit원인정리.
+- [x] `node tests/pet-expression.cjs`: 기존55+autonomy12+표현/품질13=80개PASS. 기존겹침·offset·우선순위·설정물리독립과9종개별profile/금지프레임/30·60·144Hz2초clip시간/최고점·저속하강idle깜빡임방지/비반복마지막유지/잘못된frame·순환fallback·Canvas균형확인. 생성Zzz는ON/OFF모두없음.
+- [x] `node tests/grab-throw.cjs`55개, `node tests/autonomy.cjs --measure`67개, `node tests/local-pets.cjs`PASS. 중복제외전체VM88개. 초기2-B에서변경된Look/Zzz/클립표현기대값만최신요구대로갱신하고 기존Throw수치기대값은유지.
+- [x] `node tests/smoke.cjs --sprite-preview`와최종기본smokePASS. 원본11시트385셀/legacy발검사,실제9프로필81상태428프레임선택alpha/anchor·금지셀·native1x/2x기준점/강·약squash·Brown8프레임반전, 기존도구/PC상태/Tray·저장·프로세스재시작회귀유지.
+- [x] 원본9개WebP hash가Inventory와일치.3.2초32장/100ms의실제Pet.draw반복·전환HTML/PNG생성,0/1/2/3초정적캡처비교. 원본이미지·pet.json수정없음.1x/2x/Pause컨트롤은QA산출물에만존재.
+- [x] 수정전2-B snapshot대비30/60/144Hz Throw의초기속도·0.5초거리·최고높이전체JSON동일. 성격profile값동일, 점프반발제거에따른실제활동률변화는결정기록에측정.
+- [x] 제품5개/테스트6개총11개`node --check`, `git diff --check`및신규파일공백검사PASS.
+- [ ] 실제Windows: 황색냥좌우8장·발/깜빡임,얼굴냥안경/손가락없음·표정중심안정,영업냥/푸들fallback자연스러움,9종Grab→Throw→충돌→착지·Rest/Sleep전환검수.
+- [ ] 실제마우스의자율점프1회안정착지와빠른Throw반복반발차이,점프도중Bomb·Grab/orbit/Trash·사다리우선순위,보조효과ON/OFF·PCclick-through/Hide/Show·Tray확인.
+- [ ] 실제60/144Hz·100/125/150%DPI·화면가장자리·다수펫30분방치FPS/CPU/메모리검수. 합성포즈/가상dt검사는실제사용감이나장시간성능합격이아님.
+
+## Phase 2-B 최초 표현·겹침·표시 설정 (2026-10-13, 당시 결과)
+
+아래는 최초2-B의검증기록이다. Look/Zzz/클립관련동작은위최신품질보완과Inventory확정매핑으로대체되었다.
+
+- [x] `node tests/pet-expression.cjs`: 새9개+기존Grab/Throw55개+autonomy12개=76개 PASS. 같은 위치101마리2초 밀림 없음,20이웃 유무에 Throw 경로 동일, clip/anchor/상태 우선순위, OFF의Zzz만 숨김·물리 동일,41마리 휴식 중 지속 효과 할당 없음.
+- [x] 황색냥 실제 원본2행의 잘림/분절 확인, 원본 보존 후1행 반전. Electron에서8프레임 반전 렌더 비교(수평1:1 배율로 GPU subpixel 오차 분리), 정상 타펫 좌측 행 보존.
+- [x] 기존11시트55클립385프레임+5override29프레임 decode·alpha·anchor 검사. native11종×5기본자세와10종×Idle/Rest/Look 정적 preview 확인. metadata/자산 변경 없음.
+- [x] 새 휴식/Look의 프레임 시간은30/60/144Hz에서 일치하고 draw횟수와 무관. 외부 상태/등반에서 수면 표현 금지.
+- [x] Electron4카테고리·기본슬라임1개·한글4이름/기존목록·시작4종 확인. 기존 숨긴 Canvas 정의는 삭제하지 않음.
+- [x] 격리 Electron 실제 Tray checkbox 콜백·broadcast, 기존schema1의 필드 누락ON, OFF저장·프로세스 재시작OFF·재활성화ON 확인. 기존defaultPets/customPets 보존. 테스트용 IPC/preload hook은 TEMP 복사본에만 존재.
+- [x] 보조 링/파티클/섬광은OFF에서 native Canvas alpha0, 수명/이동은 계속 갱신하고ON에서 표시됨. Bomb impulse와Throw 경로는flag와 무관. 기본 펫 자세/호흡·착지/Draw/블랙홀 흡입·삭제 유지.
+- [x] `node tests/grab-throw.cjs`, `node tests/autonomy.cjs --measure`, `node tests/smoke.cjs --sprite-preview`, `node tests/local-pets.cjs`, JS구문10개·`git diff --check` PASS. 2-A/B Throw30/60/144Hz 전체측정JSON 동일, 단독활동10종180초 비율 동일.
+- [ ] 실제 Windows: 황색냥 좌측8프레임/방향 전환, 새Rest/Look의 자연스러움·발 접촉·깜빡임, 실눈냥/커비(잠)의 수면과기상, 휴식시간3분 이상 관찰.
+- [ ] 실제 Windows: Tray마우스ON/OFF·재실행, Grab/Throw/Trash/Bomb/흡입/구출/등반 도중 전환, 빠른/느린 던지기 체감 보존, PC click-through/Hide/Show 확인.
+- [ ] 실제60/144Hz·DPI/화면 가장자리·다수 겹친펫30분·CPU/메모리/FPS 확인. 정적 이미지와 합성dt 검사는 실제 성능·조작감 합격을 의미하지 않는다.
+
+## Phase 2-A 자율 행동 검증 (2026-10-13)
+
+- [x] `node tests/autonomy.cjs --measure`: 기존55개 + 새12개, 총67개 PASS. ID/category/common profile, 정지 감속/탐색 재개, Look 방향 전환, 공중·큰 속도 보호, Bomb 휴식/등반 중단, 양방향 등반, Grab/Throw/orbit 복귀, 강한 착지·squash, 기존 idle fallback.
+- [x] Idle/Rest/Look의1초 유지와 중간 방향 전환이 30/60/144Hz에서 일치(시간 오차<1e-6ms, 전환 관찰은1step 이내). 기존 Phase1 애니메이션 dt 검사도 유지.
+- [x] 25마리20초 가상 업데이트에서 상태/좌표 유한, 펫 수 유지, 혼합 행동과 공유 구조물 생성 확인. Roam에서 기존 자동 생성 호출, Rest에서는 생성 중지 확인.
+- [x] seed731, 60Hz, 1600×900 바닥, 캐릭터별1마리/180초 관찰. Brown 이동45.07%·정지53.38%, Sleepy2종24.62%·75.02%, 시바71.04%·23.96%, 우사기70.20%·21.50%. 전체10종이 정지 구간을 가지며 최장 연속 수평 이동≤7.90초. 전체 수치는 결정 기록 참고.
+- [x] `node tests/smoke.cjs`: 실제 Electron에서 Brown rest/idle·1초 시계·Bomb 반응, 기존 모든 smoke와 Sprite11시트55클립385프레임 검사 PASS.
+- [x] `node tests/local-pets.cjs`, 9개 JS `node --check`, `git diff --check`, 신규 문서/테스트 공백 검사 PASS.
+- [x] 1-D snapshot과 현재 `node tests/grab-throw.cjs --measure`의 30/60/144Hz Throw 거리·높이 JSON 동일.
+- [ ] 실제 Windows3분 이상: Brown/Sleepy와 시바/우사기의 활동성·휴식 차이, Look의 약한 기울임/시선, 쉴 때 발 위치와 idle 전환의 자연스러움.
+- [ ] 실제25마리/구조물 ON 환경에서 휴식·충돌·등반·경로 공유, Bomb/Grab/Throw/홀 구출 후 행동 회복, Hide/Show와 PC click-through 확인.
+- [ ] 실제60/144Hz·DPI 환경/장시간 CPU·메모리·FPS는 별도 확인. 가상 dt 측정은 실제 성능/시각 QA를 대체하지 않음.
+
 ## Phase 1-D 상태 정리 회귀 (2026-10-13)
 
 - [x] `node tests/grab-throw.cjs`: 기존 45개 변경 없이 유지 + 1-D 10개, 총55개 PASS.
@@ -130,3 +183,10 @@ VM은 DOM/시계 stub, Electron은 합성 입력이다. 아래의 실화면·애
 | 2026-10-12 | 1-B | grab-throw / before-after measure / smoke / local-pets / 구문·공백 | 통과 | 같은 환경, VM 34개 사례 및 격리 Electron | 1-A 사용자 체감 피드백 반영. 수정 후 실마우스 재검증 필요 |
 | 2026-10-12 | 1-C | grab-throw / native Sprite audit / measure 비교 / smoke / local-pets / 구문·공백 | 통과 | VM45개, Electron11시트55클립385프레임, 정적 preview 확인 | 실마우스·동적 시각 QA 별도, 1-D/2 미착수 |
 | 2026-10-13 | 1-D | 상태 회귀 / smoke / local-pets / measure 비교 / 구문·공백 | 통과 | 기존45+추가10=55개, 격리 Electron 합성 입력·native dot alpha | 실제 Windows 조작·장시간 QA 별도, Phase2 미착수 |
+| 2026-10-13 | 2-A | autonomy / 전체 Phase1 회귀 / smoke / local-pets / Throw 비교 / 구문·공백 | 통과 | 55+12=67개, 10종×180초 단독 관찰·25마리20초 가상 검증 | 실제 방치 관찰·성능 QA 별도, 2-B 미착수 |
+
+| 2026-10-13 | 2-B | expression/겹침·기존회귀/Tray재시작/native Sprite/구문·공백 | 통과 | 76개VM, 격리Electron11시트+5override, Throw동일 | 실제Windows시각·조작·장시간QA 별도 |
+
+| 2026-10-13 | 2-B 품질보완 | 점프원인/개별Sprite/전체회귀/native1x·2x/구문·공백 | 통과 | 중복제외VM88개,9종81상태428선택프레임,ThrowJSON동일 | 실제Windows동적·조작·장시간QA별도 |
+
+| 2026-10-13 | 2-B 최종 시각 | 원본보행/프레임보정/전체회귀/native·브라우저전후QA | 자동·캡처비교통과 | VM94개,81상태418선택프레임,프로젝트전후캡처보존 | 실제npm start시각확인대기 |
