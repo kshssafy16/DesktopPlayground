@@ -529,6 +529,17 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 
 ## 변경 기록 템플릿
 
+### 2026-10-13 / 작업 역할 분리 및 Phase 3 준비 점검
+
+- 사용자 확정: 이 채팅은 전체 앱 물리/도구/구조물/툴바/테스트/최종 통합을 담당한다. 애니메이션 전담은 별도 `feature/pet-animation` worktree에서 펫별 클립/크기/기준점/프레임/시각 보정과 독립 모듈을 담당한다. 공통 애니메이션 코드를 중복 작성하지 않는다. 기존 Phase 2-B와 ANIMATION_WORKSTREAM의 경계를 보존한다.
+- 조사 기준: 앱과 애니메이션 브랜치 HEAD 모두 `26c23fa`. 조사 시작 시 앱 작업 트리 clean. 애니메이션 worktree에는 `animation/`, `docs/v1.1/animation/`, `tests/animation-platform.cjs` 미추적 파일만 표시됐다. 해당 파일은 수정/복사하지 않았고 모듈 완료나 통합 가능 판정도 하지 않았다.
+- 현재 코드 확인: Bomb과 최대 2개 Black Hole만 구현되어 있다. 공통 균열/Hammer/Gun/KO 삭제 예약은 미구현이다. `drawEffects()`는 프레임 횟수 기반, `beginImpact()`와 물리 선택은 Bomb source 전용, `Pet.remove()` 이후 배열 제거는 호출자가 담당한다. 이 세 부분과 모드/IPC 검증·설정·clear 경로가 장난감 구현의 주요 영향 범위다. 기존 Throw/자율 점프/활동성/애니메이션 상수는 수정하지 않았다.
+- 새 PHASE_3_PLAN에 코드별 영향, 기존 순서를 유지한 3-A 균열 → 3-B Bomb → 3-C Hammer → 3-D Gun → 3-E Black Hole 10개 제안, 테스트/수동 확인, 통합 소유권을 기록했다. 다음 권장 단위는 3-A만이다. cap/cooldown·도구 접근·겹침 명중/KO 우선순위의 미확정 세부안은 확정 요구로 취급하지 않는다.
+- 통합은 독립 모듈 완성 후 양쪽 HEAD/변경 목록과 공유 renderer 호출부·로딩/패키징·smoke 목록·QA를 다시 검토하고 한쪽에서만 수행한다. 지금 merge/cherry-pick이나 새 애니메이션 API를 만들지 않는다.
+- 변경 파일: PHASE_3_PLAN.md, IMPLEMENTATION_PLAN.md, 이 기록뿐. 제품 코드/자산/테스트/애니메이션 전담 문서는 변경하지 않았다. 사용자 확인을 요구하는 핵심 요구 변경은 없으며, 이번 요청 범위는 준비 점검으로 완료한다.
+- 검증: 문서 변경 후 `git diff --check`와 변경 목록 확인. 제품 변경이 없으므로 기능 회귀/JS 구문 검사/Electron smoke/Windows 마우스 QA는 이번에 재실행하지 않는다. 이전 Phase의 PASS 기록을 이번 실행 결과로 간주하지 않는다. 빌드/commit/push/버전 변경 미실행.
+- 남은 위험: 독립 모듈과 공유 테스트 연결의 실제 충돌은 통합 직전 확인해야 한다. Gun의 유한 KO/삭제와 Grab·orbit 경합, 효과 시간/FPS 차이, 누적 균열과 10개 홀의 부하는 후속 구현·검증 대상이다.
+
 ### YYYY-MM-DD / Phase X / 변경 제목
 
 - 현행 사실과 문제:
