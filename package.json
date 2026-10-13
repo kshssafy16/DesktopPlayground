@@ -21,6 +21,7 @@
       "preload.js",
       "index.html",
       "renderer.js",
+      "screen-effects.js",
       "styles.css",
       "controls.html",
       "controls.js",

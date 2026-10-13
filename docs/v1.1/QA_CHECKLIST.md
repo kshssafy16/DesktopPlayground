@@ -2,7 +2,18 @@
 
 체크 표시 규칙: `[ ]` 미검증, `[x]` 실제 실행 및 통과. 자동 검사와 실제 Windows 수동 확인을 구분한다. 아래 전체 v1.1 항목은 해당 단계가 구현·검증될 때 갱신한다.
 
-## Phase 2-B 최종 시각 보완 (2026-10-13, 최신)
+## Phase 3-A 공통 화면 효과 (2026-10-13)
+
+- [x] `node tests/screen-effects.cjs`: 관리자 6개 + 실제 renderer 연결 5개, 신규 11개 PASS (기존 Grab/Throw 55개도 함께 실행). 30/60/144Hz 수명·파편 궤적, 불규칙 dt, burst 상한/오래된 효과 제거, auto/accumulate 전환, 잘못된 입력, 화면 밖 파편 정리 검사.
+- [x] 실제 RAF 1초 지연 시 물리 dt 상한과 별도로 효과 만료. 효과 OFF에서도 수명 갱신/정리. 균열 전용 초기화와 전체 효과 초기화에서 Draw/collider/Pet 보존 및 BH orbit 참조 정리.
+- [x] `node tests/grab-throw.cjs` 55개, `node tests/pet-expression.cjs` 86개(autonomy 12개 포함), `node tests/jump-landing.cjs` 63개 PASS. 중복 제외 기존94개 + 신규11개 = 105개. Throw/Bomb/자율 점프, 펫 비충돌, 활동성 및 애니메이션 회귀 유지.
+- [x] `node tests/grab-throw.cjs --measure`: HEAD renderer snapshot과 현재 결과가 30/60/144Hz × 느림/보통/flick의 초기 속도·0.5초 거리·최고 높이 전체에서 동일.
+- [x] `node tests/local-pets.cjs`, `node tests/smoke.cjs` PASS. 격리 Electron에서 새 모듈 로드, 기존 Bomb 효과 OFF/ON·저장·재시작, native Canvas 균열 표시/OFF/초기화/alpha 복원, 기존 PC/도구/Draw/Trash/BH/구조물 검증. 잘못된 local-pet fixture 경고는 예상 결과.
+- [x] 제품6개/테스트7개 JS `node --check`, `git diff --check`, 신규 파일 공백 검사 PASS.
+- [ ] 실제 Windows에서 30/60/144Hz 효과 지속시간·연속 Bomb 조작감·장시간 메모리/CPU 수동 관찰. 자동 테스트의 bounded 객체 수는 실제 메모리 측정을 대신하지 않는다.
+- [ ] 균열 모드 선택 UI/설정 저장과 Bomb 균열 생성은 후속 범위. 이번에는 내부 API만 있으며 사용자 조작 QA 통과로 간주하지 않는다. BH는 기존 최대2개, Hammer/Gun 미구현.
+
+## Phase 2-B 최종 시각 보완 (2026-10-13)
 
 - [x] 실제9종원본/이전프리뷰를비교. 푸들원본1/2행8장복원(scale1.1),얼굴냥9행방향시선·좌반전·미세기울임/상향bob,영업냥4행2열기립이동/공중과업무/Rest분리,우사기공중scale1.25·소스1/2/3발보정. 정상5종프로필JSON동일.
 - [x] `node tests/pet-expression.cjs`: 기존67+표현/품질19=86개PASS. 새6개는원본gait/방향·기울임/기립분리/우사기크기·foot/공통보정유효성/표시hysteresis검사. 기존금지푸들행기대값은최신원본보행복원요구에맞게변경하고얼굴냥금지셀은유지.

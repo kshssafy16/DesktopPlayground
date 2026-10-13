@@ -315,10 +315,11 @@
         let eraser = false;
         let animationFrame = null;
         let petInstances = [];
-        let particles = [];
-        let rings = [];
-        let impacts = [];
-        let holes = [];
+        const screenEffects = new PlaygroundScreenEffects.ScreenEffects();
+        const particles = screenEffects.groups.particle;
+        const rings = screenEffects.groups.ring;
+        const impacts = screenEffects.groups.impact;
+        const holes = screenEffects.groups.crater;
         let blackHoles = [];
         let strokes = world.drawnShapes;
         let activeStroke = null;
@@ -1128,32 +1129,30 @@
         }
 
         function addParticles(x, y, color, count, speed = 3) {
-            for (let i = 0; i < count; i++) {
+            // Cap generation as well as retained objects, even for oversized bursts.
+            const budget = Number.isFinite(count) ? Math.min(160, Math.max(0, Math.floor(count))) : 0;
+            for (let i = 0; i < budget; i++) {
                 const angle = Math.random() * Math.PI * 2;
                 const velocity = (0.5 + Math.random()) * speed;
-                particles.push({
+                screenEffects.add('particle', {
                     x, y, vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity,
-                    color, size: 1.5 + Math.random() * 2.5, life: 18 + Math.random() * 14
-                });
+                    color, size: 1.5 + Math.random() * 2.5
+                }, (18 + Math.random() * 14) * physicsFrameMs);
             }
-            if (particles.length > 160) particles.splice(0, particles.length - 160);
         }
 
         function addRing(x, y, color, radius, life = 18) {
-            rings.push({ x, y, color, radius, life, maxLife: life });
-            if (rings.length > 24) rings.shift();
+            screenEffects.add('ring', { x, y, color, radius }, life * physicsFrameMs);
         }
 
         function addImpact(x, y, color, life = 10) {
-            impacts.push({ x, y, color, life, maxLife: life });
-            if (impacts.length > 24) impacts.shift();
+            screenEffects.add('impact', { x, y, color }, life * physicsFrameMs);
         }
 
         function fireBomb(x, y) {
             const radius = 61 + Math.random() * 10;
-            holes.push({ x, y, radius, life: 300, maxLife: 300,
-                edge: Array.from({ length: 24 }, () => .78 + Math.random() * .42) });
-            if (holes.length > 8) holes.shift();
+            screenEffects.add('crater', { x, y, radius,
+                edge: Array.from({ length: 24 }, () => .78 + Math.random() * .42) }, 5000);
             addRing(x, y, 'rgba(255,105,42,.96)', 240, 38);
             addImpact(x, y, 'rgba(255,239,181,.98)', 25);
             addParticles(x, y, '#f28a53', 50, 8);
@@ -1490,9 +1489,9 @@
             }
         }
 
-        function drawEffects() {
+        function drawEffects(elapsedMs = physicsFrameMs) {
             for (const hole of holes) {
-                const alpha = Math.min(1, hole.life / 35);
+                const alpha = Math.min(1, hole.remainingMs / (35 * physicsFrameMs));
                 const gradient = ctx.createRadialGradient(hole.x, hole.y, 4, hole.x, hole.y, hole.radius * 1.45);
                 gradient.addColorStop(0, `rgba(13,11,16,${alpha})`);
                 gradient.addColorStop(.57, `rgba(34,16,17,${alpha * .94})`);
@@ -1509,44 +1508,45 @@
                     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
                 }
                 ctx.stroke();
-                hole.life--;
             }
-            holes = holes.filter(hole => hole.life > 0);
             for (const ring of rings) {
                 if (auxiliaryEffectsEnabled) {
-                    const progress = 1 - ring.life / ring.maxLife;
+                    const progress = 1 - ring.remainingMs / ring.durationMs;
                     ctx.strokeStyle = ring.color;
-                    ctx.globalAlpha = Math.max(0, ring.life / ring.maxLife);
+                    ctx.globalAlpha = Math.max(0, ring.remainingMs / ring.durationMs);
                     ctx.lineWidth = 3 + (1 - progress) * 4;
                     ctx.beginPath(); ctx.arc(ring.x, ring.y, Math.max(1, ring.radius * progress), 0, Math.PI * 2); ctx.stroke();
                     ctx.globalAlpha = 1;
                 }
-                ring.life--;
             }
-            rings = rings.filter(ring => ring.life > 0);
             for (const impact of impacts) {
                 if (auxiliaryEffectsEnabled) {
                     ctx.fillStyle = impact.color;
-                    ctx.globalAlpha = impact.life / impact.maxLife;
-                    ctx.beginPath(); ctx.arc(impact.x, impact.y, 5 + (impact.maxLife - impact.life) * 2, 0, Math.PI * 2); ctx.fill();
+                    ctx.globalAlpha = impact.remainingMs / impact.durationMs;
+                    ctx.beginPath(); ctx.arc(impact.x, impact.y, 5 + (impact.durationMs - impact.remainingMs) / physicsFrameMs * 2, 0, Math.PI * 2); ctx.fill();
                     ctx.globalAlpha = 1;
                 }
-                impact.life--;
             }
-            impacts = impacts.filter(impact => impact.life > 0);
             for (const particle of particles) {
                 if (auxiliaryEffectsEnabled) {
                     ctx.fillStyle = particle.color;
-                    ctx.globalAlpha = Math.min(1, particle.life / 15);
+                    ctx.globalAlpha = Math.min(1, particle.remainingMs / (15 * physicsFrameMs));
                     ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
                     ctx.globalAlpha = 1;
                 }
-                particle.x += particle.vx;
-                particle.y += particle.vy;
-                particle.vy += .09;
-                particle.life--;
             }
-            particles = particles.filter(particle => particle.life > 0);
+            // Cracks are auxiliary visuals, never Draw geometry or Pet colliders.
+            if (auxiliaryEffectsEnabled) for (const crack of screenEffects.groups.crack) {
+                ctx.strokeStyle = 'rgba(90,75,105,.8)'; ctx.lineWidth = 1.5;
+                ctx.globalAlpha = screenEffects.crackMode === 'accumulate' ? 1 : Math.min(1, crack.remainingMs / 500);
+                for (const path of crack.paths) {
+                    ctx.beginPath(); ctx.moveTo(crack.x + path[0].x, crack.y + path[0].y);
+                    for (let i = 1; i < path.length; i++) ctx.lineTo(crack.x + path[i].x, crack.y + path[i].y);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+            screenEffects.update(elapsedMs, { width, height });
         }
 
         let draggedPet = null;
@@ -1729,12 +1729,12 @@
             window.playground.setMode('pc');
         }, true);
 
-        function animate(dt = 1) {
+        function animate(dt = 1, effectElapsedMs = dt * physicsFrameMs) {
             cleanupStructures();
             ctx.clearRect(0, 0, width, height);
             drawStructures();
 
-            drawEffects();
+            drawEffects(effectElapsedMs);
             ctx.drawImage(drawingCanvas, 0, 0);
             updateBlackHoles(dt);
 
@@ -1754,9 +1754,10 @@
             const frame = (now) => {
                 animationFrame = null;
                 if (!enabled) return;
+                const elapsedMs = previousTime === null ? physicsFrameMs : Math.max(0, now - previousTime);
                 const dt = previousTime === null ? 1 : Math.max(.25, Math.min(3, (now - previousTime) / 16.667));
                 previousTime = now;
-                animate(dt);
+                animate(dt, elapsedMs);
                 animationFrame = requestAnimationFrame(frame);
             };
             animationFrame = requestAnimationFrame(frame);
@@ -1786,12 +1787,9 @@
                 drawingCtx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
             }
             if (kind === 'effects' || kind === 'all') {
-                holes = [];
+                screenEffects.clear();
                 blackHoles = [];
                 pruneBlackHoleReferences();
-                particles = [];
-                rings = [];
-                impacts = [];
             }
             if (kind === 'structures' || kind === 'all') {
                 world.structures = [];

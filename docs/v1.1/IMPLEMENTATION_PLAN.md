@@ -101,6 +101,8 @@
 2026-10-13 준비 점검: 현재 코드의 영향 범위와 작은 구현 단위 제안은 [PHASE_3_PLAN.md](PHASE_3_PLAN.md)를 따른다. 이번 점검은 문서 작업만이며 Phase 3 구현 시작을 뜻하지 않는다. 앱 채팅은 물리/도구/구조물/UI/전체 회귀와 최종 통합을 담당하고, `feature/pet-animation`은 독립 애니메이션 작업을 담당한다. [ANIMATION_WORKSTREAM.md](ANIMATION_WORKSTREAM.md)의 소유권을 지키며 런타임 연결은 충돌 검토 후 단일 담당자가 수행한다. 기존 Phase 2-B 프로필·클립·크기·기준점은 앱 측에서 중복 수정하지 않는다.
 
 세부 작업은 독립적으로 나눈다.
+현재 진행: **3-A 공통 효과 관리 완료**. 별도 `screen-effects.js`로 기존 Bomb 시각효과의 밀리초 수명·종류별 상한·정리와 균열 auto/accumulate 내부 API를 구현했다. UI/설정 선택, Bomb 균열 연결, Hammer/Gun, BH 10개 확장은 아직 미구현이다. 세부 API/상수·후속 경계는 PHASE_3_PLAN의 완료절을 따른다. 애니메이션 모듈은 가져오지 않았다.
+
 1. 공통 Impact/Crack 레이어: 자동 복구와 누적 유지, 개별 초기화, Effect cap.
 2. Bomb: 현재 충격 유지 + 균열/파편/피격 반응. 기존 펫 삭제 금지.
 3. Hammer: 클릭 타격/균열/펫 밀려남. Bomb과 효과 범위 차별화.

@@ -1,6 +1,6 @@
 # Phase 3 장난감 구현 준비 및 영향 범위
 
-상태: 코드 조사와 구현 순서 제안만 완료. 장난감 구현/애니메이션 통합은 시작하지 않았다.
+상태: Phase 3-A 공통 효과 관리 구현 완료. Bomb 균열 연결(3-B), 신규 도구와 애니메이션 모듈 통합은 미진행. 아래 코드 조사 표는 3-A 이전 기준이며 최신 동작은 다음 완료절을 따른다.
 기준: 2026-10-13, `feature/v1.1`의 `26c23fa` (Phase 2-B checkpoint).
 요구사항의 근거: V1_1_SPEC의 4·5절, IMPLEMENTATION_PLAN의 Phase 3, QA_CHECKLIST의 장난감 항목.
 
@@ -53,3 +53,13 @@
 - 30/60/144Hz에서 같은 가상 시간의 효과 수명/이동 및 기존 던지기 측정 비교. 반복 입력에서 효과 수와 펫 인스턴스 참조가 계속 증가하지 않는지 검사한다.
 - JS 구문 검사와 `git diff --check`. 새 모듈은 격리 smoke 복사/실제 로딩 확인까지 수행한다. portable 빌드·버전 변경·commit·push는 별도 요청 전 실행하지 않는다.
 - Windows 수동: 조준/타격 조작감, PC 클릭 통과·우클릭 복귀, Hide/Show·Tray, 보조 효과 OFF의 구분, 20마리 이상 + BH 10개 + 반복 도구의 FPS/CPU/메모리와 실제 시각 반응. 자동 테스트 통과로 대체하지 않는다.
+
+## Phase 3-A 완료: 공통 효과 관리
+
+- `screen-effects.js`는 Pet/DOM/IPC/애니메이션 참조 없이 효과 데이터만 관리한다. `add(kind, data, durationMs)`, `update(elapsedMs, viewport)`, `clear(kind?)`를 제공한다. 기존 renderer 생성 함수의 frame 단위 수명 인자는 60Hz 기준 밀리초로 변환하는 호환 adapter이며, 내부 객체는 `durationMs/remainingMs`를 사용한다.
+- 실제 RAF 경과 시간을 효과에 전달한다. 기존 Pet 물리의 dt clamp·상수와 Black Hole 갱신은 변경하지 않는다. Playground Hide/Show로 RAF를 멈춘 동안은 기존처럼 일시정지하며 재개 첫 프레임에서 숨긴 시간을 소급하지 않는다.
+- 상한: particle 160, ring 24, impact 24, crater 8은 기존 값 유지. crack 64는 초기 안전 제한이며 펫 생성 상한과 무관하다. 상한 초과 시 해당 효과의 오래된 객체부터 제거한다. 배열은 제자리 압축/초기화하며, 파티클은 화면 경계 32px 밖에서 조기 제거한다. 생성 burst 자체도 160개로 제한한다.
+- 파티클은 기존 60Hz 이동/중력(.09 px/reference-frame²)의 닫힌 식으로 갱신하여 FPS별 이동 오차를 막는다. Bomb 자국은 5초, 링/섬광/파티클은 기존 60Hz 수명을 유지한다. Pet의 Bomb impulse와 Throw/자율 점프 원인 구분 코드는 수정하지 않는다.
+- `addCrack`은 6갈래×3선분, 반경 최대 200px의 고정 geometry를 한 번 생성한다. 기본 auto는 5초 뒤 정리, accumulate는 시간 만료 없이 상한 내 유지, auto로 돌아오면 기존 균열에 새 5초 복구 기간을 준다. `clear('crack')`은 다른 효과/Draw/collider/Pet/BH와 독립적이다. 전체 효과 초기화는 기존 BH 참조 정리와 함께 관리자도 비운다.
+- 균열/링/섬광/파편은 `auxiliaryEffectsEnabled`에 따른 보조 효과다. OFF에서도 갱신·만료한다. Bomb 자국/BH 본체의 기존 표시 정책은 유지한다. 균열은 내부 API와 렌더만 준비했으며 현재 클릭 도구에서 생성하지 않는다. 모드 선택 UI·IPC·저장 설정 추가는 이번 범위가 아니다.
+- 향후 애니메이션 통합 시 `index.html` script 순서, package 포함 목록, VM/smoke 로딩 목록, renderer RAF/효과 호출부를 보존한다. Pet mapping·frame·크기·anchor와 물리 업데이트는 이 단계에서 수정하지 않았다.

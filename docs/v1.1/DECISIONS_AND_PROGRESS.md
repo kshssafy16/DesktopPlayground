@@ -529,6 +529,18 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 
 ## 변경 기록 템플릿
 
+### 2026-10-13 / Phase 3-A / 화면 효과 공통 수명 및 정리
+
+- 사용자 요청 범위: 화면 타격 효과의 공통 관리만 구현. 애니메이션 모듈 가져오기/매핑 변경, 신규 도구/캐릭터/툴바/빌드/commit/push는 하지 않는다. 앞선 계획보다 좁은 최신 요청에 따라 균열 선택 UI와 설정 저장은 나중에 연결 가능한 내부 구조만 둔다.
+- `screen-effects.js`의 ScreenEffects가 종류별 bounded 배열, `durationMs/remainingMs`, 생성/경과 시간 갱신/정리를 담당한다. Pet/물리/삭제/DOM/애니메이션 의존성 없음. 기존 Bomb 생성 함수는 60Hz 기준 수명을 ms로 변환한다. 실제 RAF 경과 시간은 물리 dt clamp와 별도로 효과에 전달한다. 숨김 시 정지는 기존 동작 유지.
+- 상한과 이유: 기존 particle160/ring24/impact24/crater8 보존. 신규 crack64는 최대1152선분의 초기 안전 제한, 반경200px·6갈래×3선분으로 geometry 자체도 제한한다. 파편 생성 burst160 제한, 화면 밖32px 정리, 제자리 배열 압축/clear로 프레임별 filter 배열 교체를 제거한다. 고속 반복 생성에서 오래된 객체부터 제거하며 Pet 개수는 제한하지 않는다.
+- 균열 API: `addCrack`, `setCrackMode('auto'|'accumulate')`, `clear('crack')`. auto5초, accumulate는 cap 내 유지, auto 복귀 시 기존 균열에5초 재부여. 보조 효과 OFF에서 균열/파편/링/섬광을 숨겨도 수명 정리는 계속된다. 기존 Bomb 자국과 BH 본체 표시는 유지. 이번에는 Bomb 클릭에 균열을 추가하지 않았으며 3-B로 남긴다.
+- Pet Bomb impulse/외부 충격 source, Throw 및 자율 점프 코드·상수/클립·활동성은 그대로다. BH 최대2개와 흡수 삭제, Draw/collider/Trash/설정/IPC/툴바도 보존했다. 관리자는 인스턴스 참조를 저장하지 않는다.
+- 파일: 신규 screen-effects.js, tests/screen-effects.cjs; renderer.js(효과 생성/렌더/clear/RAF 전달만), index.html/package.json(모듈 로드/포함), tests/grab-throw.cjs(VM 로드), tests/smoke.cjs(TEMP 모듈 복사·native 효과 검사), PHASE_3_PLAN/IMPLEMENTATION_PLAN/QA_CHECKLIST/이 기록. 원본 자산 및 애니메이션 담당 파일은 미수정.
+- 실행 결과: `node tests/screen-effects.cjs` 신규11 + 기존55 PASS; `node tests/grab-throw.cjs`55, `node tests/pet-expression.cjs`86(autonomy 포함), `node tests/jump-landing.cjs`63, `node tests/local-pets.cjs`, `node tests/smoke.cjs` PASS. 중복 제외105개 단위/renderer 사례와 별도 local-pets/Electron. local-pets invalid/missing fixture 경고는 예상 검사다. `--measure`의 HEAD baseline/current JSON은30/60/144Hz 느림/보통/flick 초기속도·0.5초거리·최고높이에서 동일. 제품6개/테스트7개 구문, diff/new-file 공백 검사 PASS.
+- 통합 영향: 애니메이션 mapping/anchor/frame 함수 변경 없음. renderer의 RAF/animate 효과 elapsedMs 전달과 효과 store 연결, index script 순서, package allowlist 및 VM/smoke의 새 모듈 로드를 향후 단일 통합자가 보존해야 한다. 모듈 자체는 애니메이션과 독립적이다.
+- 남은 확인: Windows 실제 지속시간/반복 Bomb/장시간 CPU·메모리·Hide/Show 사용감. 부하 검사는 객체/geometry 상한과10000회 생성·1시간 가상 누적 검증이며 실제 장시간 실행 측정이 아니다. 효과를 그린 뒤 시간 갱신하는 기존 순서로 만료 표시가 최대 한 render 간격 남을 수 있다. 균열 UI/저장/도구 연결·Hammer/Gun/BH10과 애니메이션 통합은 미진행. 빌드/commit/push/버전 변경 없음.
+
 ### 2026-10-13 / 작업 역할 분리 및 Phase 3 준비 점검
 
 - 사용자 확정: 이 채팅은 전체 앱 물리/도구/구조물/툴바/테스트/최종 통합을 담당한다. 애니메이션 전담은 별도 `feature/pet-animation` worktree에서 펫별 클립/크기/기준점/프레임/시각 보정과 독립 모듈을 담당한다. 공통 애니메이션 코드를 중복 작성하지 않는다. 기존 Phase 2-B와 ANIMATION_WORKSTREAM의 경계를 보존한다.

@@ -68,7 +68,7 @@ async function run() {
   fs.mkdirSync(appDir, { recursive: true });
   fs.mkdirSync(appData, { recursive: true });
   for (const file of [
-    'main.js','local-pets.js','preload.js','index.html','renderer.js','styles.css',
+    'main.js','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css',
     'controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'
   ]) fs.copyFileSync(path.join(project,file),path.join(appDir,file));
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});
@@ -474,16 +474,28 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   }
   assert.ok(await overlay.eval(`(() => {
     clearPlayground('effects');ctx.clearRect(0,0,width,height);
-    addRing(60,60,'#ff0000',15,20);rings[0].life=10;
+    addRing(60,60,'#ff0000',15,20);rings[0].remainingMs=10*physicsFrameMs;
     addImpact(60,60,'#ff0000',20);addParticles(60,60,'#ff0000',5);
     auxiliaryEffectsEnabled=false;drawEffects();
     const hidden=ctx.getImageData(20,20,80,80).data.every((v,i)=>i%4!==3 || v===0);
-    const aging=rings[0].life===9 && impacts[0].life===19 && particles.every(p=>p.life<32);
+    const aging=Math.abs(rings[0].remainingMs-9*physicsFrameMs)<1e-7
+      && Math.abs(impacts[0].remainingMs-19*physicsFrameMs)<1e-7 && particles.every(p=>p.remainingMs<32*physicsFrameMs);
     auxiliaryEffectsEnabled=true;drawEffects();
     const visible=ctx.getImageData(20,20,80,80).data.some((v,i)=>i%4===3 && v>0);
     clearPlayground('effects');return hidden && aging && visible;
   })()`));
   assert.equal(await controls.eval("playground.getState().then(s=>s.auxiliaryEffectsEnabled)"),true);
+  assert.ok(await overlay.eval(`(() => {
+    clearPlayground('effects');ctx.clearRect(0,0,width,height);
+    screenEffects.addCrack(300,300);
+    auxiliaryEffectsEnabled=false;drawEffects(0);
+    const hidden=ctx.getImageData(240,240,120,120).data.every((v,i)=>i%4!==3 || v===0);
+    auxiliaryEffectsEnabled=true;drawEffects(0);
+    const visible=ctx.getImageData(240,240,120,120).data.some((v,i)=>i%4===3 && v>0);
+    screenEffects.clear('crack');ctx.clearRect(0,0,width,height);drawEffects(0);
+    const cleared=ctx.getImageData(240,240,120,120).data.every((v,i)=>i%4!==3 || v===0);
+    return hidden && visible && cleared && ctx.globalAlpha===1;
+  })()`));
   assert.equal(await controls.eval("playground.smokeAuxiliaryEffects(false)"),false);
   await until(()=>overlay.eval("auxiliaryEffectsEnabled===false"),'Tray effects broadcast');
   const persisted=JSON.parse(fs.readFileSync(settingsFile,'utf8'));
