@@ -1,6 +1,9 @@
 # DesktopPlayground v1.1 제품 명세
 
+최신 시각 회귀 보완: GrabStart 후 Held에서 원본 표정을 반복하고 영업냥 초기 좌우 이동을 복원한다. [개별 매핑/제한](animation/GRAB_REGRESSION.md)이 이전 단일 기립 walk·Held 고정 기록을 대체한다. 새 물리/도구/이미지는 추가하지 않는다.
+
 상태: 개발 중. Phase 2-B까지 구현, 실제 Windows 수동 QA 별도. 2026-10-13 최신 사용자 요구 반영.
+진행 갱신: Phase 3-A 화면 효과 관리와 독립 애니메이션 플랫폼의 Electron 연결까지 완료. 신규 도구/블랙홀 확장은 미구현이며 실제 Windows 동적 시각 품질은 수동 QA로 남는다. [통합 계약](animation/RUNTIME_INTEGRATION.md) 참고.
 기준 소스: `kshssafy16/DesktopPlayground`의 v1.0.0. 이 문서는 과거 Phase 문서를 삭제하거나 교체하지 않는다.
 
 ## 1. 제품 목표

@@ -67,6 +67,9 @@ async function connect(portNumber, suffix) {
 async function run() {
   fs.mkdirSync(appDir, { recursive: true });
   fs.mkdirSync(appData, { recursive: true });
+  fs.mkdirSync(path.join(appDir,'animation'),{recursive:true});
+  for (const file of ['pet-animation.cjs','profiles.browser.js'])
+    fs.copyFileSync(path.join(project,'animation',file),path.join(appDir,'animation',file));
   for (const file of [
     'main.js','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css',
     'controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'
@@ -351,6 +354,9 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
     const errors=[];let frames=0,clips=0;
     const cell=document.createElement('canvas');cell.width=192;cell.height=208;
     const c=cell.getContext('2d',{willReadFrequently:true});
+    function drawSource(asset,clip,column) {
+      c.clearRect(0,0,192,208);c.drawImage(asset,column*192,clip.row*208,192,208,0,0,192,208);
+    }
     const states=['idle','walkRight','walkLeft','jump','fall','drag','rest','sleep','look'];
     function pose(p,state) {
       p.vx=0;p.vy=0;p.isDragging=false;p.externalMotion=null;p.motionCause=null;p.climbing=null;
@@ -367,7 +373,7 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
         const q=new Pet(96,100-d.defaultSize,d);pose(q,state);q.advanceAnimation(0);
         const clip=q.spriteClip().clip;let left=192,right=0,top=208,bottom=0;clips++;
         for(const column of clip.frames) {
-          c.clearRect(0,0,192,208);c.drawImage(d.asset,column*192,clip.row*208,192,208,0,0,192,208);
+          drawSource(d.asset,clip,column);
           const data=c.getImageData(0,0,192,208).data;let visible=false;frames++;
           for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(data[(y*192+x)*4+3]>16) {
             visible=true;left=Math.min(left,x);right=Math.max(right,x+1);top=Math.min(top,y);bottom=Math.max(bottom,y+1);
@@ -376,15 +382,17 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
           if(id==='cat_face' && clip.row===8 && [2,3].includes(column))errors.push('forbidden glasses');
           if(id==='puddle' && state==='walkRight' && clip.row!==1)errors.push('lost original right gait');
           if(id==='puddle' && state==='walkLeft' && clip.row!==2)errors.push('lost original left gait');
-          if(id==='salary-cat' && [0,1,2,3,7].includes(clip.row))errors.push('forbidden salary pose');
+          if(id==='salary-cat' && [0,1,2,3,7].includes(clip.row)
+              && !(state.startsWith('walk')&&[1,2].includes(clip.row)&&!clip.sourceCrop&&clip.frames.every(f=>f<7)))errors.push('forbidden salary pose');
         }
-        if(Math.abs(bottom/208-clip.foot)>.0001)errors.push(id+': feet '+state);
-        if(Math.abs((left+right)/384-clip.center)>.0001)errors.push(id+': center '+state);
-        if(profile.origin==='center' && Math.abs((top+bottom)/416-clip.centerY)>.0001)errors.push(id+': centerY '+state);
+        const sourceW=192,sourceH=208;
+        if(Math.abs(bottom/sourceH-clip.foot)>.0001)errors.push(id+': feet '+state);
+        if(Math.abs((left+right)/(2*sourceW)-clip.center)>.0001)errors.push(id+': center '+state);
+        if(profile.origin==='center' && Math.abs((top+bottom)/(2*sourceH)-clip.centerY)>.0001)errors.push(id+': centerY '+state);
         // Compare the deepest authored frame with the fixed foot (or portrait center), at two scales and squash values.
         let peakFrame=0,peak=0;
         for(let f=0;f<clip.frames.length;f++) {
-          c.clearRect(0,0,192,208);c.drawImage(d.asset,clip.frames[f]*192,clip.row*208,192,208,0,0,192,208);
+          drawSource(d.asset,clip,clip.frames[f]);
           const data=c.getImageData(0,0,192,208).data;let b=0;
           for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(data[(y*192+x)*4+3]>16)b=Math.max(b,y+1);
           if(b>peak){peak=b;peakFrame=f;}
@@ -394,16 +402,16 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
         for(const [frame,scale,squash] of checks) {
           const out=document.createElement('canvas');out.width=384;out.height=416;const oc=out.getContext('2d',{willReadFrequently:true});
           q.x=192/scale;q.y=200/scale-q.size;q.squish=squash;
-          q.animationMs=frame*clip.frameMs;q.autonomy.remainingMs=q.autonomy.durationMs;
+          q.advanceAnimation(clip.frameMs);q.autonomy.remainingMs=q.autonomy.durationMs;
           oc.scale(scale,scale);q.draw(oc);const data=oc.getImageData(0,0,384,416).data;
           let drawnBottom=0;for(let y=0;y<416;y++)for(let x=0;x<384;x++)if(data[(y*384+x)*4+3]>16)drawnBottom=Math.max(drawnBottom,y+1);
-          c.clearRect(0,0,192,208);c.drawImage(d.asset,clip.frames[frame]*192,clip.row*208,192,208,0,0,192,208);
+          drawSource(d.asset,clip,clip.frames[q.frame]);
           const source=c.getImageData(0,0,192,208).data;let sourceBottom=0;
           for(let y=0;y<208;y++)for(let x=0;x<192;x++)if(source[(y*192+x)*4+3]>16)sourceBottom=Math.max(sourceBottom,y+1);
           const stretch=1+(squash-1)*profile.elasticity;
           const g=q.spriteGeometry();
           const expected=scale*(q.y+(profile.origin==='center'?0:q.size)+g.offsetY+g.bob+
-            (sourceBottom/208-g.anchorY)*q.size*2.5*g.scale/stretch);
+            (sourceBottom/sourceH-g.anchorY)*q.size*2.5*g.scale/stretch);
           const tilt=(state==='look'?.035:0)+Math.abs(g.tilt);
           const tolerance=2+scale*q.size*2.5*g.scale*Math.sin(tilt)/2/stretch;
           if(Math.abs(drawnBottom-expected)>tolerance)errors.push(id+': rendered baseline '+state+'/'+frame+'/'+scale+'/'+squash+': '+drawnBottom+' vs '+expected);
@@ -414,9 +422,9 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
     const brown=petDefinitions.get('cat_brown'),p=new Pet(96,0,brown);
     p.size=192/2.5;p.y=100-p.size; // integer horizontal destination removes GPU subpixel sampling variance
     for(let f=0;f<8;f++) {
-      p.vx=2;p.facingRight=true;p.advanceAnimation(0);p.animationMs=f*5*physicsFrameMs;
+      p.vx=2;p.facingRight=true;p.advanceAnimation(f*5*physicsFrameMs);
       c.clearRect(0,0,192,208);p.draw(c);const right=c.getImageData(0,0,192,208).data;
-      p.vx=-2;p.facingRight=false;p.advanceAnimation(0);p.animationMs=f*5*physicsFrameMs;
+      p.vx=-2;p.facingRight=false;p.advanceAnimation(f*5*physicsFrameMs);
       c.clearRect(0,0,192,208);p.draw(c);const left=c.getImageData(0,0,192,208).data;
       let bad=0;for(let y=0;y<208;y++)for(let x=0;x<192;x++) {
         const li=(y*192+x)*4,ri=(y*192+191-x)*4;
@@ -455,6 +463,68 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   })()`);
   assert.deepEqual(expressionAudit.errors,[]);assert.equal(expressionAudit.clips,81);assert.ok(expressionAudit.frames>350);
   console.log('PASS: 9 profiles / '+expressionAudit.clips+' runtime states / '+expressionAudit.frames+' frames, anchors, native 1x/2x baselines, forbidden poses and Brown mirror');
+  const platformAudit=await overlay.eval(`(() => {
+    const ids=Object.keys(PlaygroundPetProfiles.profiles),errors=[],samples=[];
+    const phases=['idle','walkRight','walkLeft','jumpRise','jumpApex','fall','land',
+      'rest','sleep','grabStart','held','release','thrown','bounce','hit','knockout','look'];
+    const sheet=document.createElement('canvas');sheet.width=phases.length*140;sheet.height=ids.length*180;
+    const sc=sheet.getContext('2d');sc.fillStyle='#edf2f6';sc.fillRect(0,0,sheet.width,sheet.height);
+    const movie=document.createElement('canvas');movie.width=280;movie.height=ids.length*160;
+    const mc=movie.getContext('2d'),frames=[];
+    const pets=ids.map(id=>new Pet(0,0,petDefinitions.get(id)));
+    for(let phase=0;phase<phases.length;phase++) {
+      const name=phases[phase];
+      for(let i=0;i<ids.length;i++) {
+        const q=pets[i];q.isDragging=false;q.blackHoleOrbit=null;q.externalMotion=null;q.motionCause=null;
+        q.climbing=null;q.animationReaction=null;q.vx=0;q.vy=0;q.squish=1;
+        q.isAutonomouslyStill=true;q.autonomy={state:'idle',remainingMs:4000,durationMs:4000};
+        if(name.startsWith('walk')){q.isAutonomouslyStill=false;q.vx=name==='walkRight'?2:-2;q.facingRight=q.vx>0;}
+        if(['jumpRise','jumpApex','fall'].includes(name)){q.motionCause='autonomous-jump';q.vy=name==='jumpRise'?-6:name==='fall'?6:0;}
+        if(['rest','sleep','look'].includes(name))q.autonomy.state=name;
+        if(['grabStart','held'].includes(name))q.isDragging=true;
+        if(['thrown','bounce'].includes(name))q.externalMotion={source:'throw'};
+        if(name==='knockout')q.setAnimationReaction('knockout');
+        if(['land','grabStart','release','bounce','hit'].includes(name))q.queueAnimationEvent(name);
+        q.advanceAnimation(0);
+        const expected=name==='rest' && q.definition.animation.sleeping?'sleep':name;
+        if(q.animationVisualState!==expected)errors.push(ids[i]+': expected '+expected+', got '+q.animationVisualState);
+      }
+      for(let t=0;t<3;t++) {
+        mc.fillStyle='#edf2f6';mc.fillRect(0,0,movie.width,movie.height);
+        for(let i=0;i<ids.length;i++) {
+          const q=pets[i];if(t)q.advanceAnimation(80);
+          const before=JSON.stringify([q.vx,q.vy,q.motionCause,q.externalMotion,q.size]);
+          q.x=140;q.y=i*160+120-q.size;q.draw(mc);
+          if(before!==JSON.stringify([q.vx,q.vy,q.motionCause,q.externalMotion,q.size]))errors.push(ids[i]+': render changed physics');
+          const clip=q.spriteClip().clip,g=q.spriteGeometry();
+          if(!Number.isFinite(g.anchorY)||!Number.isFinite(g.scale)||g.column<0||g.column>=8||clip.row>=q.definition.rows)errors.push(ids[i]+': invalid geometry');
+          const image=mc.getImageData(70,i*160+5,140,140).data;
+          if(!image.some((v,k)=>k%4===3 && v>0 && image[k-3]!==237))errors.push(ids[i]+': empty '+name);
+          mc.strokeStyle='#a9b7c5';mc.beginPath();mc.moveTo(70,i*160+120);mc.lineTo(210,i*160+120);mc.stroke();
+          mc.fillStyle='#263f53';mc.font='11px sans-serif';mc.fillText(ids[i]+' / '+q.animationVisualState,8,i*160+150);
+          if(t===0){
+            q.x=phase*140+70;q.y=i*180+140-q.size;q.draw(sc);
+            sc.strokeStyle='#a9b7c5';sc.beginPath();sc.moveTo(phase*140+10,i*180+140);sc.lineTo(phase*140+130,i*180+140);sc.stroke();
+            sc.fillStyle='#263f53';sc.font='11px sans-serif';sc.fillText(ids[i],phase*140+4,i*180+160);sc.fillText(name,phase*140+4,i*180+175);
+          }
+          samples.push({id:ids[i],input:name,tMs:t*80,state:q.animationVisualState,row:clip.row,column:g.column,scale:g.scale,anchor:g.anchorY});
+        }
+        if(${process.argv.includes('--animation-preview')})frames.push(movie.toDataURL('image/png'));
+      }
+    }
+    return {errors,samples,preview:${process.argv.includes('--animation-preview')}?sheet.toDataURL('image/png'):null,frames};
+  })()`);
+  assert.deepEqual(platformAudit.errors,[]);
+  assert.equal(platformAudit.samples.length,459);
+  console.log('PASS: native animation platform: 9 pets x 17 event/state transitions x 3 samples');
+  if(process.argv.includes('--animation-preview')) {
+    const qaDir=path.join(project,'docs','v1.1','qa','animation-integration');fs.mkdirSync(qaDir,{recursive:true});
+    fs.writeFileSync(path.join(os.tmpdir(),'desktopplayground-animation-qa-frames.json'),JSON.stringify(platformAudit.frames));
+    fs.writeFileSync(path.join(qaDir,'runtime-states.png'),Buffer.from(platformAudit.preview.split(',')[1],'base64'));
+    fs.writeFileSync(path.join(qaDir,'samples.json'),JSON.stringify(platformAudit.samples,null,2)+'\n');
+    fs.writeFileSync(path.join(qaDir,'runtime-preview.html'),'<!doctype html><meta charset="utf-8"><title>Electron animation integration QA</title><p>Native Pet.draw, scripted visual inputs, 9 pets / 17 phases / 80ms samples. Physics and Windows mouse feel require separate QA.</p><button onclick="paused=!paused">Pause</button><img id="sprite"><script>const frames='+JSON.stringify(platformAudit.frames)+';let i=0,paused=false;sprite.src=frames[0];setInterval(()=>{if(!paused)sprite.src=frames[++i%frames.length]},80)</script>');
+    console.log('Native animation QA: '+qaDir);
+  }
   if(process.argv.includes('--sprite-preview')) {
     const previewPath=path.join(os.tmpdir(),'desktopplayground-sprite-quality.png');
     fs.writeFileSync(previewPath,Buffer.from(expressionAudit.preview,'base64'));console.log('Expression preview: '+previewPath);

@@ -138,6 +138,8 @@ function createWindows() {
     if (url !== pathToFileUrl('index.html')) event.preventDefault();
   });
   overlayWindow.on('close', event => preventWindowClose(event, overlayWindow));
+  overlayWindow.on('show', raiseOverlay);
+  overlayWindow.on('restore', raiseOverlay);
   const revealOverlay = () => {
     if (state.enabled) overlayWindow.showInactive();
     publishState();
@@ -169,6 +171,9 @@ function createWindows() {
     if (url !== pathToFileUrl('controls.html')) event.preventDefault();
   });
   controlsWindow.on('close', event => preventWindowClose(event, controlsWindow));
+  controlsWindow.on('show', raiseControls);
+  controlsWindow.on('restore', raiseControls);
+  controlsWindow.on('blur', raiseOverlay);
   controlsWindow.on('closed', () => {
     controlsWindow = null;
   });
@@ -206,6 +211,15 @@ function raiseControls() {
   controlsWindow.moveTop();
 }
 
+function raiseOverlay() {
+  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return;
+  // Reapply the native topmost band after show/restore or toolbar deactivation.
+  // moveTop changes z-order without activating the click-through overlay.
+  overlayWindow.setAlwaysOnTop(true, 'floating');
+  overlayWindow.moveTop();
+  raiseControls();
+}
+
 function pathToFileUrl(filename) {
   return pathToFileURL(path.join(__dirname, filename)).href;
 }
@@ -230,7 +244,7 @@ function resizeOverlay() {
     overlayWindow.setBounds(safeOverlayBounds(screen.getPrimaryDisplay()));
   }
   clampAndStoreControlsBounds();
-  raiseControls();
+  raiseOverlay();
 }
 
 function uiStatePath() {
@@ -516,7 +530,7 @@ function setState(changes) {
       overlayWindow.hide();
     }
   }
-  raiseControls();
+  raiseOverlay();
   publishState();
 }
 
@@ -524,7 +538,7 @@ function showControls() {
   if (!controlsWindow || controlsWindow.isDestroyed()) return;
   controlsWindow.show();
   controlsWindow.focus();
-  raiseControls();
+  raiseOverlay();
 }
 
 function setMode(event, mode) {

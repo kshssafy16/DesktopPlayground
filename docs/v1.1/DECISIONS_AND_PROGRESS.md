@@ -8,6 +8,16 @@
 - 우선 기존 코드의 동작을 확인한다. 기록만 있고 재현되지 않은 버그는 미확인으로 표시한다.
 - `docs/history/`는 과거 기록으로 보존한다.
 
+## 2026-10-14 / 통합 애니메이션 회귀 보완 완료 (최신 결정)
+
+- 사용자 재지시와 현재 diff/QA를 확인해 완료된 9종 GrabStart once→Held loop, 얼굴냥 울음·시바 눈물, 푸들 원본 보행, 기존 물리·효과/플랫폼을 유지했다. 앞선 중단 작업의 미커밋 상태를 보존했고 다른 worktree·원본 WebP/pet.json·IPC/UI/물리·설정은 변경하지 않았다.
+- 새 명시 요구인 **프레임 내부 이미지 자르기 금지**가 중단 작업의 영업냥 `sourceCrop` 중간안보다 우선한다. 공통 renderer/preview/player의 crop 처리와 영업냥 프로필 값을 제거하고 원본 셀 전체를 표시한다. 기존 v1.0.0의 좌우row1/2·83.33ms를 복원하되 원본7열은 몸 일부 미완성으로 제외했다. 전체 셀0~6의 alpha>16 bbox x50~142/y9~199를 확인해 center=.5/foot=199/208만 사용한다. Pet.size/물리/충돌은 그대로다. 중간 cropped 화면은 `qa/grab-regression/interim-cropped-*`에 역사적 비교 자료로 보존했다.
+- 9종 모든 원본 시트의 9/11행×8열 비어 있지 않은 셀을 스캔해 현재 모든 클립 참조가 유효함을 확인했다. 신규 상태용 이미지가 없는 Release/Landing은 idle, Throw는 fall 등의 기존 안전 fallback을 사용한다. 9종 Held는 원본 row5의 유효 표정 목록을 반복하며 GrabStart는 선택한2장 각60ms once. 손가락/안경이 있는 얼굴냥 row8 col2/3은 여전히 제외한다.
+- 실행 결과: `node tests/animation-platform.cjs`, `animation-integration.cjs`(14개), `grab-throw.cjs`(55개), `autonomy.cjs`(12개), `pet-expression.cjs`(19개), `jump-landing.cjs`(8개), `screen-effects.cjs`(11개), `local-pets.cjs` 통과. 중복 제외 renderer/단위119개. `node tests/smoke.cjs`는 native81상태401선택프레임·9종17상태×3시점459렌더/기존 Electron 기능 통과. `node tests/grab-visual.cjs after`는 실제 `npm start`와 RAF로9종 각3.2초 Held, Release/Throw/실제 낮은 낙하 Landing/복귀와 영업냥 좌우 동작을 통과했다. 입력은 CDP DOM 이벤트이고 사람의 물리 마우스가 아니다.
+- `node animation/write-browser-profiles.cjs --check`, 20개 JS/CJS 구문, `git diff --check`·신규 텍스트 공백 검사 통과. 작업 시작 renderer snapshot과 현재 `node tests/grab-throw.cjs --measure`의30/60/144Hz 속도·거리·높이가 동일하고 Phase3-A 효과/IPC/자산 파일 차이가 없다. 최신 QA 캡처 JSON의 renderer/player/profile/effects SHA는 현재 파일과 일치한다.
+- 검토한 최신 [전후 프리뷰](qa/grab-regression/index.html)는 얼굴냥 울음과 다른8종의 표정·자세 반복, 영업냥의 원본 전체 셀 보행과 안정된 발 기준을 보여 준다. 영업냥 원본의 분리된 윗부분·회전과 업무→보행 크기/자세 차이, 전용 Release/Landing/Hit 이미지의 부재는 자산 한계다. 원본을 자르거나 새 픽셀/소품을 만들지 않는다. 실제 사람의 마우스, 60/144Hz·DPI·투명 화면에서9종3초 Hold와 동적 전환의 최종 체감은 사용자 수동 QA로 남긴다.
+- 범위: 애니메이션 재생·프로필/표시만 수정. 신규 도구·캐릭터·창 순서·Phase3-B는 미구현. 빌드/commit/push 미실행.
+
 ## 2026-10-12 결정 확정
 
 | 항목 | 확정 | 이전 논의와 달라진 점 |
@@ -529,6 +539,25 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 
 ## 변경 기록 템플릿
 
+### 2026-10-13 / 독립 애니메이션 플랫폼 Electron 선택 통합
+
+- 시작 기준 앱 `feature/v1.1`=`50d2fb7`, 별도 `feature/pet-animation`=`feceb20`, 양쪽 clean 확인. 앱 담당에서 player/9종JSON/프리뷰·생성기/테스트/설계 문서만 선택적으로 가져왔다. 별도 worktree와 branch는 수정하지 않았다. 전체 merge/cherry-pick은 수행하지 않았다.
+- renderer 중복 9종 mapping을 제거하고 canonical JSON의 browser wrapper 하나를 참조한다. CJS/browser 양쪽 export, script 순서·package 포함·VM/격리 smoke 로딩을 연결했다. 별도 preload/IPC/Node 권한/fetch는 추가하지 않았다. 원본 metadata/WebP/ID/표시명/시작4종/무제한 생성/펫 비충돌·Canvas/GIF·UI·설정 보존.
+- 실제 GrabStart→Held→Release/Throw, 자율 rise/apex/fall→land, 강한 bounce, Bomb hit, climb/orbit, Rest/Sleep/Look/wake를 기존 물리 상태와 사건에 연결했다. 향후 stunned/knockout는 시각 override 인터페이스만 준비하고 HP/삭제/새 도구는 구현하지 않았다. 전용 그림은 기존 drag/idle/fall fallback이며 신규 이미지/소품은 없다.
+- 독립 초안 보완 이유/영향: Grab > orbit과 기존 구출 우선순위를 맞췄다. 120ms 전 release와 실제 apex/fall을 pending once가 막지 않도록 했고, once 종료 초과 ms를 넘겨 FPS 차이를 줄였다. fall/thrown의 기존 loop:false 프레임 진행/마지막 자세를 유지했다. geometry의 frameAdjustments/scale/foot/center/tilt/bob/squash는 변경하지 않았다. 기존 clock 직접 조작 QA는 실제 player 진행/현재 프레임 검사로 바꿨으며 금지 셀·자산·기준점 기대치를 완화하지 않았다.
+- Phase3-A screen-effects.js 바이트 동일. 효과 RAF raw elapsedMs를 Sprite clock에도 전달하지만 물리 dt clamp/상수·Throw/Bomb impulse·자율 점프 무바운스·자율 활동성/Draw/구조물은 유지했다. HEAD snapshot 대비 `node tests/grab-throw.cjs --measure`의30/60/144Hz 느림/보통/flick 초기속도·0.5초거리·최고높이 전체 JSON 동일.
+- 검증: animation-platform PASS; animation-integration 신규12, 기존grab55/autonomy12/expression19/jump8/effects11 중복 제외117개 PASS. 각 테스트 명령과 local-pets를 재실행했다. 격리 Electron smoke PASS: 모듈 실제 로드, 기존81상태·418프레임·원본11시트385셀/기준점·1x/2x/금지셀/반전, 신규17상태×9종×3시점459렌더, 기존PC/Draw/Grab/Trash/BH/구조물/Tray·저장·재시작/HTTP0. local-pets invalid fixture 경고는 예상이다. 구문·wrapper동일성·diff/new-file 공백 검사 PASS.
+- 실제Pet.draw의51장/80ms QA와459 sample을 `qa/animation-integration`에 보존하고 contact sheet 직접 점검. 입력은 시각 전환 스크립트이며 실제 Windows 마우스/물리 영상이 아니다. 실눈냥·커비(잠)의 Rest→Sleep은 원래 정책이며 다른 종의 Sleep/KO는 QA 입력만 제공했다. 영업냥의 책상/기립 불연속·진짜 보행 부재, 푸들 원본 소품, 일부 원본 자세 크기 차이와 전용 land/hit/KO/wake 자산 부재는 남는다.
+- 변경 파일/재현 명령/계약은 animation/RUNTIME_INTEGRATION.md와 QA README에 기록했다. 실제Windows 60/144Hz·DPI·투명 화면/짧은Grab/장시간 부하 검증은 사용자 수동 확인으로 남긴다. 망치/총/BH확장/신규캐릭터/툴바/다음Phase, 빌드/commit/push/버전 변경은 미실행.
+
+## 2026-10-13 / 애니메이션 전담 1차 / 독립 상태 플랫폼 초안
+
+- `feature/pet-animation`에서 9종 원본 시트/메타데이터와 `qa/sprite-final` 전후 프리뷰·프로필, 현재 renderer와 이전 Git 이력을 대조했다. 현재 앱은 9개 클립 중심이며 grabStart/release/land/hit 등의 독립 표현 상태는 아직 없다.
+- 앱에 연결하지 않는 `animation/profiles.v1.json`(최종 after 스냅샷과 동일), `animation/pet-animation.cjs`(상태 우선순위·loop/once/hold·시간 재생·fallback), 오프라인 프리뷰 생성기와 `docs/v1.1/animation/` 분석·미리보기를 추가했다. 원본 에셋·ID와 renderer/main/controls는 변경하지 않았다.
+- 영업냥 이전 코드의 row1/2 좌우 8장 선택은 확인했지만 그 행의 몸 분절/소품 문제가 있어 실사용 자연스러움을 확정하지 않았다. 현재 row4 col2 기립 대체 표현도 실제 보행은 아니다. 통합 전 프레임별 A/B 시각 QA가 필요하다.
+- `node tests/animation-platform.cjs` PASS: 9종 프로필 스냅샷, 원본 SHA-256, 상태 전환/우선순위, 금지 셀, 푸들/얼굴냥/영업냥/우사기 주요 매핑, 30/60/144Hz 동일 시간 프레임. 기존 `node tests/pet-expression.cjs` 86개 PASS. `node animation/write-preview.cjs`로 프리뷰 생성 및 script 구문 확인 PASS. 실제 앱 실행·DPI·동적 물리 전환은 이번 브랜치에서 하지 않았다.
+- 사용자 승인으로 확정된 새 동작 변경은 없다. 다음 단계는 앱 개발 채팅과 HEAD/파일 충돌 확인 후 단일 담당이 이벤트 공급과 렌더 연결을 수행하고 실제 Windows 시각 QA를 받는 것이다.
+
 ### 2026-10-13 / Phase 3-A / 화면 효과 공통 수명 및 정리
 
 - 사용자 요청 범위: 화면 타격 효과의 공통 관리만 구현. 애니메이션 모듈 가져오기/매핑 변경, 신규 도구/캐릭터/툴바/빌드/commit/push는 하지 않는다. 앞선 계획보다 좁은 최신 요청에 따라 균열 선택 UI와 설정 저장은 나중에 연결 가능한 내부 구조만 둔다.
@@ -561,3 +590,12 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 - 사용자 승인 필요 여부:
 - 실행한 테스트와 결과:
 - 남은 문제와 다음 조치:
+
+### 2026-10-14 / Windows 일반 창 위 오버레이 순서
+
+- 범위는 실제 Windows BrowserWindow 순서만이다. 앱 시작 시 오버레이는 `floating` topmost/비포커스/입력 무시, 툴바는 `pop-up-menu` topmost였다. 기존 `raiseControls()`는 툴바만 올려 오버레이의 표시·복원·상태 변경 및 툴바 blur 시 순서를 복구하지 않았다. CSS z-index 문제가 아니다.
+- 격리 Electron+Win32 HWND 검사에서 초기 비동기 표시 완료 전 한 실행의 순서가 불안정해 테스트가 오버레이 visible을 기다리도록 보정했다. 표시 완료 후 일반 창 생성/포커스/최대화/복원은 기본 코드에서도 대부분 정상이었다. 테스트에서 topmost 속성을 상실하도록 한 뒤 툴바 blur를 발생시키면 이전 코드는 복구 실패했다. 실제 사용자 보고의 정확한 발생 원인은 아직 확정하지 못했다.
+- `main.js`에 `raiseOverlay()`를 추가했다. visible 상태에서 기존 `floating` 레벨을 재설정하고 focus 없이 `moveTop()`한 뒤 툴바를 올린다. 오버레이 show/restore, 툴바 blur, 상태 변경, 디스플레이 변경, 툴바 복구에서만 호출한다. 주기 타이머·강제 포커스·새 native 의존성은 없다. 툴바 `pop-up-menu` 레벨과 기존 입력 무시 전환은 유지한다.
+- Electron [BrowserWindow API](https://www.electronjs.org/docs/latest/api/browser-window)는 `floating`과 `pop-up-menu` 레벨, 포커스 없는 `moveTop()`/`showInactive()`, `setIgnoreMouseEvents()`의 하위 창 입력 전달을 명시한다. Windows [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos)는 topmost 창의 일반 창 위 순서와 비활성화 후 유지를 설명한다.
+- `tests/window-order.cjs`는 TEMP appData/복사본 Electron과 일반 창 probe, Win32 z-order/WS_EX_TOPMOST/WindowFromPoint를 검사한다. 수정 후 기본 시나리오 3회 연속 PASS, Pet/Draw/Toy/native hit target/비포커스 추가 검사 PASS. `node tests/smoke.cjs` PASS, `node --check main.js`, `git diff --check` PASS. 테스트는 native hit target을 확인하며 실제 좌·우클릭/휠 전송은 수동 QA로 남긴다.
+- `node tests/window-order.cjs --real-apps`: 현재 실행 중인 Chrome을 foreground로 전환한 뒤 오버레이·툴바의 native 순서 PASS. Code/ChatGPT 자동 foreground 전환은 Windows에서 거부됐고 탐색기 별도 파일 창은 탐지되지 않아 해당 실제 앱 검사는 미완료. Alt+Tab, F11 전체 화면, 관리자 권한 창/보안 데스크톱도 직접 조작하지 않았다. 일반 창 위 표시가 대상이며 F11/타 topmost/시스템 UI의 우선순위는 보장하지 않는다. 애니메이션·물리·효과·설정 경로와 원본 에셋은 수정하지 않았다. 빌드/commit/push 없음.

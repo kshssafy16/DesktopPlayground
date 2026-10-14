@@ -28,6 +28,8 @@ const sandbox = {
   setTimeout() {}, requestAnimationFrame: () => 1, cancelAnimationFrame() {}
 };
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'animation/pet-animation.cjs'), 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'animation/profiles.browser.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'screen-effects.js'), 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync(process.env.PHYSICS_SOURCE || path.join(__dirname, '..', 'renderer.js'), 'utf8'), sandbox);
 const evaluate = source => vm.runInContext(source, sandbox);

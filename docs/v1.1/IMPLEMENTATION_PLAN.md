@@ -1,5 +1,7 @@
 # DesktopPlayground v1.1 단계별 구현 계획
 
+애니메이션 통합 후 회귀 보완(2026-10-14): Held 고정 해제·9종 원본 표정 반복·GrabStart2장 once와 영업냥 초기 좌우 보행 복원. 중간안의 내부 crop을 제거하고 원본 셀 전체의 center/foot 기준으로 맞췄다. 실제 npm start에서 9종3.2초 Held 관찰과 기존 회귀 완료. [상세 기록](animation/GRAB_REGRESSION.md) 참고. Phase3-B 이후 구현은 하지 않았다.
+
 ## 0. 작업 시작 규칙
 
 1. 실제 프로젝트 경로를 확인한다. 이전 로컬 `D:\DesktopPet`이 제거됐을 수 있으므로 사용자가 선택한 clone 위치를 기준으로 한다. Codex 분석 보고서의 `D:\DesktopPlayground` 경로를 그대로 믿지 않는다.
@@ -97,6 +99,10 @@
 - 전후동일조건32장/3.2초캡처·프로필/rendererSHA를프로젝트qa/sprite-final에저장하고브라우저시각비교와native모든프레임기준점검사.실제npm start/DPI/60·144Hz사용감은수동확인후최종판정한다.
 
 ## Phase 3. 화면 장난감과 안정성
+
+### 애니메이션 플랫폼 선택 통합 완료 (Phase 3-A 이후, 2026-10-13)
+
+앱 HEAD `50d2fb7`에 별도 브랜치 `feceb20`의 독립 player/프로필/테스트/설계 자료만 연결했다. 공통 시각 상태와 일회 이벤트를 기존 Pet에 전달하며 물리·활동성·geometry 보정·효과 RAF는 보존했다. 3-B 이후 도구는 진행하지 않았다. 최신 [통합 계약](animation/RUNTIME_INTEGRATION.md)과 QA를 따른다. 아래 준비/3-A 기록의 미통합 설명은 당시 진행 상태다.
 
 2026-10-13 준비 점검: 현재 코드의 영향 범위와 작은 구현 단위 제안은 [PHASE_3_PLAN.md](PHASE_3_PLAN.md)를 따른다. 이번 점검은 문서 작업만이며 Phase 3 구현 시작을 뜻하지 않는다. 앱 채팅은 물리/도구/구조물/UI/전체 회귀와 최종 통합을 담당하고, `feature/pet-animation`은 독립 애니메이션 작업을 담당한다. [ANIMATION_WORKSTREAM.md](ANIMATION_WORKSTREAM.md)의 소유권을 지키며 런타임 연결은 충돌 검토 후 단일 담당자가 수행한다. 기존 Phase 2-B 프로필·클립·크기·기준점은 앱 측에서 중복 수정하지 않는다.
 

@@ -1,5 +1,7 @@
 # DesktopPlayground v1.1 — 전체 9종 Sprite Inventory
 
+최신 Grab 회귀 보완은 [animation/GRAB_REGRESSION.md](animation/GRAB_REGRESSION.md)를 따른다. 9종 row5 Held 반복·얼굴냥 울음·시바 눈물과 영업냥 row1/2의 **전체 셀** 보행을 복원했다. 아래6절의 영업냥 단일 기립 walk/금지행 기록은 이전 단계이며 jump/fall fallback에만 남는다. 원본 WebP/metadata는 동일하다.
+
 > 기준: 사용자가 제공한 `pets.zip` (2026-10-13). 패키지 9개, 각각 `pet.json` + `spritesheet.webp`. 실제 로컬 `feature/v1.1`의 최신 renderer는 여기에 포함되지 않았으므로, 구현 결정은 해당 브랜치 코드를 확인하여 확정한다.
 
 **문서 우선순위:** 기존 `SPRITESHEET_AUDIT.md`(일부 5종만 분석)의 내용을 이 문서가 대체한다. 특히 얼굴냥의 안경은 **9행 3~4열(1-based)**로 확인됐다. 기존 문서의 8행 기록은 잘못된 것이므로 중복된 지침을 업데이트하거나 `superseded`로 표시한다.

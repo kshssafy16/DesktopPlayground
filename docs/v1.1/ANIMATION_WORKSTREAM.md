@@ -1,6 +1,7 @@
 # DesktopPlayground v1.1: Animation Workstream
 
 상태: 계획 및 작업 역할 정의. 이 문서는 코드 구현 완료를 의미하지 않는다.
+2026-10-13 통합 갱신: 앱 담당이 `50d2fb7`에 독립 플랫폼 `feceb20`의 필요한 파일만 연결했다. 최신 구현·검증은 [animation/RUNTIME_INTEGRATION.md](animation/RUNTIME_INTEGRATION.md)를 따른다. 별도 worktree는 미수정이며 이후에도 공유 런타임 파일 동시 수정을 피한다.
 기준 프로젝트: `D:\DesktopPlayground`, 기준 개발 브랜치 `feature/v1.1`.
 
 ## 1. 목표

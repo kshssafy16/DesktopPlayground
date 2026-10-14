@@ -339,174 +339,8 @@
         const spriteProfiles = {
             cat: { feet: [.976, .9327, .9375, .976, .976] },
             magpie: { feet: [.976, .976, .976, .976, .976] },
-            "cat_brown": {
-                rows: 11,
-                origin: "feet",
-                elasticity: 0.55,
-                sleeping: false,
-                clips: {
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.976},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8462},
-                    walkLeft: {"mirrorOf": "walkRight"},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
-                    drag: {"row": 5, "frames": [0, 1, 2, 6, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.976},
-                    rest: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.4974, "foot": 0.976},
-                    sleep: {"row": 5, "frames": [3, 4], "frameMs": 500, "center": 0.5, "foot": 0.8606},
-                    look: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 160, "center": 0.4948, "foot": 0.976},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "cat_face": {
-                rows: 11,
-                origin: "center",
-                elasticity: 0.25,
-                sleeping: false,
-                clips: {
-                    walkLeft: {"mirrorOf": "walkRight"},
-                    walkRight: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 110, "center": 0.5026, "foot": 0.8894, "scale": 1.035, "tilt": 0.035, "bob": 0.025, "bobMs": 360, "centerY": 0.5},
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.8894, "centerY": 0.4976},
-                    jump: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.9038, "centerY": 0.5},
-                    fall: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.9038, "centerY": 0.5},
-                    drag: {"row": 5, "frames": [0, 1, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.9038, "centerY": 0.4976},
-                    rest: {"row": 8, "frames": [0, 1, 5], "frameMs": 400, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
-                    sleep: {"row": 8, "frames": [1, 5], "frameMs": 500, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
-                    look: {"row": 8, "frames": [0, 1, 4, 5], "frameMs": 216.6666666667, "center": 0.5, "foot": 0.9231, "centerY": 0.5},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "cat_sleepy": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.4,
-                sleeping: true,
-                clips: {
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.7933},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.851},
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.851},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.9279},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.9279},
-                    drag: {"row": 5, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.7981},
-                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 400, "center": 0.5, "foot": 0.7837},
-                    sleep: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 483.3333333333, "center": 0.5, "foot": 0.7933},
-                    look: {"row": 8, "frames": [0, 1, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.8173},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "doge": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.55,
-                sleeping: false,
-                clips: {
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.4974, "foot": 0.976},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.976},
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.976},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
-                    drag: {"row": 5, "frames": [0, 1, 5, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.976},
-                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.4974, "foot": 0.976},
-                    sleep: {"row": 5, "frames": [3, 4], "frameMs": 500, "center": 0.5, "foot": 0.9519},
-                    look: {"row": 8, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.976},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "puddle": {
-                rows: 11,
-                origin: "feet",
-                elasticity: 0.55,
-                sleeping: false,
-                clips: {
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8125, "scale": 1.1},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.8125, "scale": 1.1},
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5, 6], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.976},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.976},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.976},
-                    drag: {"row": 5, "frames": [0, 1, 2, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.976},
-                    rest: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 383.3333333333, "center": 0.5, "foot": 0.976},
-                    sleep: {"row": 5, "frames": [4, 5], "frameMs": 500, "center": 0.5, "foot": 0.8173},
-                    look: {"row": 9, "frames": [1, 2, 3, 4, 5, 6, 5, 4, 3, 2], "frameMs": 180, "center": 0.5391, "foot": 0.976},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "salary-cat": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.4,
-                sleeping: false,
-                clips: {
-                    fall: {"row": 4, "frames": [2], "frameMs": 125, "center": 0.5, "foot": 0.875, "loop": false},
-                    jump: {"row": 4, "frames": [2], "frameMs": 100, "center": 0.5, "foot": 0.875, "loop": false},
-                    walkLeft: {"mirrorOf": "walkRight"},
-                    walkRight: {"row": 4, "frames": [2], "frameMs": 180, "center": 0.5, "foot": 0.875, "tilt": 0.025, "bob": 0.018, "bobMs": 420},
-                    idle: {"row": 8, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.9327},
-                    drag: {"row": 5, "frames": [0, 1, 4, 5], "frameMs": 116.6666666667, "scale": 0.9, "center": 0.5, "foot": 0.9327},
-                    rest: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 350, "center": 0.5, "foot": 0.8413},
-                    look: {"row": 8, "frames": [0, 1, 4, 5], "frameMs": 216.6666666667, "center": 0.5, "foot": 0.9327},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "kirby": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.7,
-                sleeping: false,
-                clips: {
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.5, "foot": 0.899},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.9567},
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.5, "foot": 0.9567},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.5, "foot": 0.899},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.5, "foot": 0.899},
-                    drag: {"row": 5, "frames": [0, 1, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.5, "foot": 0.9087},
-                    rest: {"row": 6, "frames": [2, 3, 4], "frameMs": 400, "center": 0.5, "foot": 0.8894},
-                    sleep: {"row": 6, "frames": [3], "frameMs": 500, "center": 0.5, "foot": 0.8606},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "kirby_sleepy": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.4,
-                sleeping: true,
-                clips: {
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.3854, "foot": 0.9423},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4167, "foot": 0.9471},
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4818, "foot": 0.9471},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "loop": false, "center": 0.4297, "foot": 0.9038},
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "loop": false, "center": 0.4297, "foot": 0.9038},
-                    drag: {"row": 5, "frames": [0, 1, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.388, "foot": 0.9375},
-                    rest: {"row": 5, "frames": [1, 2, 3, 4, 5], "frameMs": 400, "center": 0.388, "foot": 0.9375},
-                    sleep: {"row": 5, "frames": [2, 3, 4], "frameMs": 516.6666666667, "center": 0.3906, "foot": 0.9375},
-                    look: {"row": 6, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.4036, "foot": 0.9375},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
-            "usagi": {
-                rows: 9,
-                origin: "feet",
-                elasticity: 0.55,
-                sleeping: false,
-                clips: {
-                    fall: {"row": 4, "frames": [1, 2, 3], "frameMs": 125, "center": 0.4974, "foot": 0.9327, "loop": false, "scale": 1.25, "frameAdjustments": {"1": {"foot": 0.8894}, "2": {"foot": 0.7356}, "3": {"foot": 0.9327}}},
-                    jump: {"row": 4, "frames": [1, 2, 3], "frameMs": 100, "center": 0.4974, "foot": 0.9327, "loop": false, "scale": 1.25, "frameAdjustments": {"1": {"foot": 0.8894}, "2": {"foot": 0.7356}, "3": {"foot": 0.9327}}},
-                    idle: {"row": 0, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 183.3333333333, "center": 0.4974, "foot": 0.9712},
-                    walkRight: {"row": 1, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4974, "foot": 0.9663},
-                    walkLeft: {"row": 2, "frames": [0, 1, 2, 3, 4, 5, 6, 7], "frameMs": 83.3333333333, "center": 0.4974, "foot": 0.9663},
-                    drag: {"row": 5, "frames": [0, 1, 2, 4, 5, 6, 7], "frameMs": 116.6666666667, "center": 0.4974, "foot": 0.9663},
-                    rest: {"row": 0, "frames": [1, 3], "frameMs": 350, "center": 0.4974, "foot": 0.9712},
-                    look: {"row": 7, "frames": [0, 1, 2, 3, 4, 5], "frameMs": 200, "center": 0.5, "foot": 0.9712},
-                },
-                fallback: {"sleep": "rest", "look": "idle", "rest": "idle", "jump": "fall", "fall": "idle", "walkRight": "idle", "walkLeft": "idle", "climb": "idle", "drag": "idle"}
-            },
+            ...PlaygroundPetProfiles.profiles
         };
-        // Resolve mirror declarations once, never rebuild frame arrays during rendering.
-        for (const profile of Object.values(spriteProfiles)) for (const [name, clip] of Object.entries(profile.clips || {})) {
-            if (clip.mirrorOf) {
-                const source = profile.clips[clip.mirrorOf];
-                if (!source || source.mirrorOf) { delete profile.clips[name]; continue; }
-                profile.clips[name] = { ...source, flip: !source.flip, mirrorOf: clip.mirrorOf };
-            }
-        }
         const spriteStates = ['idle', 'walkRight', 'walkLeft', 'fall', 'drag'];
 
         // Durations are milliseconds of stable autonomous time, never render frame counts.
@@ -592,6 +426,10 @@
             }
 
             remove() {
+                this.animationPlayer = null;
+                this.animationInputPrevious = null;
+                this.animationEvent = null;
+                this.animationReaction = null;
                 if (draggedPet === this) releaseDraggedPet();
                 this.blackHoleOrbit = null;
                 this.rescuedFromHoles.clear();
@@ -632,6 +470,8 @@
             }
 
             beginThrow(vx, vy) {
+                this.animationPlayer?.reset();
+                this.animationEvent = Math.hypot(vx, vy) <= 1.5 ? 'release' : null;
                 this.interruptAutonomy();
                 const scale = Math.min(1, maxThrowSpeed / (Math.hypot(vx, vy) || 1));
                 this.vx = vx * scale;
@@ -660,17 +500,18 @@
             }
 
             beginImpact() {
+                this.queueAnimationEvent('hit');
                 this.motionCause = 'bomb';
                 this.externalMotion = { source: 'bomb', elapsedMs: 0, stableMs: 0 };
             }
 
-            update(dt = 1) {
+            update(dt = 1, animationElapsedMs = dt * physicsFrameMs) {
                 // Small physics steps keep fast throws consistent across refresh rates.
                 // Autonomous movement and ladder timing keep their existing update path.
                 const steps = this.externalMotion ? Math.max(1, Math.ceil(dt / throwPhysics.maxStep)) : 1;
                 for (let i = 0; i < steps; i++) this.updateStep(dt / steps);
                 if (!this.isDragging) this.squish = 1 + (this.squish - 1) * Math.pow(.85, dt);
-                this.advanceAnimation(dt * physicsFrameMs);
+                this.advanceAnimation(animationElapsedMs);
                 this.updateImagePosition();
             }
 
@@ -822,14 +663,17 @@
 
                 // 양옆 벽 충돌
                 if (this.x - this.size <= 0) {
+                    if (externalMotion && Math.abs(this.vx) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
                     this.x = this.size;
                     this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
                 }
                 if (this.x + this.size >= width) {
+                    if (externalMotion && Math.abs(this.vx) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
                     this.x = width - this.size;
                     this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
                 }
                 if (externalMotion && this.y < this.size && this.vy < 0) {
+                    if (Math.abs(this.vy) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
                     this.y = this.size;
                     this.vy = throwRebound(this.vy, motionPhysics.wallRestitution);
                 }
@@ -852,6 +696,7 @@
             }
 
             reactToLanding(speed) {
+                if (speed > 1.5) this.queueAnimationEvent(this.externalMotion && speed > throwPhysics.stopImpact ? 'bounce' : 'land');
                 // Ignore resting gravity contact; cap strong landings without touching velocity.
                 if (speed >= 6) this.autonomyHoldMs = Math.max(this.autonomyHoldMs, 300);
                 const amount = Math.min(.4, Math.max(0, (speed - 2) * .018));
@@ -863,8 +708,63 @@
                     && !this.blackHoleOrbit && !this.climbing && Math.abs(this.vy) <= 1.5;
             }
 
-            spriteClip() {
+            queueAnimationEvent(event) {
+                if (!Object.hasOwn(PlaygroundPetAnimation.ONCE_MS, event)) return false;
+                // Multiple physics substeps produce at most one visual event per update.
+                if (this.animationEvent !== 'hit' || event === 'grabStart') this.animationEvent = event;
+                return true;
+            }
+
+            setAnimationReaction(state = null) {
+                // Future tool interface only; visual overrides never own physics/removal.
+                if (![null, 'stunned', 'knockout'].includes(state)) return false;
+                this.animationReaction = state;
+                return true;
+            }
+
+            platformClip(profile, elapsedMs) {
+                if (!profile.rows || !profile.origin || !profile.clips) return null;
+                if (this.animationProfile !== profile || !this.animationPlayer) {
+                    try { this.animationPlayer = PlaygroundPetAnimation.createPlayer(profile); }
+                    catch { return null; }
+                    this.animationProfile = profile;
+                    this.animationInputPrevious = null;
+                }
+                const quiet = this.quietAutonomy();
+                const walking = !this.isAutonomouslyStill && Math.abs(this.vx) >
+                    (this.animationState?.startsWith('walk') ? .15 : .5);
+                const input = {
+                    held: this.isDragging, orbit: !!this.blackHoleOrbit,
+                    thrown: !!this.externalMotion,
+                    stunned: this.animationReaction === 'stunned', knockout: this.animationReaction === 'knockout',
+                    climbing: this.climbing ? (this.climbingDown ? 'down' : 'up') : null,
+                    airborne: this.motionCause === 'autonomous-jump' || Math.abs(this.vy) > 1.5,
+                    vx: walking ? (this.facingRight ? 1 : -1) * Math.max(.51, Math.abs(this.vx)) : 0,
+                    vy: this.vy,
+                    resting: quiet && ['rest', 'sleep'].includes(this.autonomy.state),
+                    sleeping: this.autonomy.state === 'sleep' || profile.sleeping,
+                    looking: quiet && this.autonomy.state === 'look'
+                };
+                const previous = this.animationInputPrevious;
+                let event = this.animationEvent;
+                if (input.held && !previous?.held) { this.animationPlayer.reset(); event = 'grabStart'; }
+                else if (previous?.held && !input.held && !input.orbit && !input.thrown) event = 'release';
+                else if (previous?.resting && !input.resting && !input.thrown && !input.airborne && !input.climbing) event ||= 'wake';
+                if (event) input.event = event;
+                this.animationEvent = null;
+                this.animationInputPrevious = input;
+                const sample = this.animationPlayer.update(input, elapsedMs);
+                this.animationVisualState = sample.state;
+                this.animationState = sample.requestedClip;
+                this.animationMs = sample.elapsedMs;
+                this.frame = sample.frameIndex;
+                return { state: sample.requestedClip, clip: sample.clip, platform: true };
+            }
+
+            spriteClip(elapsedMs = 0) {
                 const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
+                const platform = this.platformClip(profile, elapsedMs);
+                if (platform) return platform;
                 const clips = profile.clips || this.definition.clips || {};
                 const quiet = this.quietAutonomy();
                 const requested = this.isDragging ? 'drag'
@@ -919,8 +819,9 @@
 
             advanceAnimation(elapsedMs) {
                 if (this.definition.renderKind !== 'sprite') return;
-                const selected = this.spriteClip();
+                const selected = this.spriteClip(elapsedMs);
                 if (!selected) return;
+                if (selected.platform) return;
                 const { clip } = selected;
                 const frameCount = Array.isArray(clip.frames) ? clip.frames.length : clip.frames;
                 const clipKey = `${selected.state}:${clip.row}:${clip.start || 0}:${clip.frameMs ?? clip.speed}:${frameCount}`;
@@ -1454,6 +1355,7 @@
                 const normalSpeed = pet.vx * first.nx + pet.vy * first.ny;
                 if (first.ny < -.5) pet.reactToLanding(-normalSpeed);
                 const bounce = Math.abs(normalSpeed) > physics.stopImpact ? physics.restitution : 0;
+                if (bounce) pet.queueAnimationEvent('bounce');
                 pet.vx -= (1 + bounce) * normalSpeed * first.nx;
                 pet.vy -= (1 + bounce) * normalSpeed * first.ny;
                 if (first.ny < -.5 && bounce === 0) support = `draw:${first.segment.shapeId}`;
@@ -1740,7 +1642,7 @@
 
             // 펫 업데이트 및 렌더링
             petInstances.forEach(pet => {
-                pet.update(dt);
+                pet.update(dt, effectElapsedMs);
                 pet.draw(ctx);
             });
             drawTrash();

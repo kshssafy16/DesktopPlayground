@@ -22,6 +22,8 @@
       "index.html",
       "renderer.js",
       "screen-effects.js",
+      "animation/pet-animation.cjs",
+      "animation/profiles.browser.js",
       "styles.css",
       "controls.html",
       "controls.js",

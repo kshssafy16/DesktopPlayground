@@ -2,7 +2,29 @@
 
 체크 표시 규칙: `[ ]` 미검증, `[x]` 실제 실행 및 통과. 자동 검사와 실제 Windows 수동 확인을 구분한다. 아래 전체 v1.1 항목은 해당 단계가 구현·검증될 때 갱신한다.
 
+## 애니메이션 통합 회귀 최종 보완 (2026-10-14, 최신)
+
+- [x] 원본9개 WebP의 9/11행×8열 alpha>16 유효 셀을 다시 스캔하고 프로필의 Idle/Walk/Jump/Fall/GrabStart/Held/Release/Throw/Landing/Rest/Sleep/Look 및 fallback 참조가 모두 실제 비어 있지 않은 셀임을 확인. 얼굴냥 row8 col2/3 금지·푸들 좌우 원본 보행 유지. 원본 자산 변경 없음.
+- [x] `node tests/animation-platform.cjs`, `node tests/animation-integration.cjs`: 9종 GrabStart120ms once → Held3.2초 순차 loop → Release/Throw/착지 복귀,30/60/144Hz, 단일프레임 hold fallback, 물리좌표·size 불변 통과. 통합14개 포함 중복 제외 단위/renderer 회귀119개.
+- [x] `node tests/grab-visual.cjs after`: **실제 프로젝트 `npm start` + RAF + Electron Canvas**에서 9종 각각 Held3.2초/추가시점, Release·빠른 Throw·Landing·복귀 통과. DOM MouseEvent 자동 입력이며 물리 마우스 아님. [전후 영상식 샘플·영업냥 비교](qa/grab-regression/index.html) 확인. 수정 전9종 Held 단일 프레임; 수정 후 관측2~6프레임.
+- [x] `git show v1.0.0:renderer.js`의 영업냥 row1/2 8장·size×2.5·offsetY10을 실제 Electron Canvas에서 재생한 `legacy-salary.png`와 현재 원본 **전체 셀** row1/2 0~6을 비교. 내부 crop 제거, union center=.5/foot=199/208, 미완성7열 제외. 자연스러운 전체 픽셀 보존과 좌우·발 기준 확인; 원본의 머리/몸 분리·회전 및 업무→이동 표현 차이는 남음.
+- [x] `node tests/smoke.cjs`: 9종81상태401선택프레임 native1x/2x 기준점·금지프레임·좌우 반전,17상태×9종×3시점459렌더 및 기존 Electron 앱/효과/Tray/설정/도구 회귀 통과. `node tests/grab-throw.cjs`, `autonomy.cjs`, `pet-expression.cjs`, `jump-landing.cjs`, `screen-effects.cjs`, `local-pets.cjs`도 재실행 통과.
+- [x] `node animation/write-browser-profiles.cjs --check`, 20개 JS/CJS `node --check`, `git diff --check`, 신규 텍스트 공백 검사 통과. 작업 시작 renderer snapshot과 현재 `node tests/grab-throw.cjs --measure`의30/60/144Hz Throw 수치 동일. Phase3-A 효과·IPC/자산 파일 차이 없음.
+- [ ] 실제 사람의 마우스로9종을 각각3초 이상 잡아 표정 변화·천천히 놓기·빠른 던지기/착지, 영업냥 원본 분절/업무 전환, 얼굴냥 울음/금지소품, 푸들 보행을 확인. 60/144Hz·고DPI·투명 화면/다수펫의 최종 자연스러움은 자동 검사로 판정하지 않는다.
+
 ## Phase 3-A 공통 화면 효과 (2026-10-13)
+
+### 애니메이션 플랫폼 통합 검증 (2026-10-13)
+
+- [x] `node tests/animation-platform.cjs`: 원본 9종 SHA/프로필/금지 셀, fallback·시간 재생, Grab > orbit, 조기 release/공중 전환 중단, 일회 시간 잔여분, 미래 knockout 인터페이스 PASS.
+- [x] `node tests/animation-integration.cjs`: 실제 renderer 연결12개 PASS. 9종 GrabStart/Held/느린 release, 빠른 Throw, orbit 구출, 자율 점프→land, 강/약 충돌, Bomb hit 종료, 등반, wake/KO의 물리 독립성, FPS·RAF·삭제 참조 검사.
+- [x] 기존 grab-throw55/autonomy12/expression19/jump8/effects11과 통합12, 중복 제외117개 PASS. `node tests/grab-throw.cjs`, `autonomy.cjs`, `pet-expression.cjs`, `jump-landing.cjs`, `screen-effects.cjs`, `local-pets.cjs` 모두 재실행. `--measure`의30/60/144Hz 속도·거리·높이 JSON은 앱 HEAD `50d2fb7`과 동일.
+- [x] `node tests/smoke.cjs --animation-preview`: secure Electron 로딩/PC/도구/Draw/Trash/구조물/흡입/Tray 저장·재시작/HTTP0, 기존81상태/418프레임 기준점·1x/2x·반전 및 새9종×17상태×3시점 native459렌더 PASS. 기존 sleepy Rest→Sleep 정책 보존.
+- [x] `node animation/write-browser-profiles.cjs --check`: JSON/wrapper 일치. JS/CJS 구문, Python QA encoder 구문, `git diff --check`·신규파일 공백 검사 PASS. `screen-effects.js` 변경 없음.
+- [x] `python tests/encode-sprite-preview.py animation`: native51장 무손실 반복 QA 생성. 실제 contact sheet를 직접 보아 방향/몸 크기/기준점/금지 프레임을 점검. 기존 sprite-final before/after는 보존.
+- [ ] [통합 QA](qa/animation-integration/README.md)의 Windows 실제 `npm start` 항목: 9종 동적 전환·짧은 Grab→Throw·착지, 60/144Hz·DPI·투명 화면, 장시간 부하. 자동/native 정적 비교로 최종 자연스러움을 확정하지 않는다.
+
+### 화면 효과 관리 검증
 
 - [x] `node tests/screen-effects.cjs`: 관리자 6개 + 실제 renderer 연결 5개, 신규 11개 PASS (기존 Grab/Throw 55개도 함께 실행). 30/60/144Hz 수명·파편 궤적, 불규칙 dt, burst 상한/오래된 효과 제거, auto/accumulate 전환, 잘못된 입력, 화면 밖 파편 정리 검사.
 - [x] 실제 RAF 1초 지연 시 물리 dt 상한과 별도로 효과 만료. 효과 OFF에서도 수명 갱신/정리. 균열 전용 초기화와 전체 효과 초기화에서 Draw/collider/Pet 보존 및 BH orbit 참조 정리.
@@ -161,6 +183,15 @@ VM은 DOM/시계 stub, Electron은 합성 입력이다. 아래의 실화면·애
 - [ ] 균열 초기화가 Draw, Pet, Structure를 삭제하지 않는다.
 
 ## UI와 구조물
+
+### Windows 오버레이 창 순서 (2026-10-14)
+
+- [x] 격리 Electron `node tests/window-order.cjs`: Windows HWND z-order/WS_EX_TOPMOST, 일반 창 생성·활성화·최대화·최소화/복원, 오버레이 Hide/Show·최소화/복원, 툴바와 오버레이 순서, 최상위 속성 상실 후 blur 복구, PC/Touch의 native hit target 검사. 기본 시나리오 3회 연속 PASS; 최종 Pet/Draw/Toy 모드·비포커스 검사 PASS.
+- [x] `node tests/smoke.cjs`: 기존 모드·우클릭 PC 복귀·Hide/Show·Tray·설정·Draw·Grab/Throw 등 격리 Electron 회귀 PASS.
+- [x] `node tests/window-order.cjs --real-apps`: 실행 중인 Chrome을 foreground로 전환한 뒤 오버레이·툴바의 native 순서 PASS. Code/ChatGPT 창의 자동 foreground 요청은 Windows가 거부해 수동 확인 대상으로 남겼다. 탐색기의 별도 파일 창은 탐지되지 않았다.
+- [ ] **실제 Windows 수동:** Chrome, 탐색기, VS Code, Codex를 차례로 일반 크기/최대화하여 펫과 툴바가 위에 있는지 확인. 각 창 클릭, Alt+Tab 왕복, 최소화/복원, 툴바 Hide→Tray 복구를 반복한다. 테스트는 같은 창의 다른 상태뿐 아니라 각 앱의 실제 포커스 전환도 포함한다.
+- [ ] PC 모드에서 펫이 보이는 자리의 아래 앱 좌클릭·우클릭·휠 스크롤이 모두 전달되고, 툴바 버튼은 동작하는지 확인한다. Touch/Draw/Pet/Toy에서 필요한 입력만 오버레이가 받고 우클릭은 PC로 복귀하는지 확인한다. 자동 native hit target 검사는 휠 이벤트 실전달의 증거가 아니다.
+- [ ] 일반 최대화와 Chrome F11 전체 화면을 분리해 확인한다. F11 전체 화면, 별도 항상 위 창, 관리자 권한 창, UAC 보안 데스크톱·Windows 시스템 UI는 일반 창보다 위라는 보장 범위 밖이며 강제로 앞에 띄우지 않는다. 다중 모니터/DPI/작업 표시줄 위치도 수동 확인한다.
 
 - [ ] 펼친 툴바 버튼과 Toy 메뉴의 모든 기능이 올바른 모드를 선택한다.
 - [ ] PC 모드에서는 좌클릭, 우클릭, 휠이 아래 Chrome/Explorer에 전달된다.

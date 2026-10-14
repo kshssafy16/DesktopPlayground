@@ -111,7 +111,7 @@ test('all nine profiles resolve explicit frames; forbidden Face and Salary frame
   }
   assert.ok(evaluate("Object.values(spriteProfiles.cat_face.clips).every(c=>c.row!==8 || !c.frames.some(f=>f===2||f===3))"));
   assert.ok(evaluate("spriteProfiles.puddle.clips.walkRight.row===1 && spriteProfiles.puddle.clips.walkLeft.row===2 && spriteProfiles.puddle.clips.walkRight.frames.length===8"));
-  assert.ok(evaluate("Object.values(spriteProfiles['salary-cat'].clips).every(c=>![0,1,2,3,7].includes(c.row))"));
+  assert.ok(evaluate("Object.entries(spriteProfiles['salary-cat'].clips).every(([name,c])=>name.startsWith('walk')? [1,2].includes(c.row)&&!c.sourceCrop&&c.frames.every(f=>f<7):![0,1,2,3,7].includes(c.row))"));
 });
 
 test('air clip does not flicker to idle at the autonomous apex and holds its final frame', () => {
@@ -136,7 +136,9 @@ test('all local clip clocks use elapsed milliseconds at 30/60/144 Hz', () => {
         for(let i=0;i<hz*2;i++)evaluate(`p.advanceAnimation(${1000/hz})`);
         result.push(evaluate('[p.animationState,p.frame,p.animationMs]'));
       }
-      for(const row of result){assert.equal(row[0],result[0][0]);assert.equal(row[1],result[0][1]);assert.ok(Math.abs(row[2]-2000)<1e-6);}
+      // GrabStart consumes 120ms once; Held keeps the remaining elapsed time.
+      const expectedMs=2000-(state==='drag'?120:0);
+      for(const row of result){assert.equal(row[0],result[0][0]);assert.equal(row[1],result[0][1]);assert.ok(Math.abs(row[2]-expectedMs)<1e-6,`${id}/${state}: ${row[2]}`);}
     }
   }
 });
@@ -172,9 +174,9 @@ test('Face has directional source gaze, mirrored left lean and tiny elapsed-time
   assert.equal(evaluate('JSON.stringify([p.x,p.y,p.vx,p.vy,p.size])'),motion);
 });
 
-test('Salary movement and air are upright instead of the office or rest clip', () => {
+test('Salary uses restored source gait independently of office/rest and air fallback', () => {
   pet('salary-cat');evaluate('p.vx=2;p.advanceAnimation(0)');
-  assert.ok(evaluate('p.spriteClip().clip.row===4 && p.spriteClip().clip.frames.length===1'));
+  assert.ok(evaluate('p.spriteClip().clip.row===1 && p.spriteClip().clip.frames.length===7 && !p.spriteClip().clip.sourceCrop'));
   evaluate('p.beginAutonomousJump(-9);p.advanceAnimation(0)');assert.equal(evaluate('p.spriteClip().clip.row'),4);
   quiet('salary-cat');assert.equal(evaluate('p.spriteClip().clip.row'),6);
   quiet('salary-cat','idle');assert.equal(evaluate('p.spriteClip().clip.row'),8);
@@ -183,7 +185,7 @@ test('Salary movement and air are upright instead of the office or rest clip', (
 test('Usagi air display height matches walking scale and each baked-in airborne foot is corrected', () => {
   pet('usagi');evaluate('p.beginAutonomousJump(-9);p.advanceAnimation(0)');
   for(let i=0;i<3;i++) {
-    evaluate(`p.animationMs=${i*100};p.advanceAnimation(0)`);
+    evaluate(`p.advanceAnimation(${i===0?0:100})`);
     const g=evaluate('p.spriteGeometry()');
     const bottoms=[185,153,194],heights=[146,147,148];
     assert.ok(Math.abs(g.anchorY-bottoms[i]/208)<.0001);

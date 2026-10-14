@@ -1,5 +1,9 @@
 # DesktopPlayground — 재사용 가능한 Pet Animation Platform 규격
 
+Grab 회귀 보완: [animation/GRAB_REGRESSION.md](animation/GRAB_REGRESSION.md). Held는 다중 유효 프레임 loop(단일 프레임만 hold)이며 GrabStart는120ms once이다. 영업냥 보행은 원본 좌우 행의 전체 셀을 표시하고 `center=.5`, `foot=199/208`로 맞춘다. 셀 내부 crop은 최신 사용자 요구에 따라 사용하지 않는다.
+
+최신 Electron 통합 계약은 [animation/RUNTIME_INTEGRATION.md](animation/RUNTIME_INTEGRATION.md)를 따른다. `feceb20`의 독립 player와 9종 프로필을 선택적으로 연결했고 기존 geometry 보정·물리는 보존했다. 아래 과거 설계/7~8절의 클립 보정 근거는 유지하되 상태 선택/loop·once·hold와 이벤트 공급은 최신 통합절이 우선한다.
+
 기준: `pets.zip` 9종과 GitHub 공개 v1.0.0 소스 구조를 분석하여 제안한 **v1.1 확장 설계**. Phase 2-B 품질 보완에서 definition 기반 프로필을 구현했다. 아래 animation.json 예시는 향후 파일 규격 제안이며, 현재 실제 인터페이스와 우선순위는 7절을 기준으로 한다.
 
 ## 목표와 경계

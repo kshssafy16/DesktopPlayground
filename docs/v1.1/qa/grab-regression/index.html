@@ -1,0 +1,14 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><title>Grab 회귀 전후 QA</title>
+<style>body{font:15px system-ui;background:#edf2f6;color:#263f53;margin:24px}#grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:12px}canvas{background:#edf2f6;border:1px solid #a9b7c5}img{max-width:100%}button,input{font:inherit}small{display:block}</style>
+<h1>Grab/Held 전후 비교</h1><p>각 카드 왼쪽 수정 전 / 오른쪽 수정 후. Held 그림은 2.4초까지이며, 수정 후 앱은 3.2초까지 잡은 뒤 Release로 넘어갑니다. 실제 npm start의 저장 sample이며 재생 간격은 비교용입니다. 실제 화면 녹화·물리 마우스 QA와 구분합니다.</p>
+<button id="play">샘플 재생</button> <input id="phase" type="range" min="0" max="12" value="0"><span id="name"></span><div id="grid"></div>
+<h2>영업냥 초기 원본 렌더</h2><img src="legacy-salary.png" alt="v1.0.0 원본 좌우 draw 식">
+<h2>영업냥 수정 전 / 후</h2><img src="before-salary.png" alt="기립 단일 프레임 이동"><img src="after-salary.png" alt="원본 좌우 행의 전체 셀 표시">
+<script>
+const ids=['cat_brown','cat_face','cat_sleepy','doge','puddle','salary-cat','kirby','kirby_sleepy','usagi'];
+const names=['GrabStart','Held 400ms','Held 800ms','Held 1200ms','Held 1600ms','Held 2000ms','Held 2400ms','Release','Recover','Throw','Flight','Landing','Recovered'];
+const a=new Image(),b=new Image(),cards=[];a.src='before-held.png';b.src='after-held.png';
+for(const id of ids){const box=document.createElement('div'),title=document.createElement('b'),c=document.createElement('canvas');title.textContent=id;c.width=280;c.height=180;box.append(title,document.createElement('br'),c);grid.append(box);cards.push(c);}
+function draw(){const col=Number(phase.value);nameLabel.textContent=names[col];cards.forEach((c,row)=>{const x=c.getContext('2d');x.clearRect(0,0,280,180);if(a.complete)x.drawImage(a,col*140,row*180,140,180,0,0,140,180);if(b.complete)x.drawImage(b,col*140,row*180,140,180,140,0,140,180);});}
+const nameLabel=document.getElementById('name');a.onload=b.onload=draw;phase.oninput=draw;let running=false;play.onclick=()=>{running=!running;play.textContent=running?'일시정지':'샘플 재생'};setInterval(()=>{if(running){phase.value=(Number(phase.value)+1)%13;draw();}},400);
+</script></html>
