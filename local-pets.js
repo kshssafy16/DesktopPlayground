@@ -3,10 +3,10 @@ const path = require('node:path');
 
 // Folder names are stable app IDs; pet.json IDs belong to the source packages.
 const LOCAL_PETS = [
-  { id: 'cat_brown', sourceId: 'sanqian', category: 'cat', label: 'Brown' },
-  { id: 'cat_face', sourceId: 'hami--tat', category: 'cat', label: 'Face' },
-  { id: 'cat_sleepy', sourceId: 'diandian--lllucasxu', category: 'cat', label: 'Sleepy' },
-  { id: 'salary-cat', sourceId: 'monthly-salary-cat', category: 'cat', label: 'Salary' },
+  { id: 'cat_brown', sourceId: 'sanqian', category: 'cat', label: '황색냥' },
+  { id: 'cat_face', sourceId: 'hami--tat', category: 'cat', label: '얼굴냥' },
+  { id: 'cat_sleepy', sourceId: 'diandian--lllucasxu', category: 'cat', label: '실눈냥' },
+  { id: 'salary-cat', sourceId: 'monthly-salary-cat', category: 'cat', label: '영업냥' },
   { id: 'doge', sourceId: 'doge', category: 'dog', label: '시바' },
   { id: 'puddle', sourceId: 'tudou', category: 'dog', label: '푸들' },
   { id: 'kirby', sourceId: 'kirby', category: 'character', label: '커비' },

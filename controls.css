@@ -25,7 +25,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   bottom: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 3px;
   width: 100%;
   height: 56px;
   padding: 7px 10px;
@@ -73,24 +73,30 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   font-size: 18px;
   line-height: 1;
 }
+.icon-button.active { box-shadow: inset 0 0 0 2px #73b5eb; }
 .mode-button:hover, .action-button:hover { background: #e0eaf5; transform: translateY(-1px); }
 .mode-button:active, .action-button:active { transform: scale(.97); }
 .mode-button.active, .action-button.active {
   background: #cee7ff;
   color: #175e9e;
 }
-.vortex-icon { width: 25px; height: 25px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.vortex-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.gun-icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .chevron-icon, .power-icon { display: block; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .chevron-icon { width: 19px; height: 19px; }
+.toolbar-hide-icon { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+#toolbar-hide-button { width: 30px; background: #eef1f6; color: #718198; }
 #exit-button { background: #fff0ee; color: #c96d68; }
 #exit-button:hover { background: #fbe1de; color: #bd5754; }
 
 #control-panel {
   position: absolute;
+  display: flex;
+  flex-direction: column;
   left: 8px;
+  right: 8px;
   bottom: 63px;
-  width: 474px;
-  max-height: 263px;
+  max-height: calc(100% - 64px);
   padding: 9px;
   border: 1px solid #d5dfeb;
   border-radius: 27px;
@@ -98,7 +104,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   box-shadow: 0 7px 20px rgba(23,32,53,.12);
   -webkit-app-region: no-drag;
 }
-.panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.panel-heading { display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .panel-heading strong { font-size: 13px; }
 #panel-close {
   width: 26px;
@@ -108,7 +114,7 @@ button:disabled { opacity: .45; cursor: not-allowed; }
   color: #5b6a7c;
   font-size: 18px;
 }
-#panel-list { max-height: 223px; overflow: hidden; }
+#panel-list { min-height: 0; overflow-y: auto; overflow-x: hidden; }
 .pet-category { display: flex; align-items: center; gap: 5px; min-height: 27px; }
 .category-label { flex: 0 0 42px; color: #687b90; font-size: 10px; font-weight: 700; }
 .pet-variants { display: flex; flex: 1 1 auto; flex-wrap: wrap; gap: 3px; min-width: 0; }
@@ -130,6 +136,9 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .panel-row button.selected { background: #cee7ff; font-weight: 700; }
 .panel-draw { display: flex; flex-direction: column; align-items: center; gap: 7px; }
 .panel-draw .brush-options { justify-content: center; width: 100%; padding: 3px 2px; }
+.panel-gun { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.gun-choice { min-height: 34px; padding: 0 12px; border-radius: 12px; background: #edf4fa; color: #315b77; font-size: 11px; font-weight: 700; }
+.gun-choice.selected { background: #cee7ff; color: #175e9e; }
 .shape-options { gap: 10px; }
 .shape-button { display: inline-grid; place-items: center; flex: 0 0 38px; width: 38px; height: 38px; padding: 0; border-radius: 12px; background: #edf2f9; color: #3f5f7b; }
 .shape-button.selected { background: #cee7ff; color: #175e9e; font-weight: 700; }

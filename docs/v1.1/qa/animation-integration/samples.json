@@ -1,0 +1,4592 @@
+[
+  {
+    "id": "cat_brown",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "idle",
+    "tMs": 0,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "idle",
+    "tMs": 80,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "idle",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 9,
+    "column": 1,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkRight",
+    "tMs": 0,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 9,
+    "column": 1,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkRight",
+    "tMs": 80,
+    "state": "walkRight",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 9,
+    "column": 2,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkRight",
+    "tMs": 160,
+    "state": "walkRight",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 9,
+    "column": 1,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkLeft",
+    "tMs": 0,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 1,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 9,
+    "column": 1,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkLeft",
+    "tMs": 80,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 1,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.8462
+  },
+  {
+    "id": "cat_face",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 9,
+    "column": 2,
+    "scale": 1.035,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.851
+  },
+  {
+    "id": "doge",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1.1,
+    "anchor": 0.8125
+  },
+  {
+    "id": "salary-cat",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9567
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9471
+  },
+  {
+    "id": "usagi",
+    "input": "walkLeft",
+    "tMs": 160,
+    "state": "walkLeft",
+    "row": 2,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpRise",
+    "tMs": 0,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpRise",
+    "tMs": 80,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 6,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpRise",
+    "tMs": 160,
+    "state": "jumpRise",
+    "row": 4,
+    "column": 2,
+    "scale": 1.25,
+    "anchor": 0.7356
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 6,
+    "column": 5,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpApex",
+    "tMs": 0,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1.25,
+    "anchor": 0.9327
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 6,
+    "column": 5,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpApex",
+    "tMs": 80,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1.25,
+    "anchor": 0.9327
+  },
+  {
+    "id": "cat_brown",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 6,
+    "column": 5,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "jumpApex",
+    "tMs": 160,
+    "state": "jumpApex",
+    "row": 4,
+    "column": 3,
+    "scale": 1.25,
+    "anchor": 0.9327
+  },
+  {
+    "id": "cat_brown",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "fall",
+    "tMs": 0,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "fall",
+    "tMs": 80,
+    "state": "fall",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 6,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "fall",
+    "tMs": 160,
+    "state": "fall",
+    "row": 4,
+    "column": 2,
+    "scale": 1.25,
+    "anchor": 0.7356
+  },
+  {
+    "id": "cat_brown",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "land",
+    "tMs": 0,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "land",
+    "tMs": 80,
+    "state": "land",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "land",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "rest",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 6,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.8894
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "rest",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "rest",
+    "tMs": 0,
+    "state": "rest",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "rest",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 6,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.8894
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "rest",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "rest",
+    "tMs": 80,
+    "state": "rest",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "rest",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 6,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.8894
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "rest",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "rest",
+    "tMs": 160,
+    "state": "rest",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "cat_face",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 8,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9519
+  },
+  {
+    "id": "puddle",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 5,
+    "column": 4,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "salary-cat",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 6,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "sleep",
+    "tMs": 0,
+    "state": "sleep",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "cat_face",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 8,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9519
+  },
+  {
+    "id": "puddle",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 5,
+    "column": 4,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "salary-cat",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 6,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "sleep",
+    "tMs": 80,
+    "state": "sleep",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "cat_face",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 8,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 5,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.9519
+  },
+  {
+    "id": "puddle",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 5,
+    "column": 4,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "salary-cat",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8413
+  },
+  {
+    "id": "kirby",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 6,
+    "column": 3,
+    "scale": 1,
+    "anchor": 0.8606
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 5,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "sleep",
+    "tMs": 160,
+    "state": "sleep",
+    "row": 0,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "grabStart",
+    "tMs": 0,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "grabStart",
+    "tMs": 80,
+    "state": "grabStart",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "grabStart",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "held",
+    "tMs": 0,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "held",
+    "tMs": 80,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "held",
+    "tMs": 160,
+    "state": "held",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "release",
+    "tMs": 0,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "release",
+    "tMs": 80,
+    "state": "release",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7933
+  },
+  {
+    "id": "doge",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9423
+  },
+  {
+    "id": "usagi",
+    "input": "release",
+    "tMs": 160,
+    "state": "idle",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "thrown",
+    "tMs": 0,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "thrown",
+    "tMs": 80,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 6,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "thrown",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1.25,
+    "anchor": 0.7356
+  },
+  {
+    "id": "cat_brown",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "bounce",
+    "tMs": 0,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "bounce",
+    "tMs": 80,
+    "state": "bounce",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9279
+  },
+  {
+    "id": "doge",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.875
+  },
+  {
+    "id": "kirby",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9038
+  },
+  {
+    "id": "usagi",
+    "input": "bounce",
+    "tMs": 160,
+    "state": "thrown",
+    "row": 4,
+    "column": 1,
+    "scale": 1.25,
+    "anchor": 0.8894
+  },
+  {
+    "id": "cat_brown",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "hit",
+    "tMs": 0,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "hit",
+    "tMs": 80,
+    "state": "hit",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "hit",
+    "tMs": 160,
+    "state": "hit",
+    "row": 5,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "knockout",
+    "tMs": 0,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "knockout",
+    "tMs": 80,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.4976
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.7981
+  },
+  {
+    "id": "doge",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 0.9,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9087
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "knockout",
+    "tMs": 160,
+    "state": "knockout",
+    "row": 5,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9663
+  },
+  {
+    "id": "cat_brown",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 9,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "doge",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 9,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "look",
+    "tMs": 0,
+    "state": "look",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 9,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "doge",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 9,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "look",
+    "tMs": 80,
+    "state": "look",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  },
+  {
+    "id": "cat_brown",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 9,
+    "column": 2,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "cat_face",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.5
+  },
+  {
+    "id": "cat_sleepy",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.8173
+  },
+  {
+    "id": "doge",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "puddle",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 9,
+    "column": 1,
+    "scale": 1,
+    "anchor": 0.976
+  },
+  {
+    "id": "salary-cat",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 8,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9327
+  },
+  {
+    "id": "kirby",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 0,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.899
+  },
+  {
+    "id": "kirby_sleepy",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 6,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9375
+  },
+  {
+    "id": "usagi",
+    "input": "look",
+    "tMs": 160,
+    "state": "look",
+    "row": 7,
+    "column": 0,
+    "scale": 1,
+    "anchor": 0.9712
+  }
+]

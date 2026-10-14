@@ -5,6 +5,11 @@ const path = require('node:path');
 const { loadLocalPets, webpSize } = require('../local-pets');
 
 const project = path.resolve(__dirname, '..');
+const bundled = loadLocalPets(path.join(project, 'assets', 'pets'));
+assert.equal(bundled.length, 9);
+assert.deepEqual(bundled.filter(pet => pet.category === 'cat').map(pet => [pet.id, pet.label]), [
+  ['cat_brown', '황색냥'], ['cat_face', '얼굴냥'], ['cat_sleepy', '실눈냥'], ['salary-cat', '영업냥']
+]);
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-playground-local-'));
 try {
   for (const id of ['doge', 'kirby']) {

@@ -1,0 +1,16 @@
+DesktopPlayground v1.1 Gun Planning + Pixel Art Assets Pack
+
+1. 이 ZIP을 D:\DesktopPlayground\ 프로젝트 루트에 압축 해제합니다.
+   - docs/v1.1/GUN_WEAPON_SPEC.md
+   - docs/v1.1/CODEX_GUN_RESUME.md
+   - assets/weapons/awm.png
+   - assets/weapons/ak47.png
+   - assets/weapons/uzi.png
+   - assets/weapons/double_barrel.png
+   - assets/weapons/README.md
+
+2. 기존 AGENTS.md, 원본 펫 에셋, 사용자 설정과 제품 코드는 덮어쓰지 않습니다.
+3. Codex 사용량이 복구되면 CODEX_GUN_RESUME.md의 전체 내용을 기존 앱 개발 Codex 채팅에 전송합니다.
+4. 중단된 Phase 3-C의 미커밋 변경을 삭제하거나 초기화하면 안 됩니다.
+5. 무기별 PNG는 투명 배경 오른쪽 방향 게임용 비주얼 자산입니다. 앱에서 에셋 로드 경로, 표시 크기, 총구/조준 앵커, package.json의 build.files 추가가 필요합니다.
+6. 이번 단계에서는 개발용 렌더와 테스트까지 진행하고 portable 빌드, 커밋, Push는 하지 않습니다.
