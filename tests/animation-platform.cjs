@@ -14,11 +14,17 @@ const hashes = {cat_brown:'a12f1e408377',cat_face:'95f9d38500fa',
   usagi:'5cd25a775f0a'};
 assert.equal(catalog.schemaVersion, 1);
 assert.equal(catalog.sourceRendererSha256, snapshot.rendererSha256);
-// Preserve all unrelated mappings; only reviewed grab clips and Salary gait differ.
+// Preserve unrelated mappings while allowing reviewed grab, gait and quiet poses.
 const unchanged=structuredClone(catalog.profiles);
 for(const profile of Object.values(unchanged))delete profile.clips.grabStart;
 for(const id of ['cat_face','doge'])unchanged[id].clips.drag=snapshot.profiles[id].clips.drag;
 for(const state of ['walkRight','walkLeft'])unchanged['salary-cat'].clips[state]=snapshot.profiles['salary-cat'].clips[state];
+for(const [id,states] of Object.entries({'salary-cat':['rest','sleep'],doge:['rest','sleep'],puddle:['sleep'],usagi:['sleep']})) {
+  for(const state of states) {
+    if (snapshot.profiles[id].clips[state]) unchanged[id].clips[state]=snapshot.profiles[id].clips[state];
+    else delete unchanged[id].clips[state];
+  }
+}
 assert.deepEqual(unchanged, snapshot.profiles);
 assert.equal(Object.keys(catalog.profiles).length, 9);
 
@@ -54,6 +60,15 @@ for (const [id, profile] of Object.entries(catalog.profiles)) {
 }
 
 const face = catalog.profiles.cat_face;
+for(const [id,row,frames] of [
+  ['cat_brown',5,[3,4]],['cat_face',8,[1,5]],['cat_sleepy',0,[0,1,2,3,4,5]],
+  ['salary-cat',8,[0]],['doge',0,[3]],['puddle',5,[4]],
+  ['usagi',0,[3]],['kirby',6,[3]],['kirby_sleepy',5,[2,3,4]]
+]) {
+  const sleep=resolveClip(catalog.profiles[id],'sleep').clip;
+  assert.equal(sleep.row,row,`${id} sleep row`);
+  assert.deepEqual(sleep.frames,frames,`${id} sleep frames`);
+}
 for (const state of ['idle','walkRight','walkLeft','rest','sleep','look','grabStart']) {
   const c = resolveClip(face,state).clip;
   assert.ok(!(c.row === 8 && c.frames.some(f => f === 2 || f === 3)), state);

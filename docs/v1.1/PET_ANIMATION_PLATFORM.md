@@ -1,5 +1,7 @@
 # DesktopPlayground — 재사용 가능한 Pet Animation Platform 규격
 
+배포 전 Sleep/Rest 프로필 보완(2026-10-14): 실제 9개 WebP를 대조해 영업냥의 눈물 섞인 row6과 시바의 row5를 조용한 상태에서 제외했다. 영업냥은 전용 수면 그림이 없어 중립적인 row8 업무 자세를 유지한다. 시바는 row0의 눈 감은 프레임, 푸들은 row5의 웅크린 프레임, 우사기는 row0의 눈 감은 프레임을 Sleep에 사용한다. 나머지 5종의 안전한 매핑은 유지했다. 상세 row/column은 [Inventory](SPRITE_INVENTORY.md)와 실제 프로필에 있다. Sleep 지속 시간/깨우기, Player의 hold 규칙과 원본 시트는 그대로다.
+
 Grab 회귀 보완: [animation/GRAB_REGRESSION.md](animation/GRAB_REGRESSION.md). Held는 다중 유효 프레임 loop(단일 프레임만 hold)이며 GrabStart는120ms once이다. 영업냥 보행은 원본 좌우 행의 전체 셀을 표시하고 `center=.5`, `foot=199/208`로 맞춘다. 셀 내부 crop은 최신 사용자 요구에 따라 사용하지 않는다.
 
 최신 Electron 통합 계약은 [animation/RUNTIME_INTEGRATION.md](animation/RUNTIME_INTEGRATION.md)를 따른다. `feceb20`의 독립 player와 9종 프로필을 선택적으로 연결했고 기존 geometry 보정·물리는 보존했다. 아래 과거 설계/7~8절의 클립 보정 근거는 유지하되 상태 선택/loop·once·hold와 이벤트 공급은 최신 통합절이 우선한다.

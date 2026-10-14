@@ -14,7 +14,10 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   setPetEnabled: (id, enabled) => ipcRenderer.invoke('app:set-pet-enabled', id, enabled),
   removeCustomPet: id => ipcRenderer.invoke('app:remove-custom-pet', id),
   setMode: mode => {
-    if (['pc', 'touch', 'draw', 'bomb', 'blackhole'].includes(mode)) ipcRenderer.send('app:set-mode', mode);
+    if (['pc', 'touch', 'draw', 'bomb', 'hammer', 'gun', 'blackhole'].includes(mode)) ipcRenderer.send('app:set-mode', mode);
+  },
+  setGunWeapon: weapon => {
+    if (['awm', 'ak47', 'uzi', 'double_barrel'].includes(weapon)) ipcRenderer.send('app:set-gun-weapon', weapon);
   },
   setEnabled: enabled => {
     if (typeof enabled === 'boolean') ipcRenderer.send('app:set-enabled', enabled);
@@ -41,7 +44,7 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
     if (typeof open === 'boolean') ipcRenderer.send('app:set-controls-panel-open', open);
   },
   clear: kind => {
-    if (['effects', 'drawing', 'structures', 'pets', 'all'].includes(kind)) ipcRenderer.send('app:clear', kind);
+    if (['crack', 'effects', 'drawing', 'structures', 'pets', 'all'].includes(kind)) ipcRenderer.send('app:clear', kind);
   },
   exit: () => ipcRenderer.send('app:exit'),
   onState: callback => subscribe('app:state', callback),

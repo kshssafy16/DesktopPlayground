@@ -1,5 +1,7 @@
 # Codex에 전달할 작업 시작 프롬프트
 
+주의(2026-10-14): 아래 Phase 0 프롬프트는 당시 요청의 역사 기록이다. 현재 Bomb은 균열 없이 폭발을 표시하고 Bomb/Hammer/향후 Gun은 모두 공통 비살상 Hit·숫자를 사용한다. Gun KO/삭제 문구를 새 작업 지시로 재사용하지 않는다. 최신 결정은 [DECISIONS_AND_PROGRESS.md](DECISIONS_AND_PROGRESS.md)를 따른다.
+
 ## A. 첫 세션: 현행 코드 확인과 Phase 0
 
 아래 내용 전체를 Codex에 복사해 보낸다.

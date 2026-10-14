@@ -1,6 +1,8 @@
 # DesktopPlayground v1.1 단계별 구현 계획
 
-애니메이션 통합 후 회귀 보완(2026-10-14): Held 고정 해제·9종 원본 표정 반복·GrabStart2장 once와 영업냥 초기 좌우 보행 복원. 중간안의 내부 crop을 제거하고 원본 셀 전체의 center/foot 기준으로 맞췄다. 실제 npm start에서 9종3.2초 Held 관찰과 기존 회귀 완료. [상세 기록](animation/GRAB_REGRESSION.md) 참고. Phase3-B 이후 구현은 하지 않았다.
+최신 진행(2026-10-14): **Phase 3-C Gun 4종·수류탄식 Bomb·Hammer 반복 파손·Head/Body 비살상 Hit·상단 개방 구현**. Sleep 5~60분과 기존 Grab/Throw·자동 점프를 유지한다. 아래 초기 Gun KO/삭제·Bomb 즉시 폭발 제안은 최신 요구로 대체됐다. 블랙홀 10개 확장·Phase 4는 미진행이다. [현행 Gun 명세](GUN_WEAPON_SPEC.md)와 [Phase 3 계획](PHASE_3_PLAN.md)을 따른다.
+
+애니메이션 통합 후 회귀 보완(2026-10-14): Held 고정 해제·9종 원본 표정 반복·GrabStart2장 once와 영업냥 초기 좌우 보행 복원. 중간안의 내부 crop을 제거하고 원본 셀 전체의 center/foot 기준으로 맞췄다. 실제 npm start에서 9종3.2초 Held 관찰과 기존 회귀 완료. [상세 기록](animation/GRAB_REGRESSION.md) 참고. 당시 Phase3-B 이후 구현은 하지 않았다.
 
 ## 0. 작업 시작 규칙
 
@@ -110,9 +112,9 @@
 현재 진행: **3-A 공통 효과 관리 완료**. 별도 `screen-effects.js`로 기존 Bomb 시각효과의 밀리초 수명·종류별 상한·정리와 균열 auto/accumulate 내부 API를 구현했다. UI/설정 선택, Bomb 균열 연결, Hammer/Gun, BH 10개 확장은 아직 미구현이다. 세부 API/상수·후속 경계는 PHASE_3_PLAN의 완료절을 따른다. 애니메이션 모듈은 가져오지 않았다.
 
 1. 공통 Impact/Crack 레이어: 자동 복구와 누적 유지, 개별 초기화, Effect cap.
-2. Bomb: 현재 충격 유지 + 균열/파편/피격 반응. 기존 펫 삭제 금지.
+2. Bomb: 현재 충격 유지 + 불규칙한 구멍/폭발/파편/공통 비살상 피격·숫자. 균열과 펫 삭제 금지.
 3. Hammer: 클릭 타격/균열/펫 밀려남. Bomb과 효과 범위 차별화.
-4. Gun: cursor aim, 짧은 shot trail, 명중 판정, damage-number popup, knockdown, 인스턴스 1개 제거. 단일 hit -> removal idempotent.
+4. Gun (후속 작업): cursor aim, 짧은 shot trail, 명중 판정, 공통 비살상 Hit와 damage-number popup. KO·인스턴스 삭제 없음.
 5. Black Hole: cap 10개, 가장 오래된 것 교체, orbit 상태 정리, 기존 흡수 완료 후 삭제 유지.
 - 모든 도구는 화면 아래 OS 앱을 실제 수정하지 않는다. 파티클/숫자/탄흔/균열은 모두 cleanup한다.
 - 완료: 10개 블랙홀, 폭탄 반복, 총과 망치 연속 타격 중 충돌/메모리 오류 없음. Draw collider는 그대로 동작.

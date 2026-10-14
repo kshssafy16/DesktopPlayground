@@ -2,6 +2,8 @@
 
 최신 기존9종 Grab/Held 및 영업냥 좌우 이동은 [animation/GRAB_REGRESSION.md](animation/GRAB_REGRESSION.md)의 개별 매핑을 따른다. 원본 row5 표정 루프를 복원하고 얼굴냥 울음/시바 눈물을 포함하며, 영업냥 초기 좌우 행은 전체 셀의 center/foot 기준으로 사용한다. 푸들 현재 보행·활동성·원본 자산은 보존했다.
 
+2026-10-14 보완: 기존 9종은 Hit 때 검증된 drag 계열 원본 프레임을 짧게 재활용하며 새 이미지/장식이나 KO를 추가하지 않는다. Sleep 지속 시간은 매우 차분 30~60분, 차분 20~40분, 보통 10~25분, 약간 활발 7~18분, 활발 5~15분, 매우 활발 5~10분이다. 각 펫의 기존 활동성 등급과 Grab/Throw/도구/Black Hole 깨우기 우선순위를 유지한다.
+
 목적: 먼저 펫별 특성과 그래픽 규격을 정하고, 실제 이미지는 별도로 제작한 후 코드에 연결한다. **이 문서에 적힌 신규 이미지는 아직 제작되지 않았다.**
 
 ## 1. 기존 펫 유지 정책
@@ -54,19 +56,19 @@
 - 작은 흰 강아지, 둥글고 부드러운 눈매, 귀끝과 짧은 다리.
 - 그림체: 과하게 세밀하지 않은 부드러운 2D 마스코트.
 - 성격: 호기심이 많고 기분 좋게 짧게 뛰어다님.
-- 우선 모션: idle, walk L/R, jump, fall, drag/scared, hit/knockout.
+- 우선 모션: idle, walk L/R, jump, fall, drag/scared, 비살상 hit/recovery.
 
 ### 포메라니안
 
 - 크림/살구색의 폭신한 털 실루엣, 작은 귀, 통통한 몸통.
 - 성격: 활발하지만 짧게 쉬는 행동이 잦음.
-- 우선 모션: idle, walk L/R, hop, fall, drag, hit/knockout. 빠른 꼬리 움직임은 선택.
+- 우선 모션: idle, walk L/R, hop, fall, drag, 비살상 hit/recovery. 빠른 꼬리 움직임은 선택.
 
 ### 웰시코기
 
 - 짧은 다리와 길쭉한 몸, 큰 귀, 따뜻한 브라운/화이트.
 - 성격: 기운찬 이동과 바닥에서 굴러가는 모습.
-- 우선 모션: idle, walk L/R, jump, fall, drag, hit/knockout.
+- 우선 모션: idle, walk L/R, jump, fall, drag, 비살상 hit/recovery.
 
 ### 오리
 

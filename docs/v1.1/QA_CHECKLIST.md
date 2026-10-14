@@ -2,6 +2,64 @@
 
 체크 표시 규칙: `[ ]` 미검증, `[x]` 실제 실행 및 통과. 자동 검사와 실제 Windows 수동 확인을 구분한다. 아래 전체 v1.1 항목은 해당 단계가 구현·검증될 때 갱신한다.
 
+## 배포 전 마지막 수정: 툴바 숨김·창 순서 (2026-10-14, 현행)
+
+- [x] `node tests/window-order.cjs`: 일반·최대화 창 위 오버레이와 더 위의 툴바, Hide/Show·모드 전환 후 native topmost, PC mode native hit target 확인. 툴바 버튼 숨김에서 PC 전환/입력 통과, Playground 숨김과 독립 동작, Playground가 숨겨진 상태의 트레이 **툴바 표시** 및 기존 트레이 아이콘 복원 확인.
+- [x] 변경 JS `node --check` 및 `git diff --check` 통과. 격리 Electron 핵심 검사만 실행했고 전체 smoke·장시간 테스트·새 Canvas 캡처는 이번 작업에서 실행하지 않았다.
+- [ ] 사용자가 실제 Windows에서 Chrome·탐색기·Codex 클릭/최대화/Alt+Tab 후 펫이 앞에 남는지, 조작창이 펫보다 위인지 확인한다. PC 모드의 좌우 클릭·휠·키보드 전달과 Grab/Throw 뒤 순서, 툴바 숨김→트레이 메뉴/아이콘 복원, Playground만 숨김/보이기, 접힌3버튼, 모니터 이동·DPI·작업 표시줄을 확인한다. F11 전체 화면·관리자 권한 창·시스템 UI는 일반 창보다 높은 별도 제한으로 기록한다.
+
+## 배포 전 품질 보완 (2026-10-14, 현행)
+
+- [x] `node tests/gun.cjs`, `node tests/screen-effects.cjs`: 24개 수류탄을 2999ms까지 보존하고 만료 시 폭발 뒤 제거, 25번째 거절, 시각효과의 별도 상한 확인. 좌/우/정면 클릭 및 드래그·물리·비살상 Hit 회귀 확인.
+- [x] 실제 9개 WebP를 대조해 Sleep에서 눈물/놀람/피격 프레임을 제외하거나 기존 안전 프레임을 유지. `node tests/animation-platform.cjs`, `node tests/pet-expression.cjs`, `node tests/hit-sleep.cjs`와 `node animation/write-browser-profiles.cjs --check` 통과. 수면 5~60분과 깨우기 규칙 유지.
+- [x] 변경한 JS/CJS 8개 `node --check`와 `git diff --check` 통과. 툴바 시각 정렬은 정적 코드 확인까지만 진행했고 실제 Electron 렌더는 수동 검수로 남겼다.
+- [ ] 사용자가 `npm start`에서 수류탄 24개 연속 투척의 각각 약3초 폭발과 25번째 제한, 실마우스 투척감/FPS, 9종 Rest→Sleep→기상 자세·발 위치, 특히 영업냥 대체 자세를 확인한다. 툴바 펼침/접기·Playground 숨김의 구분, 도구 선택 윤곽/툴팁, 화면 가장자리의 Gun/Draw/펫 메뉴와 고DPI를 확인한다. 이번에는 Electron 화면 검사를 반복하지 않았다.
+
+## Phase 3-C 최종 사용감 보완 (2026-10-14)
+
+- [x] `node tests/gun.cjs`: 4종 총구가 기본 4시에서 레드도트를 향함, 화면 모서리 PNG 표시 범위, 프레임 간 이동 구간의 최초 펫 명중/빈 조준점 앞의 펫 명중, Head/Body·샷건 개별 판정, 수류탄 좌/우/수직 클릭과 기존 드래그/3초 신관 확인.
+- [x] `node tests/screen-effects.cjs`, `node tests/smoke.cjs --viewport-only`, 전체 `node tests/smoke.cjs`, `node tests/window-order.cjs`: Hammer/비살상 Hit, Electron 전체 화면 높이, 기존 Sprite·애니메이션·설정 회귀, PC native 입력 대상·창 순서 확인. 변경 JS 구문과 `git diff --check` 확인. 전체 화면 Sprite 감사는 이전 작은 화면보다 오래 걸렸으나 완료됐다.
+- [ ] 사용자가 `npm start`에서 총 4종 방향과 PNG 총구·섬광·레드도트 정합, 경로상 첫 펫, 수류탄 세 기본 방향, 430ms Hammer 스윙/260ms 균열, 도구별 커서 hotspot, 작업 표시줄 위 표시 및 PC 클릭·휠 통과를 직접 확인한다. 특히 주/보조 모니터 DPI와 Windows 작업 표시줄 최상위 순서는 실제 환경 검수가 필요하다.
+
+아래 Phase 3-C 초기 QA의 레드도트 최종 좌표 판정·총기 2시 방향 내용은 위 현행 경로 판정·4시 방향으로 대체한다.
+
+## Phase 3-C 현행 QA (2026-10-14)
+
+- [x] `node tests/gun.cjs`: 신규 13개 + 기존 Grab/Throw/autonomy 67개 상속. AWM 4000ms, AK-47 120ms, UZI 65ms, 샷건 1200ms/10펠릿, 24발·2초 제한, 레드도트 명중/빈 곳 miss, Head>Body 숫자, 수면 해제·9종 Hit·비삭제, 샷건 개별 숫자·넉백 cap, 30/60/144Hz 비교. 수류탄 클릭/드래그 투척·당시16개 상한(현행24개는 위 최신 QA)/바닥 반발/3초 신관·지상 펫 상승, Hammer 반복 파손과 Bomb 균열 0, 상단 개방 Throw 회귀를 포함한다.
+- [x] `node tests/smoke.cjs --gun-preview`: 격리 Electron에서 네 무기 선택과 PNG 로드, 실제 Sprite 알파의 투명 여백 miss/불투명 픽셀 hit, 모서리 배치, 비살상 Hit·Sleep 해제·숫자·Tray/PC/기존 기능 확인. [4종 비행/명중 캡처](qa/phase3c/native-weapons.png)와 [수류탄 비행/폭발·반복 Hammer 캡처](qa/phase3c/native-grenade-hammer.png)를 직접 열어 확인했다. 기존 3-B [비교 이미지](qa/phase3b/native-toys-hit.png)도 보존한다.
+- [x] `node tests/window-order.cjs`: Gun/Bomb/Hammer와 PC mode의 native z-order·입력 대상 확인. `node tests/screen-effects.cjs`, `hit-sleep.cjs`, `animation-platform.cjs`, `animation-integration.cjs`, `jump-landing.cjs`, `pet-expression.cjs`, `local-pets.cjs`, `node tests/grab-visual.cjs after`(9종 3.2초 Held) 통과. 구문·브라우저 프로필 동기화·`git diff --check` 통과. Grab 프리뷰 검사로 재생성된 기존 3개 QA 파일은 원래 기록으로 되돌렸다.
+- [ ] 실제 `npm start` 물리 마우스로 네 무기의 조준점/발사체·연사 유지와 놓기·창 전환, 샷건 10발 숫자 가독성, 수류탄 클릭/드래그 투척 거리와 3초 신관, 지상 펫 상승·상단 화면 밖 복귀, Hammer 동일 위치 반복 파손, 20마리 이상과 연속 사용 CPU/메모리, 고DPI/다중 모니터 클릭 통과와 조작감을 확인한다. 격리 캡처가 실사용 만족도를 확정하지는 않는다.
+
+아래 Phase 3-B 절은 당시 변경·검증 기록이다. 클릭 즉시 Bomb 등 현행과 충돌하는 과거 문구에는 위 최신 결정이 우선한다.
+
+## Phase 3-B 후속 보완: 큰 Bomb/Hammer·비살상 Hit·장시간 Sleep (2026-10-14, 최신)
+
+- [x] `node tests/screen-effects.cjs`: Bomb 균열 0, 더 큰 구멍/충격파/68 파편, Hammer 클릭 즉시 반경 76px 국소 균열·24 유리 파편, effect별 상한·만료/초기화. 광역/국소 펫 충격 수식 및 비삭제 유지.
+- [x] `node tests/hit-sleep.cjs`: 9종 각각 Bomb/Hammer Hit의 유효 기존 클립·비삭제·숫자, 성격별 5~60분 Sleep 범위, Rest→Sleep과 30/60/144Hz 5초 동일 시간 경과, 물리 dt 상한 중에도 실제 RAF 5초 반영, Grab/Throw/Bomb/Hammer/Black Hole 깨우기, 등반과 외부 충격 우선순위. 신규 6개 사례 통과.
+- [x] `node tests/smoke.cjs --toy-preview`: 실제 격리 Electron Canvas에서 Bomb/Hammer 확대·데미지 숫자 ON/OFF(OFF여도 충격 유지)·Sleep 깨우기와 기존 자동 복구/Tray·무잔상 확인. [보완 전](qa/phase3b/before-hit-sleep-toys.png), [클릭 직후](qa/phase3b/native-toys-hit.png), [파편 이동](qa/phase3b/native-toys-hit-motion.png) 실제 Canvas 캡처를 직접 비교.
+- [x] `node tests/grab-throw.cjs`, `autonomy.cjs`, `animation-platform.cjs`, `animation-integration.cjs`, `jump-landing.cjs`, `pet-expression.cjs`, `local-pets.cjs`, `window-order.cjs` 및 변경 JS/CJS 구문·브라우저 프로필 동기화·`git diff --check` 통과. 잘못된 local-pet fixture 경고는 예상 결과.
+- [ ] 실제 `npm start`에서 사람의 물리 마우스로 두 도구의 크기·유리 파손·숫자 가독성·반복 타격감, 9종 표정과 Sleep 5~60분 지속/깨우기, 60/144Hz·고DPI·다중 모니터·연속 사용 CPU/메모리를 확인한다. 자동 캡처는 최종 디자인 만족도나 장시간 실사용을 대신하지 않는다.
+
+아래의 이전 Phase 3-B 절은 당시 구현과 검증의 기록이다. 충돌하는 40ms 접촉 지연·58px 균열·Bomb 균열 등은 위 최신 절과 [계획](PHASE_3_PLAN.md)이 우선한다.
+
+## Phase 3-B Bomb/Hammer 시각 보완 (2026-10-14, 최신)
+
+- [x] `node tests/screen-effects.cjs`: Bomb을 자동/누적 균열 모드에서 반복해도 새 균열 0개, 기존 광역 펫 충격·비삭제 유지. 불규칙 32점 구멍과 짧은 폭발 효과, Hammer만 최대58px 유리 파손·41선분/균열·다른 모양 생성·Hit/국소 반발 확인.
+- [x] `node tests/smoke.cjs --toy-preview`: 실제 격리 Electron Canvas에서 Hammer 머리 하단/클릭·균열·펫 피격 중심 일치, 40ms 접촉 전 균열 없음, 접촉 후 유리 파손/파편과 Bomb 균열 없는 불규칙 구멍 확인. 자동 복구 후 Canvas 잔상 0, Tray 누적/균열만 Clear와 저장/재시작 유지.
+- [x] 수정 전 [같은 2도구 캡처](qa/phase3b/before-native-toys.png), 수정 후 [접촉·폭발](qa/phase3b/native-toys.png) 및 [파편·충격파 이동](qa/phase3b/native-toys-motion.png)을 저장하고 직접 시각 비교. 첨부 참고 이미지는 디자인 참고로만 사용하고 외부 자산을 가져오지 않았다.
+- [x] `node tests/grab-throw.cjs`, `animation-platform.cjs`, `animation-integration.cjs`, `autonomy.cjs`, `jump-landing.cjs`, `pet-expression.cjs`, `local-pets.cjs`, `window-order.cjs` 재실행 통과. 변경 JS/CJS 4개 `node --check`, `node animation/write-browser-profiles.cjs --check`, `git diff --check` 통과. local-pets의 고의로 잘못된 fixture 경고는 예상 결과.
+- [ ] 실제 `npm start`에서 물리 마우스로 Hammer 접촉 타이밍/타격감, 반복 Bomb/Hammer의 파편 가독성과 장시간 CPU·메모리, 60/144Hz·고DPI·다중 모니터에서의 투명 오버레이를 확인한다. 자동 캡처는 최종 사용감 판정을 대신하지 않는다.
+
+## Phase 3-B Bomb 균열·Hammer (2026-10-14, 최신)
+
+- [x] `node tests/screen-effects.cjs`: Bomb 광역 기존 충격+155px 균열, Hammer 70px 국소 균열·최상위 적격 펫 1마리 Hit/Throw 계열 외부 충격·비삭제, 자율 점프보다 외부 충격 우선, 보조 효과 OFF에서도 물리 정상. 정지/누적/자동 복구 및 균열만 Clear에서 Draw/collider 보존.
+- [x] 효과 상한: Hammer 모션 12, 균열 64개(각 최대 24선분), 파편 160, 링/섬광 각 24. 연속 100회 타격에서 상한과 오래된 효과 정리 확인. 자동 복구 5초, 누적 모드 전환/재시작 저장 확인.
+- [x] `node tests/smoke.cjs --toy-preview`: 실제 격리 Electron에서 Hammer 커서·타격 렌더·Hit·국소 반발, Bomb의 더 넓은 균열/충격, Tray 자동/누적 전환·균열만 지우기·설정 재시작 유지, 11개 도구 버튼과 화면 넘침 없음. [동일 조건 실제 Canvas 캡처](qa/phase3b/native-toys.png).
+- [x] `node tests/window-order.cjs`: Hammer를 포함한 18개 입력/창 순서 시나리오와 PC click-through 유지 통과. 우클릭 PC 복귀는 Electron smoke에서 확인.
+- [x] `node tests/grab-throw.cjs`, `animation-platform.cjs`, `animation-integration.cjs`, `autonomy.cjs`, `jump-landing.cjs`, `pet-expression.cjs`, `screen-effects.cjs`, `local-pets.cjs` 회귀 통과. Sprite 프로필/원본 자산과 자율 점프/Throw/Bomb 물리 상수는 변경하지 않음.
+- [x] `node tests/grab-throw.cjs --measure`: 변경 전 HEAD와 현재의 30/60/144Hz × 느림/보통/flick 초기 속도·0.5초 거리·최고 높이 JSON이 동일.
+- [ ] 사람이 실제 `npm start`에서 Hammer 연타와 Bomb 연속 사용, 누적 균열 64개 근처의 가독성·CPU/메모리, 60/144Hz·고DPI·다중 모니터·투명 배경의 체감, Tray 전환/우클릭 PC 복귀를 최종 확인. 격리 Electron의 DOM 입력/Canvas 캡처는 물리 마우스 사용감 검증을 대신하지 않는다.
+
 ## 애니메이션 통합 회귀 최종 보완 (2026-10-14, 최신)
 
 - [x] 원본9개 WebP의 9/11행×8열 alpha>16 유효 셀을 다시 스캔하고 프로필의 Idle/Walk/Jump/Fall/GrabStart/Held/Release/Throw/Landing/Rest/Sleep/Look 및 fallback 참조가 모두 실제 비어 있지 않은 셀임을 확인. 얼굴냥 row8 col2/3 금지·푸들 좌우 원본 보행 유지. 원본 자산 변경 없음.
@@ -33,7 +91,7 @@
 - [x] `node tests/local-pets.cjs`, `node tests/smoke.cjs` PASS. 격리 Electron에서 새 모듈 로드, 기존 Bomb 효과 OFF/ON·저장·재시작, native Canvas 균열 표시/OFF/초기화/alpha 복원, 기존 PC/도구/Draw/Trash/BH/구조물 검증. 잘못된 local-pet fixture 경고는 예상 결과.
 - [x] 제품6개/테스트7개 JS `node --check`, `git diff --check`, 신규 파일 공백 검사 PASS.
 - [ ] 실제 Windows에서 30/60/144Hz 효과 지속시간·연속 Bomb 조작감·장시간 메모리/CPU 수동 관찰. 자동 테스트의 bounded 객체 수는 실제 메모리 측정을 대신하지 않는다.
-- [ ] 균열 모드 선택 UI/설정 저장과 Bomb 균열 생성은 후속 범위. 이번에는 내부 API만 있으며 사용자 조작 QA 통과로 간주하지 않는다. BH는 기존 최대2개, Hammer/Gun 미구현.
+- [ ] 당시 3-A 범위에서는 균열 UI/저장·Bomb 균열·Hammer가 미구현이었다. 현재 3-B 자동 검증 결과는 이 문서 맨 위 최신 절을 따른다. BH는 여전히 기존 최대2개, Gun은 미구현.
 
 ## Phase 2-B 최종 시각 보완 (2026-10-13)
 
@@ -169,10 +227,10 @@ VM은 DOM/시계 stub, Electron은 합성 입력이다. 아래의 실화면·애
 
 ## 장난감
 
-- [ ] Bomb 클릭 시 화면 균열, 폭발, 펫 반발. 펫 자동 삭제 없음.
+- [ ] Bomb 클릭 시 균열 없는 구멍·폭발·숫자와 펫 반발. 펫 자동 삭제 없음.
 - [ ] Hammer가 Bomb과 명확히 다른 국소 타격 효과를 가진다. 맞은 펫이 반응하되 남는다.
-- [ ] Gun 조준과 클릭이 직관적이다. 빗나가면 삭제되지 않고, 명중하면 숫자 팝업과 쓰러짐 후 해당 인스턴스만 사라진다.
-- [ ] Gun 반복 피격 시 동일 인스턴스에 중복 KO/삭제가 발생하지 않는다.
+- [ ] 향후 Gun 조준과 클릭이 직관적이다. 명중하면 공통 비살상 Hit·숫자 팝업을 보여 주고 펫은 남는다.
+- [ ] 향후 Gun 반복 피격에서도 KO/삭제가 발생하지 않는다.
 - [ ] 숫자 팝업, 파편, 탄흔에 수명과 cap이 적용되어 화면에 무한히 남지 않는다.
 - [ ] Black Hole 최대 10개 동시 생성 가능.
 - [ ] 11번째 생성 시 오래된 홀과 관련 orbit 상태가 안전하게 정리된다.

@@ -4,12 +4,13 @@ let count = 0;
 function check(name, body) { body(); count++; console.log('PASS:', name); }
 function close(a, b) { assert.ok(Math.abs(a - b) < 1e-6, `${a} != ${b}`); }
 
-check('all transient kinds expire at the same elapsed time at 30/60/144 Hz', () => {
+check('visual transient kinds expire at the same elapsed time at 30/60/144 Hz', () => {
   for (const hz of [30, 60, 144]) {
     const effects = new ScreenEffects();
-    for (const kind of Object.keys(limits)) effects.add(kind, { x: 500, y: 500, vx: 0, vy: 0 }, 1000);
+    for (const kind of Object.keys(limits).filter(kind => kind !== 'grenade'))
+      effects.add(kind, { x: 500, y: 500, vx: 0, vy: 0 }, 1000);
     for (let i = 0; i < hz / 2; i++) effects.update(1000 / hz);
-    for (const group of Object.values(effects.groups)) close(group[0].remainingMs, 500);
+    for (const [kind,group] of Object.entries(effects.groups)) if (kind !== 'grenade') close(group[0].remainingMs, 500);
     for (let i = 0; i < hz / 2; i++) effects.update(1000 / hz);
     for (const group of Object.values(effects.groups)) assert.equal(group.length, 0);
   }
@@ -28,7 +29,7 @@ check('particle trajectory matches original 60Hz and agrees at other FPS/irregul
     close(p.x, baseline.x); close(p.y, baseline.y); close(p.vy, baseline.vy);
   }
 });
-check('burst stress bounds every group and evicts oldest effects', () => {
+check('burst stress bounds every group, retaining live grenades while evicting old visual effects', () => {
   const effects = new ScreenEffects();
   const references = { ...effects.groups };
   for (let i = 0; i < 10000; i++) for (const kind of Object.keys(limits)) {
@@ -37,10 +38,14 @@ check('burst stress bounds every group and evicts oldest effects', () => {
   for (const [kind, limit] of Object.entries(limits)) {
     assert.equal(effects.groups[kind], references[kind]);
     assert.equal(effects.groups[kind].length, limit);
-    assert.equal(effects.groups[kind][0].x, 10000 - limit);
+    assert.equal(effects.groups[kind][0].x, kind === 'grenade' ? 0 : 10000 - limit);
   }
   effects.update(6000);
-  assert.ok(Object.values(effects.groups).every(group => !group.length));
+  assert.ok(Object.entries(effects.groups).every(([kind,group]) => kind === 'grenade' || !group.length));
+  assert.equal(effects.groups.grenade.length, limits.grenade);
+  assert.equal(effects.groups.grenade[0].remainingMs, 5000);
+  effects.clear('grenade');
+  assert.equal(effects.groups.grenade.length, 0);
 });
 check('cracks auto heal; accumulated cracks remain bounded; auto resumes healing', () => {
   const effects = new ScreenEffects();
@@ -50,8 +55,14 @@ check('cracks auto heal; accumulated cracks remain bounded; auto resumes healing
   effects.setCrackMode('accumulate');
   for (let i = 0; i < 1000; i++) effects.addCrack(i, 10, 10000);
   effects.update(3600000); assert.equal(effects.groups.crack.length, 64);
-  assert.equal(effects.groups.crack[0].paths.length, 6);
-  assert.ok(effects.groups.crack[0].paths.every(path => path.length === 4 && path.every(p => Math.hypot(p.x, p.y) <= 200 + 1e-7)));
+  assert.equal(effects.groups.crack[0].paths.length, 13);
+  assert.equal(effects.groups.crack[0].core.length, 9);
+  assert.equal(effects.groups.crack[0].shards.length, 5);
+  assert.ok(effects.groups.crack[0].paths.every((path,i) => path.length === (i===0?10:(i+1)%3===0?3:4)
+    && path.every(p => Math.hypot(p.x, p.y) <= 200 + 1e-7)));
+  assert.equal(effects.groups.crack[0].paths.reduce((n, path) => n + path.length - 1, 0), 41);
+  const a = effects.addCrack(0, 0, 58), b = effects.addCrack(0, 0, 58);
+  assert.notDeepEqual(a.paths, b.paths);
   assert.equal(effects.setCrackMode('invalid'), false);
   assert.equal(effects.crackMode, 'accumulate');
   effects.setCrackMode('auto'); effects.update(4999);
@@ -120,7 +131,7 @@ test('crack-only reset preserves Draw/colliders, Black Hole and Pet; global effe
 });
 test('renderer burst generation and effects clear are bounded', () => {
   evaluate(`addParticles(50,50,'red',1e9);for(let i=0;i<100;i++){addRing(50,50,'red',20);addImpact(50,50,'red');fireBomb(50,50);}`);
-  assert.ok(evaluate('particles.length<=160 && rings.length===24 && impacts.length===24 && holes.length===8'));
+  assert.ok(evaluate('particles.length<=160 && rings.length===24 && impacts.length===24 && holes.length===8 && screenEffects.groups.crack.length===0'));
   evaluate(`clearPlayground('effects')`);
   assert.ok(evaluate('particles.length+rings.length+impacts.length+holes.length===0'));
 });
@@ -136,4 +147,68 @@ test('requestAnimationFrame uses raw elapsed time for effects despite physics dt
     evaluate('stopAnimation()'); sandbox.requestAnimationFrame = original;
   }
 });
-console.log(`PASS: ${count} effect manager + 5 renderer cases (plus 55 Grab/Throw regressions)`);
+evaluate("applyPetDefinitions({defaultPets:{},customPets:[],localPets:[{id:'doge',name:'Doge',category:'dog',rows:9,asset:'fixture.webp'}]})");
+test('Bomb keeps its area impulse and irregular crater without making cracks in either mode', () => {
+  pet('doge',500,400);
+  evaluate('screenEffects.setCrackMode("auto");fireBomb(500,400);p.advanceAnimation(0)');
+  assert.equal(evaluate('screenEffects.groups.crack.length'),0);
+  assert.ok(evaluate('holes[0].edge.length===32 && Math.max(...holes[0].edge)-Math.min(...holes[0].edge)>.2'));
+  evaluate('screenEffects.setCrackMode("accumulate");fireBomb(500,400)');
+  assert.equal(evaluate('screenEffects.groups.crack.length'),0);
+  assert.equal(evaluate('p.externalMotion.source'),'bomb');
+  assert.equal(evaluate('p.animationVisualState'),'hit');
+  assert.ok(evaluate('screenEffects.groups.damage.length===2 && screenEffects.groups.damage.every(n=>n.source==="bomb" && n.amount>0)'));
+  assert.equal(evaluate('petInstances.length'),1);
+});
+test('Hammer has a narrow single-target impulse, Hit fallback and no deletion', () => {
+  pet('doge',500,400);
+  evaluate('globalThis.other=spawnPet("doge",750,400);strikeHammer(500,400);p.advanceAnimation(0)');
+  assert.equal(evaluate('p.externalMotion.source'),'hammer');
+  assert.equal(evaluate('p.motionCause'),'hammer');
+  assert.equal(evaluate('p.animationVisualState'),'hit');
+  assert.ok(evaluate('p.vx>0 && p.vy<0'));
+  assert.equal(evaluate('other.externalMotion'),null);
+  assert.equal(evaluate('petInstances.length'),2);
+  assert.equal(evaluate('screenEffects.groups.hammer.length'),1);
+  assert.equal(evaluate('screenEffects.groups.crack.length'),1);
+  assert.ok(evaluate('Math.max(...screenEffects.groups.crack[0].paths.flat().map(q=>Math.hypot(q.x,q.y)))<=76.000001'));
+  assert.ok(evaluate('particles.every(q=>q.shape==="glass")'));
+  assert.ok(evaluate('screenEffects.groups.damage.length===1 && screenEffects.groups.damage[0].source==="hammer"'));
+  evaluate('p.advanceAnimation(180)');
+  assert.equal(evaluate('p.animationVisualState'),'thrown');
+});
+test('Hammer targets the topmost eligible Pet and supersedes an autonomous jump', () => {
+  pet('doge',500,400);
+  evaluate('p.beginAutonomousJump(-9);globalThis.top=spawnPet("doge",500,400);strikeHammer(500,400)');
+  assert.equal(evaluate('top.externalMotion.source'),'hammer');
+  assert.equal(evaluate('p.motionCause'),'autonomous-jump');
+  evaluate('top.isDragging=true;strikeHammer(500,400)');
+  assert.equal(evaluate('p.externalMotion.source'),'hammer');
+  assert.equal(evaluate('p.motionCause'),'hammer');
+  assert.equal(evaluate('petInstances.length'),2);
+});
+test('Hammer mode input, accumulated cracks and crack-only Clear remain independent', () => {
+  pet('doge',500,400);
+  evaluate('screenEffects.setCrackMode("accumulate");currentMode="hammer"');
+  const { event } = require('./grab-throw.cjs');
+  event('canvas:mousedown',500,400,0);
+  assert.equal(evaluate('p.externalMotion.source'),'hammer');
+  evaluate('for(let i=0;i<100;i++)strikeHammer(500,400)');
+  assert.equal(evaluate('screenEffects.groups.crack.length'),64);
+  assert.ok(evaluate('screenEffects.groups.hammer.length===12 && screenEffects.groups.damage.length<=40 && particles.length<=160 && rings.length<=24 && impacts.length<=24'));
+  evaluate('drawEffects(3600000)');
+  assert.equal(evaluate('screenEffects.groups.hammer.length'),0);
+  assert.equal(evaluate('petInstances.length'),1);
+  evaluate('addBlackHole(100,100);clearPlayground("crack")');
+  assert.ok(evaluate('screenEffects.groups.crack.length===0 && blackHoles.length===1 && petInstances.length===1'));
+  evaluate('screenEffects.addCrack(500,400);screenEffects.setCrackMode("auto");drawEffects(5000)');
+  assert.equal(evaluate('screenEffects.groups.crack.length'),0);
+});
+test('hidden auxiliary visuals do not suppress Hammer physics or effect aging', () => {
+  pet('doge',500,400);
+  evaluate('auxiliaryEffectsEnabled=false;strikeHammer(500,400);drawEffects(6000)');
+  assert.equal(evaluate('p.externalMotion.source'),'hammer');
+  assert.ok(evaluate('screenEffects.groups.hammer.length===0 && screenEffects.groups.crack.length===0 && screenEffects.groups.damage.length===0'));
+  evaluate('auxiliaryEffectsEnabled=true;screenEffects.setCrackMode("auto")');
+});
+console.log(`PASS: ${count} effect manager + 10 renderer cases (plus 55 Grab/Throw regressions)`);

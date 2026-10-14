@@ -1,7 +1,7 @@
 {
   "name": "desktopplayground",
   "productName": "DesktopPlayground",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Interactive desktop pets and playground for Windows",
   "main": "main.js",
   "scripts": {
@@ -31,6 +31,12 @@
       "spritesheet.webp",
       "spritesheet_2.webp",
       "assets/icon.png",
+      "assets/tools/hammer.png",
+      "assets/tools/bomb.png",
+      "assets/weapons/awm.png",
+      "assets/weapons/ak47.png",
+      "assets/weapons/uzi.png",
+      "assets/weapons/double_barrel.png",
       "assets/pets/doge/pet.json",
       "assets/pets/doge/spritesheet.webp",
       "assets/pets/kirby/pet.json",
@@ -49,7 +55,10 @@
       "assets/pets/salary-cat/pet.json",
       "assets/pets/salary-cat/spritesheet.webp",
       "assets/pets/usagi/pet.json",
-      "assets/pets/usagi/spritesheet.webp"
+      "assets/pets/usagi/spritesheet.webp",
+      "animation/**",
+      "assets/weapons/*.png",
+      "assets/tools/*.png"
     ],
     "win": {
       "icon": "electron-build/icon.ico",

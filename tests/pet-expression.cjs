@@ -45,7 +45,7 @@ test('verified rest/look/sleep poses use explicit safe frame lists and fallbacks
     assert.equal(evaluate('JSON.stringify(p.spriteClip().clip.frames)'),JSON.stringify(frames));
   }
   quiet('cat_sleepy');assert.ok(evaluate('p.spriteClip().clip.row===0 && Math.abs(p.spriteClip().clip.frameMs-483.3333333333)<1e-6'));
-  for(const [id,row] of [['salary-cat',6],['doge',6],['kirby',6],['usagi',0]]) {
+  for(const [id,row] of [['salary-cat',8],['doge',0],['kirby',6],['usagi',0]]) {
     quiet(id);assert.equal(evaluate('p.spriteClip().clip.row'),row);
   }
 });
@@ -178,7 +178,7 @@ test('Salary uses restored source gait independently of office/rest and air fall
   pet('salary-cat');evaluate('p.vx=2;p.advanceAnimation(0)');
   assert.ok(evaluate('p.spriteClip().clip.row===1 && p.spriteClip().clip.frames.length===7 && !p.spriteClip().clip.sourceCrop'));
   evaluate('p.beginAutonomousJump(-9);p.advanceAnimation(0)');assert.equal(evaluate('p.spriteClip().clip.row'),4);
-  quiet('salary-cat');assert.equal(evaluate('p.spriteClip().clip.row'),6);
+  quiet('salary-cat');assert.equal(evaluate('p.spriteClip().clip.row'),8);
   quiet('salary-cat','idle');assert.equal(evaluate('p.spriteClip().clip.row'),8);
 });
 

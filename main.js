@@ -33,7 +33,7 @@ const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
 const MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 16 * 1024 * 1024;
 const PET_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const MODES = new Set(['pc', 'touch', 'draw', 'bomb', 'blackhole', 'spawn']);
+const MODES = new Set(['pc', 'touch', 'draw', 'bomb', 'hammer', 'gun', 'blackhole', 'spawn']);
 const BRUSH_COLORS = new Set(['#e85b6b', '#4a90e2', '#f2c94c', '#55b88a', '#30384c', '#ffffff']);
 const DRAW_SHAPES = new Set(['freehand', 'line', 'rect', 'ellipse']);
 const EMERGENCY_SHORTCUT = 'Control+Alt+Shift+P';
@@ -49,7 +49,9 @@ let state = {
   enabled: true,
   structuresEnabled: false,
   auxiliaryEffectsEnabled: true,
+  crackMode: 'auto',
   mode: 'pc',
+  gunWeapon: 'ak47',
   petId: null,
   drawColor: '#30384c',
   drawSize: 7,
@@ -57,9 +59,9 @@ let state = {
   eraser: false
 };
 const controlsUiState = { x: null, y: null, collapsed: false };
-const CONTROLS_EXPANDED = { width: 490, height: 56 };
+const CONTROLS_EXPANDED = { width: 578, height: 56 };
 const CONTROLS_COLLAPSED = { width: 152, height: 52 };
-const CONTROLS_PANEL = { width: 490, height: 335 };
+const CONTROLS_PANEL = { width: 578, height: 335 };
 const CONTROLS_EDGE_GUARD = 8;
 let controlsPanelOpen = false;
 let uiSaveTimer = null;
@@ -68,7 +70,7 @@ let petWriteChain = Promise.resolve();
 let petSettings = defaultPetSettings();
 
 function defaultPetSettings() {
-  return { schemaVersion: 1, auxiliaryEffectsEnabled: true,
+  return { schemaVersion: 1, auxiliaryEffectsEnabled: true, crackMode: 'auto',
     defaultPets: Object.fromEntries(DEFAULT_PET_IDS.map(id => [id, true])), customPets: [] };
 }
 
@@ -96,6 +98,7 @@ if (!hasSingleInstance) {
     await loadUiState();
     await loadPetSettings();
     state.auxiliaryEffectsEnabled = petSettings.auxiliaryEffectsEnabled;
+    state.crackMode = petSettings.crackMode;
     registerPetAssetProtocol();
     createWindows();
     createTray();
@@ -131,17 +134,19 @@ function createWindows() {
     show: false,
     webPreferences: secureWebPreferences('preload.js')
   });
-  overlayWindow.setAlwaysOnTop(true, 'floating');
+  overlayWindow.setAlwaysOnTop(true, 'pop-up-menu');
   overlayWindow.setIgnoreMouseEvents(true);
   overlayWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   overlayWindow.webContents.on('will-navigate', (event, url) => {
     if (url !== pathToFileUrl('index.html')) event.preventDefault();
   });
   overlayWindow.on('close', event => preventWindowClose(event, overlayWindow));
-  overlayWindow.on('show', raiseOverlay);
-  overlayWindow.on('restore', raiseOverlay);
+  overlayWindow.on('show', () => { raiseOverlay(); setImmediate(raiseOverlay); });
+  overlayWindow.on('restore', () => { raiseOverlay(); setImmediate(raiseOverlay); });
   const revealOverlay = () => {
+    overlayWindow.setBounds(safeOverlayBounds(screen.getPrimaryDisplay()));
     if (state.enabled) overlayWindow.showInactive();
+    raiseOverlay();
     publishState();
   };
   overlayWindow.once('ready-to-show', revealOverlay);
@@ -171,16 +176,18 @@ function createWindows() {
     if (url !== pathToFileUrl('controls.html')) event.preventDefault();
   });
   controlsWindow.on('close', event => preventWindowClose(event, controlsWindow));
-  controlsWindow.on('show', raiseControls);
-  controlsWindow.on('restore', raiseControls);
+  controlsWindow.on('show', raiseOverlay);
+  controlsWindow.on('restore', raiseOverlay);
+  controlsWindow.on('focus', raiseOverlay);
   controlsWindow.on('blur', raiseOverlay);
+  controlsWindow.on('hide', raiseOverlay);
   controlsWindow.on('closed', () => {
     controlsWindow = null;
   });
   controlsWindow.on('move', clampAndStoreControlsBounds);
   const revealControls = () => {
     controlsWindow.showInactive();
-    raiseControls();
+    raiseOverlay();
     publishState();
   };
   controlsWindow.once('ready-to-show', revealControls);
@@ -189,20 +196,9 @@ function createWindows() {
 }
 
 function safeOverlayBounds(display) {
-  const area = display.workArea;
-  const bounds = display.bounds;
-  // Auto-hidden taskbars can make workArea equal the whole display.
-  // Leave an edge strip free on all sides so the shell remains reachable.
-  const needsEdgeStrip = area.x === bounds.x && area.y === bounds.y
-    && area.width === bounds.width && area.height === bounds.height;
-  const insetX = needsEdgeStrip ? Math.min(48, Math.floor((area.width - 1) / 2)) : 0;
-  const insetY = needsEdgeStrip ? Math.min(48, Math.floor((area.height - 1) / 2)) : 0;
-  return {
-    x: area.x + insetX,
-    y: area.y + insetY,
-    width: Math.max(1, area.width - insetX * 2),
-    height: Math.max(1, area.height - insetY * 2)
-  };
+  // Include the taskbar strip in both the Canvas and the Pet's floor.
+  // PC mode continues to forward native mouse input to the shell below it.
+  return { ...display.bounds };
 }
 
 function raiseControls() {
@@ -212,11 +208,14 @@ function raiseControls() {
 }
 
 function raiseOverlay() {
-  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return;
-  // Reapply the native topmost band after show/restore or toolbar deactivation.
-  // moveTop changes z-order without activating the click-through overlay.
-  overlayWindow.setAlwaysOnTop(true, 'floating');
-  overlayWindow.moveTop();
+  if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
+    // Reapply the native topmost band after window/state transitions.
+    // moveTop changes z-order without activating the click-through overlay.
+    // The floating level can lose native topmost after hide/show on Windows.
+    // Use the same stable topmost band, then place controls above it.
+    overlayWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    overlayWindow.moveTop();
+  }
   raiseControls();
 }
 
@@ -236,7 +235,7 @@ function secureWebPreferences(preloadFile) {
 function preventWindowClose(event, window) {
   if (quitting) return;
   event.preventDefault();
-  if (window && window !== overlayWindow) window.hide();
+  if (window === controlsWindow) hideControls();
 }
 
 function resizeOverlay() {
@@ -317,6 +316,7 @@ async function loadPetSettings() {
       });
     }
     petSettings = { schemaVersion: 1, auxiliaryEffectsEnabled: parsed.auxiliaryEffectsEnabled !== false,
+      crackMode: parsed.crackMode === 'accumulate' ? 'accumulate' : 'auto',
       defaultPets: defaults, customPets };
   } catch (error) {
     if (error.code !== 'ENOENT') {
@@ -370,6 +370,19 @@ function setAuxiliaryEffectsEnabled(enabled) {
     setState({ auxiliaryEffectsEnabled: enabled });
   }).catch(error => {
     console.warn('Could not save auxiliary effects setting:', error);
+    updateTrayMenu();
+  });
+}
+
+function setCrackMode(mode) {
+  if (!['auto', 'accumulate'].includes(mode)) return Promise.resolve();
+  return queuePetChange(async () => {
+    const next = { ...petSettings, crackMode: mode };
+    await writePetSettings(next);
+    petSettings = next;
+    setState({ crackMode: mode });
+  }).catch(error => {
+    console.warn('Could not save crack mode:', error);
     updateTrayMenu();
   });
 }
@@ -488,6 +501,7 @@ function setControlsCollapsed(event, collapsed) {
     controlsWindow.setBounds(clampControlsBounds({ ...current, ...size }, screen.getDisplayMatching(current)));
   }
   scheduleUiStateSave();
+  raiseOverlay();
 }
 
 function resizeControlsPanel(open) {
@@ -500,6 +514,7 @@ function resizeControlsPanel(open) {
   controlsPanelOpen = open;
   controlsWindow.setBounds(clampControlsBounds(target, screen.getDisplayMatching(current)));
   scheduleUiStateSave();
+  raiseOverlay();
 }
 
 function isTrustedSender(event, expectedWindow) {
@@ -536,8 +551,16 @@ function setState(changes) {
 
 function showControls() {
   if (!controlsWindow || controlsWindow.isDestroyed()) return;
-  controlsWindow.show();
-  controlsWindow.focus();
+  clampAndStoreControlsBounds();
+  controlsWindow.showInactive();
+  raiseOverlay();
+}
+
+function hideControls() {
+  if (!controlsWindow || controlsWindow.isDestroyed()) return;
+  if (state.mode !== 'pc') setState({ mode: 'pc' });
+  if (controlsPanelOpen) resizeControlsPanel(false);
+  controlsWindow.hide();
   raiseOverlay();
 }
 
@@ -546,6 +569,12 @@ function setMode(event, mode) {
     && !(mode === 'pc' && isTrustedSender(event, overlayWindow))) return;
   if (!MODES.has(mode) || mode === 'spawn') return;
   setState({ mode });
+}
+
+function setGunWeapon(event, weapon) {
+  if (!isTrustedSender(event, controlsWindow)) return;
+  if (!['awm', 'ak47', 'uzi', 'double_barrel'].includes(weapon)) return;
+  setState({ gunWeapon: weapon, mode: 'gun' });
 }
 
 function setEnabled(event, enabled) {
@@ -613,12 +642,13 @@ function installIpcHandlers() {
   ipcMain.handle('app:set-pet-enabled', setPetEnabled);
   ipcMain.handle('app:remove-custom-pet', removeCustomPet);
   ipcMain.on('app:set-mode', setMode);
+  ipcMain.on('app:set-gun-weapon', setGunWeapon);
   ipcMain.on('app:set-enabled', setEnabled);
   ipcMain.on('app:set-structures-enabled', setStructuresEnabled);
   ipcMain.on('app:select-pet', selectPet);
   ipcMain.on('app:set-brush', setBrush);
   ipcMain.on('app:hide-controls', event => {
-    if (isTrustedSender(event, controlsWindow)) controlsWindow.hide();
+    if (isTrustedSender(event, controlsWindow)) hideControls();
   });
   ipcMain.on('app:set-controls-collapsed', setControlsCollapsed);
   ipcMain.on('app:set-controls-panel-open', (event, open) => {
@@ -627,7 +657,7 @@ function installIpcHandlers() {
     }
   });
   ipcMain.on('app:clear', (event, kind) => {
-      if (isTrustedSender(event, controlsWindow) && ['effects', 'drawing', 'structures', 'pets', 'all'].includes(kind)
+      if (isTrustedSender(event, controlsWindow) && ['crack', 'effects', 'drawing', 'structures', 'pets', 'all'].includes(kind)
       && overlayWindow && !overlayWindow.isDestroyed()) {
       overlayWindow.webContents.send('playground:clear', kind);
     }
@@ -679,11 +709,18 @@ function updateTrayMenu() {
   const menu = Menu.buildFromTemplate([
     { label: 'PC 모드', click: () => setState({ mode: 'pc' }) },
     { label: state.enabled ? 'Playground 숨기기' : 'Playground 보이기', click: () => setState({ enabled: !state.enabled }) },
-    { label: '조작창 보이기', click: showControls },
+    { id: 'show-toolbar', label: '툴바 표시', click: showControls },
     { id: 'auxiliary-effects', label: '보조 효과 표시', type: 'checkbox',
       checked: state.auxiliaryEffectsEnabled,
       click: item => setAuxiliaryEffectsEnabled(item.checked) },
+    { label: '균열 모드', submenu: [
+      { id: 'crack-auto', label: '약 5초 뒤 복구', type: 'radio', checked: state.crackMode === 'auto',
+        click: () => setCrackMode('auto') },
+      { id: 'crack-accumulate', label: '누적 유지', type: 'radio', checked: state.crackMode === 'accumulate',
+        click: () => setCrackMode('accumulate') }
+    ] },
     { label: '정리', submenu: [
+      { id: 'clear-crack', label: '균열만 지우기', click: () => clear('crack') },
       { label: '효과 지우기', click: () => clear('effects') },
       { label: '그림 지우기', click: () => clear('drawing') },
       { label: '구조물 지우기', click: () => clear('structures') },
@@ -694,6 +731,7 @@ function updateTrayMenu() {
     { label: '종료', click: requestAppQuit }
   ]);
   tray.setContextMenu(menu);
+  return menu;
 }
 
 installIpcHandlers();

@@ -310,9 +310,15 @@ test('fast floor and screen side impacts rebound, and weak landing settles', () 
   near(evaluate('p.y'),865);assert.ok(Math.abs(evaluate('p.vy'))<.6);
   assert.equal(evaluate('p.externalMotion'),null);
 });
-test('upward flick bounces at screen top instead of escaping', () => {
+test('upward flick crosses the open top and returns under gravity', () => {
   pet('blob',500,60);evaluate('p.beginThrow(0,-54)');tick(2);
-  assert.ok(evaluate('p.y>=p.size && p.vy>25'));
+  assert.ok(evaluate('p.y<0 && p.vy<0'));
+  let returned=false;
+  for(let i=0;i<1200;i++) {
+    tick(1);
+    if(evaluate('p.y>=p.size && p.vy>0')) { returned=true; break; }
+  }
+  assert.equal(returned,true);
 });
 test('thin line/freehand/rectangle/ellipse walls rebound at high speed', () => {
   for(const shape of [

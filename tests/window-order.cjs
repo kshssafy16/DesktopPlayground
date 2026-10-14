@@ -50,6 +50,7 @@ async function run() {
   for(const file of ['pet-animation.cjs','profiles.browser.js'])fs.copyFileSync(path.join(project,'animation',file),path.join(appDir,'animation',file));
   for(const file of ['main.js','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css','controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'])fs.copyFileSync(path.join(project,file),path.join(appDir,file));
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});fs.copyFileSync(path.join(project,'assets/icon.png'),path.join(appDir,'assets/icon.png'));fs.cpSync(path.join(project,'assets/pets'),path.join(appDir,'assets/pets'),{recursive:true});
+  for(const kind of ['weapons','tools'])fs.cpSync(path.join(project,'assets',kind),path.join(appDir,'assets',kind),{recursive:true});
   const main=path.join(appDir,'main.js');let code=fs.readFileSync(main,'utf8').replace("const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');","app.setPath('appData', process.env.WINDOW_TEST_APPDATA);\nconst USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');");
   code+=String.raw`
 let windowOrderProbe;
@@ -65,14 +66,20 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   else if (action === 'hide-overlay') setState({enabled:false});
   else if (action === 'show-overlay') setState({enabled:true,mode:'pc'});
   else if (action === 'pc') setState({mode:'pc'});
-  else if (['touch','draw','spawn','bomb','blackhole'].includes(action)) setState({mode:action});
+  else if (['touch','draw','spawn','bomb','hammer','gun','blackhole'].includes(action)) setState({mode:action});
   else if (action === 'toolbar') showControls();
+  else if (action === 'tray-click') tray.emit('click');
+  else if (action === 'tray-menu') {
+    const item = updateTrayMenu().getMenuItemById('show-toolbar');
+    if (!item || item.label !== '툴바 표시') throw new Error('Tray toolbar restore item missing');
+    item.click();
+  }
   else if (action === 'demote') { overlayWindow.setAlwaysOnTop(false); controlsWindow.emit('blur'); }
   else if (action === 'minimize-overlay') overlayWindow.minimize();
   else if (action === 'restore-overlay') overlayWindow.restore();
   const handle = w => w && !w.isDestroyed() ? Number(w.getNativeWindowHandle().readBigUInt64LE()) : 0;
   const bounds=windowOrderProbe?.getBounds() || overlayWindow.getBounds();
-  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),mode:state.mode,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused()};
+  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),controlsVisible:controlsWindow.isVisible(),mode:state.mode,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused()};
 });
 `;
   fs.writeFileSync(main,code);
@@ -84,21 +91,51 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
     if(['create','show-overlay','restore-overlay'].includes(action))h=await until(async()=>{const x=await evaluate("window.playground.smokeWindowOrder('status')");return x.visible?x:null},`${action} visible`);
     if(['hide-overlay','minimize-overlay'].includes(action))h=await until(async()=>{const x=await evaluate("window.playground.smokeWindowOrder('status')");return !x.visible?x:null},`${action} hidden`);
     await pause(160);return {h,z:native(h)}}
-  for(const action of ['create','focus','maximize','minimize','restore','hide-overlay','show-overlay','toolbar','demote','minimize-overlay','restore-overlay','pc','touch','draw','spawn','bomb','blackhole']){
+  for(const action of ['create','focus','maximize','minimize','restore','hide-overlay','show-overlay','toolbar','demote','minimize-overlay','restore-overlay','pc','touch','draw','spawn','bomb','hammer','gun','blackhole']){
     const {h,z}=await state(action);
-    if(action==='hide-overlay'||action==='minimize-overlay'){assert.equal(h.visible,false,`${action}: overlay hidden`);continue}
+    if(action==='hide-overlay'||action==='minimize-overlay'){
+      assert.equal(h.visible,false,`${action}: overlay hidden`);
+      assert.equal(h.controlsVisible,true,`${action}: toolbar stays visible`);
+      continue;
+    }
     if(action==='minimize')continue;
     assert.equal(h.visible,true,`${action}: overlay visible`);
-    assert.equal(z.overlayTopmost,true,`${action}: overlay topmost`);
+    assert.equal(z.overlayTopmost,true,`${action}: overlay topmost ${JSON.stringify(z)}`);
     assert.equal(z.controlsTopmost,true,`${action}: controls topmost`);
     assert.ok(z.overlayRank<z.probeRank,`${action}: overlay above normal window ${JSON.stringify(z)}`);
     assert.ok(z.controlsRank<z.overlayRank,`${action}: toolbar above overlay ${JSON.stringify(z)}`);
     assert.equal(h.overlayFocused,false,`${action}: overlay must not steal focus`);
-    if(action==='toolbar')assert.equal(h.controlsFocused,true,'toolbar remains focused after overlay reorder');
+    if(action==='toolbar')assert.equal(h.controlsFocused,false,'toolbar restore must not steal focus');
     if(action==='pc')assert.ok(z.hit!==h.overlay&&z.hit!==h.controls,`${action}: native hit target ${JSON.stringify(z)}`);
-    if(['touch','draw','spawn','bomb','blackhole'].includes(action))assert.equal(z.hit,h.overlay,`${action}: native hit target ${JSON.stringify(z)}`);
+    if(['touch','draw','spawn','bomb','hammer','gun','blackhole'].includes(action))assert.equal(z.hit,h.overlay,`${action}: native hit target ${JSON.stringify(z)}`);
     console.log(`PASS: ${action} z-order and input target`);
   }
+  await evaluate("document.getElementById('touch-button').click()");
+  await until(async()=> (await evaluate("window.playground.smokeWindowOrder('status')")).mode==='touch','touch mode before hiding toolbar');
+  await evaluate("document.getElementById('toolbar-hide-button').click()");
+  const hidden=await until(async()=>{
+    const h=await evaluate("window.playground.smokeWindowOrder('status')");
+    return !h.controlsVisible && h.mode==='pc' ? h : null;
+  },'toolbar hidden in PC mode');
+  let z=native(hidden);
+  assert.equal(hidden.visible,true,'toolbar hide leaves Playground visible');
+  assert.ok(z.overlayTopmost && z.overlayRank<z.probeRank,'hidden toolbar leaves overlay above normal window');
+  assert.ok(z.hit!==hidden.overlay && z.hit!==hidden.controls,'hidden toolbar PC input passes through');
+  console.log('PASS: toolbar hides independently and restores PC input passthrough');
+  let result=await state('hide-overlay');
+  assert.equal(result.h.controlsVisible,false,'Playground hide does not restore toolbar');
+  result=await state('tray-menu');
+  assert.ok(result.h.controlsVisible && !result.h.visible,'Tray menu restores toolbar while Playground stays hidden');
+  assert.equal(result.z.controlsTopmost,true,'restored toolbar remains topmost');
+  result=await state('show-overlay');
+  assert.ok(result.h.controlsVisible && result.h.visible,'Playground show leaves restored toolbar visible');
+  assert.ok(result.z.controlsRank<result.z.overlayRank && result.z.overlayRank<result.z.probeRank,'Tray restore keeps window order');
+  assert.equal(result.h.controlsFocused,false,'Tray restore does not take normal window focus');
+  await evaluate("document.getElementById('toolbar-hide-button').click()");
+  await until(async()=>!(await evaluate("window.playground.smokeWindowOrder('status')")).controlsVisible,'toolbar hidden again');
+  result=await state('tray-click');
+  assert.ok(result.h.controlsVisible && result.h.visible,'Tray icon click still restores toolbar');
+  console.log('PASS: Playground visibility is independent; Tray menu and icon restore toolbar');
   if(process.argv.includes('--real-apps')){
     const targets=JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',"Get-Process chrome,Code,ChatGPT -ErrorAction SilentlyContinue | Where-Object MainWindowHandle -ne 0 | Select-Object ProcessName,MainWindowHandle | ConvertTo-Json -Compress"],{encoding:'utf8'}));
     for(const target of [].concat(targets||[])){

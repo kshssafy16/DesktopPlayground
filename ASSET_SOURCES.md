@@ -11,5 +11,6 @@
 | 강아지 시바 / 푸들 | `assets/pets/doge`, `puddle` | 로컬 Codex Pet package의 `pet.json`과 `spritesheet.webp` 복사본 | license 파일 없음, 확인 필요 |
 | 캐릭터 우사기 / 커비 / 커비(잠) | `assets/pets/usagi`, `kirby`, `kirby_sleepy` | 로컬 Codex Pet package의 `pet.json`과 `spritesheet.webp` 복사본 | **local/personal use** 범위로 취급. Kirby 등 제3자 IP의 **redistribution rights not verified** |
 | 기본 계열 Pet, 효과, 구조물, 툴바 SVG, Tray 아이콘 | `renderer.js`, `controls.html`, `main.js`의 Canvas/SVG 코드 | 프로젝트 소스에서 생성 | 별도 이미지 자산 없음 |
+| Phase 3-C 도구 PNG | `assets/tools/hammer.png`, `assets/tools/bomb.png`, `assets/weapons/{awm,ak47,uzi,double_barrel}.png` | 사용자가 현재 작업 트리에 제공한 투명 PNG | 원저작자·라이선스 문서 없음. 공개 재배포 전 확인 필요 |
 
 로컬 Pet package에는 공개 재배포를 허가하는 문서가 확인되지 않았습니다. 특히 Kirby 계열과 다른 캐릭터 자산은 개인 사용 가능 여부와 별개로 공개 ZIP·EXE 및 GitHub 소스 배포 권리를 확인해야 합니다. 확인 전에는 해당 자산의 공개 재배포가 허가되었다고 표시하지 마세요. `package.json`의 소스코드 라이선스 표기는 Pet 이미지·아이콘 권리를 보증하지 않습니다.

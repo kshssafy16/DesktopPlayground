@@ -2,9 +2,9 @@ const api = window.playground;
 const byId = id => document.getElementById(id);
 const controls = {
   pc: byId('pc-button'), pets: byId('pets-button'), touch: byId('touch-button'),
-  draw: byId('draw-button'), bomb: byId('bomb-button'), blackhole: byId('blackhole-button'),
+  draw: byId('draw-button'), bomb: byId('bomb-button'), hammer: byId('hammer-button'), gun: byId('gun-button'), blackhole: byId('blackhole-button'),
   structures: byId('structures-button'), visibility: byId('visibility-button'),
-  exit: byId('exit-button'), collapse: byId('collapse-button'),
+  exit: byId('exit-button'), collapse: byId('collapse-button'), toolbarHide: byId('toolbar-hide-button'),
   miniVisibility: byId('mini-visibility-button'),
   panel: byId('control-panel'), panelTitle: byId('panel-title'),
   panelList: byId('panel-list'), error: byId('error-message')
@@ -53,6 +53,12 @@ function makePanel(kind) {
 }
 const petPanel = makePanel('pets');
 const drawPanel = makePanel('draw');
+const gunPanel = makePanel('gun');
+for (const [id,label] of [['awm','AWM'],['ak47','AK-47'],['uzi','UZI'],['double_barrel','더블배럴 샷건']]) {
+  const choice = button(label, label + ' 선택', () => { api.setGunWeapon(id); closePanel(); }, 'gun-choice');
+  choice.dataset.weapon = id;
+  gunPanel.appendChild(choice);
+}
 
 function addPetChoice(parent, pet, icon) {
   const choice = button(icon + ' ' + pet.label, pet.name || pet.label, () => {
@@ -147,20 +153,26 @@ function drawIcon(pathData) {
 }
 function updateSelection() {
   for (const [mode, element] of [['pc',controls.pc],['touch',controls.touch],
-    ['draw',controls.draw],['bomb',controls.bomb],['blackhole',controls.blackhole]]) {
-    element.classList.toggle('active', currentState.mode === mode);
+    ['draw',controls.draw],['bomb',controls.bomb],['hammer',controls.hammer],['gun',controls.gun],['blackhole',controls.blackhole]]) {
+    const selected = currentState.mode === mode;
+    element.classList.toggle('active', selected);
+    element.setAttribute('aria-pressed', String(selected));
   }
-  controls.pets.classList.toggle('active', currentState.mode === 'spawn' || panelKind === 'pets');
+  const petsSelected = currentState.mode === 'spawn' || panelKind === 'pets';
+  controls.pets.classList.toggle('active', petsSelected);
+  controls.pets.setAttribute('aria-pressed', String(petsSelected));
+  const weaponLabels = { awm: 'AWM', ak47: 'AK-47', uzi: 'UZI', double_barrel: '더블배럴 샷건' };
+  controls.gun.title = `장난감 총 · ${weaponLabels[currentState.gunWeapon] || 'AK-47'} 선택/발사`;
   controls.structures.classList.toggle('active', currentState.structuresEnabled);
   controls.structures.setAttribute('aria-pressed', String(currentState.structuresEnabled));
   controls.structures.title = currentState.structuresEnabled ? '구조물 끄기' : '구조물 켜기';
   controls.structures.setAttribute('aria-label', controls.structures.title);
   controls.visibility.classList.toggle('active', !currentState.enabled);
-  controls.visibility.title = currentState.enabled ? 'Playground 숨기기' : 'Playground 보이기';
-  controls.visibility.setAttribute('aria-label', currentState.enabled ? '숨기기' : '보이기');
+  controls.visibility.title = currentState.enabled ? 'Playground 숨기기 · 툴바 유지' : 'Playground 보이기';
+  controls.visibility.setAttribute('aria-label', currentState.enabled ? 'Playground 숨기기' : 'Playground 보이기');
   controls.visibility.textContent = currentState.enabled ? '👁' : '◉';
   controls.miniVisibility.title = controls.visibility.title;
-  controls.miniVisibility.setAttribute('aria-label', currentState.enabled ? '숨기기' : '보이기');
+  controls.miniVisibility.setAttribute('aria-label', currentState.enabled ? 'Playground 숨기기' : 'Playground 보이기');
   controls.miniVisibility.textContent = controls.visibility.textContent;
   for (const choice of petPanel.querySelectorAll('[data-pet-id]'))
     choice.classList.toggle('selected', currentState.mode === 'spawn' && choice.dataset.petId === currentState.petId);
@@ -173,6 +185,8 @@ function updateSelection() {
     byId('draw-size-value').textContent = byId('draw-size-slider').value;
   }
   drawPanel.querySelector('[data-eraser]').classList.toggle('selected', currentState.eraser);
+  for (const choice of gunPanel.querySelectorAll('[data-weapon]'))
+    choice.classList.toggle('selected', choice.dataset.weapon === (currentState.gunWeapon || 'ak47'));
 }
 function renderState(next) {
   if (!next || typeof next.enabled !== 'boolean') return;
@@ -193,9 +207,10 @@ function switchPanel(kind) {
   panelKind = kind;
   controls.panel.hidden = false;
   for (const [name, element] of Object.entries(panels)) element.hidden = name !== kind;
-  controls.panelTitle.textContent = { pets: '펫 추가', draw: '그리기' }[kind];
+  controls.panelTitle.textContent = { pets: '펫 추가', draw: '그리기', gun: '장난감 총' }[kind];
   controls.pets.setAttribute('aria-expanded', String(kind === 'pets'));
   controls.draw.setAttribute('aria-expanded', String(kind === 'draw'));
+  controls.gun.setAttribute('aria-expanded', String(kind === 'gun'));
   api.setControlsPanelOpen(true);
   updateSelection();
 }
@@ -206,6 +221,7 @@ function closePanel() {
   api.setControlsPanelOpen(false);
   controls.pets.setAttribute('aria-expanded', 'false');
   controls.draw.setAttribute('aria-expanded', 'false');
+  controls.gun.setAttribute('aria-expanded', 'false');
   updateSelection();
 }
 function togglePanel(kind) {
@@ -226,9 +242,12 @@ controls.pets.addEventListener('click', () => togglePanel('pets'));
 controls.touch.addEventListener('click', () => { api.setMode('touch'); closePanel(); });
 controls.draw.addEventListener('click', () => { api.setMode('draw'); togglePanel('draw'); });
 controls.bomb.addEventListener('click', () => { api.setMode('bomb'); closePanel(); });
+controls.hammer.addEventListener('click', () => { api.setMode('hammer'); closePanel(); });
+controls.gun.addEventListener('click', () => { api.setMode('gun'); togglePanel('gun'); });
 controls.blackhole.addEventListener('click', () => { api.setMode('blackhole'); closePanel(); });
 controls.structures.addEventListener('click', () => api.setStructuresEnabled(!currentState.structuresEnabled));
 controls.visibility.addEventListener('click', () => { api.setEnabled(!currentState.enabled); closePanel(); });
+controls.toolbarHide.addEventListener('click', hideControls);
 controls.exit.addEventListener('click', () => api.exit());
 controls.collapse.addEventListener('click', () => setCollapsed(true));
 controls.miniVisibility.addEventListener('click', () => api.setEnabled(!currentState.enabled));

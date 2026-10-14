@@ -595,28 +595,25 @@ globalThis.PlaygroundPetProfiles = {
           "foot": 0.976
         },
         "rest": {
-          "row": 6,
+          "row": 0,
           "frames": [
             0,
             1,
             2,
-            3,
-            4,
-            5
+            3
           ],
           "frameMs": 350,
           "center": 0.4974,
           "foot": 0.976
         },
         "sleep": {
-          "row": 5,
+          "row": 0,
           "frames": [
-            3,
-            4
+            3
           ],
           "frameMs": 500,
-          "center": 0.5,
-          "foot": 0.9519
+          "center": 0.4974,
+          "foot": 0.976
         },
         "look": {
           "row": 8,
@@ -765,8 +762,7 @@ globalThis.PlaygroundPetProfiles = {
         "sleep": {
           "row": 5,
           "frames": [
-            4,
-            5
+            4
           ],
           "frameMs": 500,
           "center": 0.5,
@@ -898,18 +894,16 @@ globalThis.PlaygroundPetProfiles = {
           "foot": 0.9327
         },
         "rest": {
-          "row": 6,
+          "row": 8,
           "frames": [
             0,
             1,
-            2,
-            3,
             4,
             5
           ],
           "frameMs": 350,
           "center": 0.5,
-          "foot": 0.8413
+          "foot": 0.9327
         },
         "look": {
           "row": 8,
@@ -934,6 +928,15 @@ globalThis.PlaygroundPetProfiles = {
           "center": 0.5,
           "foot": 0.9134615384615384,
           "loop": false
+        },
+        "sleep": {
+          "row": 8,
+          "frames": [
+            0
+          ],
+          "frameMs": 500,
+          "center": 0.5,
+          "foot": 0.9327
         }
       },
       "fallback": {
@@ -1381,6 +1384,15 @@ globalThis.PlaygroundPetProfiles = {
           "center": 0.5,
           "foot": 0.9615384615384616,
           "loop": false
+        },
+        "sleep": {
+          "row": 0,
+          "frames": [
+            3
+          ],
+          "frameMs": 500,
+          "center": 0.4974,
+          "foot": 0.9712
         }
       },
       "fallback": {

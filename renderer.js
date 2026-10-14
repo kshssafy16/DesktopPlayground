@@ -320,6 +320,28 @@
         const rings = screenEffects.groups.ring;
         const impacts = screenEffects.groups.impact;
         const holes = screenEffects.groups.crater;
+        const bullets = screenEffects.groups.bullet;
+        const grenades = screenEffects.groups.grenade;
+        const weaponProfiles = Object.freeze({
+            awm: { label: 'AWM', cooldownMs: 4000, speed: 3.1, damage: 120, knockback: 34,
+                spread: 0, count: 1, width: 166, height: 62, muzzle: [.99,.32], color: '#e94c70' },
+            ak47: { label: 'AK-47', cooldownMs: 120, speed: 2.35, damage: 20, knockback: 12,
+                spread: 0, count: 1, width: 137, height: 55, muzzle: [.98,.31], color: '#ff815d', auto: true },
+            uzi: { label: 'UZI', cooldownMs: 65, speed: 2.25, damage: 9, knockback: 6,
+                spread: 0, count: 1, width: 105, height: 61, muzzle: [.98,.27], color: '#ffd15a', auto: true },
+            double_barrel: { label: '더블배럴 샷건', cooldownMs: 1200, speed: 2.0, damage: 12,
+                knockback: 5, spread: .22, count: 10, width: 141, height: 42,
+                muzzle: [.99,.29], color: '#ff9b67' }
+        });
+        const weaponSprites = Object.fromEntries(Object.keys(weaponProfiles).map(id => {
+            const image = new Image(); image.src = `assets/weapons/${id}.png`; return [id, image];
+        }));
+        const hammerSprite = new Image(); hammerSprite.src = 'assets/tools/hammer.png';
+        const grenadeSprite = new Image(); grenadeSprite.src = 'assets/tools/bomb.png';
+        let gunWeapon = 'ak47';
+        let gunTriggerHeld = false;
+        let grenadeDrag = null;
+        let lastGunShotAt = -Infinity;
         let blackHoles = [];
         let strokes = world.drawnShapes;
         let activeStroke = null;
@@ -345,12 +367,12 @@
 
         // Durations are milliseconds of stable autonomous time, never render frame counts.
         const activityProfiles = {
-            sleepy: { roam: [1800,3500], idle: [1800,3200], rest: [6500,12000], look: [900,1800], restChance: .8, lookChance: .15, jump: .05, turn: .35 },
-            calm: { roam: [2500,4500], idle: [1500,2500], rest: [4000,7500], look: [800,1500], restChance: .7, lookChance: .2, jump: .12, turn: .6 },
-            normal: { roam: [2500,4500], idle: [1000,2200], rest: [3000,5500], look: [700,1400], restChance: .55, lookChance: .25, jump: .2, turn: .8 },
-            lively: { roam: [3500,5500], idle: [800,1600], rest: [2000,4000], look: [600,1100], restChance: .5, lookChance: .3, jump: .25, turn: 1 },
-            active: { roam: [4500,6500], idle: [600,1400], rest: [1000,2200], look: [500,1000], restChance: .45, lookChance: .35, jump: .3, turn: 1.2 },
-            veryActive: { roam: [5000,7500], idle: [400,1000], rest: [800,1600], look: [400,900], restChance: .35, lookChance: .45, jump: .4, turn: 1.4 }
+            sleepy: { roam: [1800,3500], idle: [1800,3200], rest: [6500,12000], sleep: [1800000,3600000], sleepChance: .55, look: [900,1800], restChance: .8, lookChance: .15, jump: .05, turn: .35 },
+            calm: { roam: [2500,4500], idle: [1500,2500], rest: [4000,7500], sleep: [1200000,2400000], sleepChance: .25, look: [800,1500], restChance: .7, lookChance: .2, jump: .12, turn: .6 },
+            normal: { roam: [2500,4500], idle: [1000,2200], rest: [3000,5500], sleep: [600000,1500000], sleepChance: .12, look: [700,1400], restChance: .55, lookChance: .25, jump: .2, turn: .8 },
+            lively: { roam: [3500,5500], idle: [800,1600], rest: [2000,4000], sleep: [420000,1080000], sleepChance: .08, look: [600,1100], restChance: .5, lookChance: .3, jump: .25, turn: 1 },
+            active: { roam: [4500,6500], idle: [600,1400], rest: [1000,2200], sleep: [300000,900000], sleepChance: .05, look: [500,1000], restChance: .45, lookChance: .35, jump: .3, turn: 1.2 },
+            veryActive: { roam: [5000,7500], idle: [400,1000], rest: [800,1600], sleep: [300000,600000], sleepChance: .04, look: [400,900], restChance: .35, lookChance: .45, jump: .4, turn: 1.4 }
         };
         const activityById = { cat_brown: 'calm', cat_face: 'normal', cat_sleepy: 'sleepy',
             'salary-cat': 'calm', doge: 'active', puddle: 'normal', usagi: 'veryActive',
@@ -458,6 +480,8 @@
                         const choice = Math.random();
                         this.enterAutonomy(choice < this.activity.lookChance ? 'look'
                             : choice < this.activity.lookChance + this.activity.restChance ? 'rest' : 'idle');
+                    } else if (this.autonomy.state === 'rest' && Math.random() < this.activity.sleepChance) {
+                        this.enterAutonomy('sleep');
                     } else this.enterAutonomy('roam');
                 }
                 this.autonomy.remainingMs -= remaining;
@@ -499,23 +523,23 @@
                 this.autonomyHoldMs = Math.max(this.autonomyHoldMs, 200);
             }
 
-            beginImpact() {
+            beginImpact(source = 'bomb') {
                 this.queueAnimationEvent('hit');
-                this.motionCause = 'bomb';
-                this.externalMotion = { source: 'bomb', elapsedMs: 0, stableMs: 0 };
+                this.motionCause = source;
+                this.externalMotion = { source, elapsedMs: 0, stableMs: 0 };
             }
 
             update(dt = 1, animationElapsedMs = dt * physicsFrameMs) {
                 // Small physics steps keep fast throws consistent across refresh rates.
                 // Autonomous movement and ladder timing keep their existing update path.
                 const steps = this.externalMotion ? Math.max(1, Math.ceil(dt / throwPhysics.maxStep)) : 1;
-                for (let i = 0; i < steps; i++) this.updateStep(dt / steps);
+                for (let i = 0; i < steps; i++) this.updateStep(dt / steps, animationElapsedMs / steps);
                 if (!this.isDragging) this.squish = 1 + (this.squish - 1) * Math.pow(.85, dt);
                 this.advanceAnimation(animationElapsedMs);
                 this.updateImagePosition();
             }
 
-            updateStep(dt) {
+            updateStep(dt, elapsedMs = dt * physicsFrameMs) {
                 this.isAutonomouslyStill = false;
                 this.autonomyHoldMs = Math.max(0, this.autonomyHoldMs - dt * physicsFrameMs);
                 if (this.isDragging) {
@@ -567,7 +591,7 @@
                 if (supportingPlatform) supportingPlatform.lastUsedAt = now;
                 const stableAutonomy = grounded && !externalMotion && this.autonomyHoldMs === 0
                     && Math.abs(this.vy) <= 1.5 && Math.abs(this.vx) <= 3 && this.squish <= 1.12;
-                const roaming = stableAutonomy && this.updateAutonomy(dt * physicsFrameMs);
+                const roaming = stableAutonomy && this.updateAutonomy(elapsedMs);
                 if (stableAutonomy && !roaming) {
                     this.isAutonomouslyStill = true;
                     this.vx *= Math.pow(.7, dt); // Gradual stop; never brake an external impulse.
@@ -672,11 +696,8 @@
                     this.x = width - this.size;
                     this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
                 }
-                if (externalMotion && this.y < this.size && this.vy < 0) {
-                    if (Math.abs(this.vy) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
-                    this.y = this.size;
-                    this.vy = throwRebound(this.vy, motionPhysics.wallRestitution);
-                }
+                // The top edge is open. Only an extreme off-screen excursion loses upward speed.
+                if (this.y < -Math.max(2700,height*3) && this.vy < 0) this.vy = 0;
 
                 if (externalMotion) {
                     const motion = this.externalMotion;
@@ -870,9 +891,9 @@
                 ctx.translate(this.x, this.y);
                 const quiet = this.quietAutonomy();
                 const looking = quiet && this.autonomy.state === 'look';
-                const resting = quiet && this.autonomy.state === 'rest';
+                const resting = quiet && ['rest', 'sleep'].includes(this.autonomy.state);
                 const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
-                const sleeping = resting && profile.sleeping;
+                const sleeping = resting && (this.autonomy.state === 'sleep' || profile.sleeping);
                 const restPhase = (this.autonomy.durationMs - this.autonomy.remainingMs) / 1000;
                 const breath = resting ? 1 + Math.sin(restPhase * Math.PI * .8) * (sleeping ? .012 : .006) : 1;
 
@@ -1029,7 +1050,7 @@
             }
         }
 
-        function addParticles(x, y, color, count, speed = 3) {
+        function addParticles(x, y, color, count, speed = 3, shape = 'spark') {
             // Cap generation as well as retained objects, even for oversized bursts.
             const budget = Number.isFinite(count) ? Math.min(160, Math.max(0, Math.floor(count))) : 0;
             for (let i = 0; i < budget; i++) {
@@ -1037,7 +1058,7 @@
                 const velocity = (0.5 + Math.random()) * speed;
                 screenEffects.add('particle', {
                     x, y, vx: Math.cos(angle) * velocity, vy: Math.sin(angle) * velocity,
-                    color, size: 1.5 + Math.random() * 2.5
+                    color, size: 1.5 + Math.random() * 2.5, shape, angle
                 }, (18 + Math.random() * 14) * physicsFrameMs);
             }
         }
@@ -1050,13 +1071,202 @@
             screenEffects.add('impact', { x, y, color }, life * physicsFrameMs);
         }
 
+        // Shared nonlethal toy hit path; future tools can supply their own impulse and number.
+        function applyNonlethalHit(pet, { source, vx, vy, cap, squish, holdMs, damage,
+            hitX = pet.x, hitY = pet.y, numberOffset = 0, numberLift = 0, weapon = null }) {
+            if (pet.isDragging || pet.blackHoleOrbit) return false;
+            pet.vx = Math.max(-cap, Math.min(cap, pet.vx + vx));
+            pet.vy = Math.max(-cap, Math.min(cap, pet.vy + vy));
+            pet.squish = squish;
+            pet.interruptAutonomy(holdMs);
+            pet.beginImpact(source);
+            pet.climbing = null; pet.climbingDown = false;
+            pet.targetLadderId = null; pet.supportId = null;
+            screenEffects.add('damage', { x: hitX + numberOffset,
+                y: Math.max(32, hitY - (source === 'gun' ? 24 + numberLift : pet.size * 1.9)),
+                amount: Math.max(1, Math.round(damage)), source, weapon,
+                drift: ((pet.instanceId * 17 + numberOffset * 3) % 11 - 5) * 1.2 }, 850);
+            return true;
+        }
+
+        const hitMaskCache = new WeakMap();
+        function spriteHitArea(pet, x, y) {
+            if (pet.definition.renderKind !== 'sprite') {
+                if (Math.hypot(x - pet.x, y - pet.y) > pet.size) return null;
+                return y < pet.y - pet.size * .3 ? 'head' : 'body';
+            }
+            const image = pet.definition.asset;
+            const selected = pet.spriteClip();
+            if (!selected || !image?.complete || !image.naturalWidth) return null;
+            const { clip } = selected, geometry = pet.spriteGeometry(selected);
+            const fw = image.naturalWidth / 8, fh = image.naturalHeight / (pet.definition.rows || 11);
+            const renderSize = pet.size * 2.5 * geometry.scale;
+            const profile = pet.definition.animation || spriteProfiles[pet.definitionId] || {};
+            const quiet = pet.quietAutonomy();
+            const resting = quiet && ['rest', 'sleep'].includes(pet.autonomy.state);
+            const sleeping = resting && (pet.autonomy.state === 'sleep' || profile.sleeping);
+            const restPhase = (pet.autonomy.durationMs - pet.autonomy.remainingMs) / 1000;
+            const breath = resting ? 1 + Math.sin(restPhase * Math.PI * .8) * (sleeping ? .012 : .006) : 1;
+            const squash = 1 + (pet.squish - 1) * (profile.elasticity ?? .55);
+            let lx = (x - pet.x - geometry.offsetX) / (squash / breath);
+            let ly = (y - pet.y - (profile.origin === 'center' ? 0 : pet.size)
+                - geometry.offsetY - geometry.bob) / (breath / squash);
+            if (clip.flip) lx = -lx;
+            const angle = (geometry.tilt || 0) + (quiet && pet.autonomy.state === 'look'
+                ? pet.facingRight ? .035 : -.035 : 0);
+            const rx = lx * Math.cos(angle) + ly * Math.sin(angle);
+            const ry = -lx * Math.sin(angle) + ly * Math.cos(angle);
+            const sx = Math.floor((rx / renderSize + geometry.center) * fw);
+            const sy = Math.floor((ry / renderSize + geometry.anchorY) * fh);
+            if (sx < 0 || sy < 0 || sx >= fw || sy >= fh) return null;
+            let frames = hitMaskCache.get(image);
+            if (!frames) { frames = new Map(); hitMaskCache.set(image, frames); }
+            const key = `${clip.row}:${geometry.column}`;
+            let mask = frames.get(key);
+            if (!mask) {
+                try {
+                    const cell = document.createElement('canvas'); cell.width = fw; cell.height = fh;
+                    const cellCtx = cell.getContext('2d', { willReadFrequently: true });
+                    cellCtx.drawImage(image, geometry.column * fw, clip.row * fh, fw, fh, 0, 0, fw, fh);
+                    const pixels = cellCtx.getImageData(0, 0, fw, fh).data;
+                    let top = fh, bottom = 0;
+                    for (let py = 0; py < fh; py++) for (let px = 0; px < fw; px++) {
+                        if (pixels[(py * fw + px) * 4 + 3] > 32) {
+                            top = Math.min(top, py); bottom = Math.max(bottom, py);
+                        }
+                    }
+                    mask = { pixels, top, bottom };
+                } catch { mask = { fallback: true, top: 0, bottom: fh }; }
+                frames.set(key, mask);
+            }
+            if (!mask.fallback && mask.pixels[(sy * fw + sx) * 4 + 3] <= 32) return null;
+            return sy <= mask.top + (mask.bottom - mask.top) * .42 ? 'head' : 'body';
+        }
+
+        function gunPose(x, y, profile = weaponProfiles[gunWeapon]) {
+            const offsets = [[78,78],[-78,78],[78,-78],[-78,-78]];
+            const cornersAt = (muzzleX, muzzleY, angle) => {
+                const cos = Math.cos(angle), sin = Math.sin(angle);
+                const flipY = cos < 0 ? -1 : 1;
+                return [[0,0],[profile.width,0],[0,profile.height],[profile.width,profile.height]]
+                    .map(([cx,cy]) => ({ x: muzzleX + (cx-profile.width*profile.muzzle[0])*cos
+                        - (cy-profile.height*profile.muzzle[1])*flipY*sin,
+                    y: muzzleY + (cx-profile.width*profile.muzzle[0])*sin
+                        + (cy-profile.height*profile.muzzle[1])*flipY*cos }));
+            };
+            for (const [ox,oy] of offsets) {
+                const muzzleX=x+ox,muzzleY=y+oy,angle=Math.atan2(-oy,-ox);
+                if (cornersAt(muzzleX,muzzleY,angle).every(point => point.x>=14 && point.y>=14
+                    && point.x<=width-14 && point.y<=height-14)) return { muzzleX,muzzleY,angle,flipY:Math.cos(angle)<0?-1:1 };
+            }
+            let muzzleX=x+78,muzzleY=y+78,angle=0;
+            for (let attempt=0;attempt<5;attempt++) {
+                angle=Math.atan2(y-muzzleY,x-muzzleX);
+                const corners=cornersAt(muzzleX,muzzleY,angle);
+                const minX = Math.min(...corners.map(p=>p.x)), maxX = Math.max(...corners.map(p=>p.x));
+                const minY = Math.min(...corners.map(p=>p.y)), maxY = Math.max(...corners.map(p=>p.y));
+                muzzleX += Math.max(14-minX, Math.min(0,width-14-maxX));
+                muzzleY += Math.max(14-minY, Math.min(0,height-14-maxY));
+            }
+            angle = Math.atan2(y - muzzleY, x - muzzleX);
+            return { muzzleX, muzzleY, angle, flipY:Math.cos(angle)<0?-1:1 };
+        }
+
+        function shootGun(x, y) {
+            const now = world.now(), profile = weaponProfiles[gunWeapon];
+            if (!Number.isFinite(x) || !Number.isFinite(y)
+                || now - lastGunShotAt < profile.cooldownMs) return false;
+            lastGunShotAt = now;
+            const pose = gunPose(x, y, profile);
+            for (let pellet = 0; pellet < profile.count; pellet++) {
+                const distance = Math.hypot(x-pose.muzzleX,y-pose.muzzleY);
+                const spread = profile.count === 1 ? 0
+                    : ((pellet - (profile.count-1)/2)/(profile.count-1) + (Math.random()-.5)*.16) * profile.spread * 2;
+                const angle = pose.angle + spread, aimX = pose.muzzleX + Math.cos(angle)*distance;
+                const aimY = pose.muzzleY + Math.sin(angle)*distance;
+                const vx = Math.cos(angle) * profile.speed, vy = Math.sin(angle) * profile.speed;
+                screenEffects.add('bullet', { x: pose.muzzleX, y: pose.muzzleY,
+                    originX: pose.muzzleX, originY: pose.muzzleY,
+                    previousX: pose.muzzleX, previousY: pose.muzzleY, vx, vy, aimX, aimY,
+                    weapon: gunWeapon,
+                    volleyTime: now, pellet }, 2000);
+            }
+            addImpact(pose.muzzleX, pose.muzzleY, 'rgba(255,234,159,.96)', 5);
+            addParticles(pose.muzzleX, pose.muzzleY, '#ffdb82', gunWeapon === 'double_barrel' ? 10 : 5, 4);
+            return true;
+        }
+
+        function updateBullets(elapsedMs) {
+            if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return;
+            for (let i = bullets.length - 1; i >= 0; i--) {
+                const bullet = bullets[i];
+                const step = Math.min(elapsedMs, bullet.remainingMs);
+                const fromX = bullet.x, fromY = bullet.y;
+                const remaining = Math.hypot(bullet.aimX-fromX,bullet.aimY-fromY);
+                const arrived = bullet.vx*bullet.vx*step*step + bullet.vy*bullet.vy*step*step >= remaining*remaining;
+                const toX=arrived ? bullet.aimX : fromX+bullet.vx*step;
+                const toY=arrived ? bullet.aimY : fromY+bullet.vy*step;
+                const dx=toX-fromX,dy=toY-fromY,length2=dx*dx+dy*dy;
+                let target=null,area=null,firstT=Infinity;
+                if (length2>0) for(let p=petInstances.length-1;p>=0;p--) {
+                    const pet=petInstances[p];
+                    if(pet.isDragging||pet.blackHoleOrbit)continue;
+                    const radius=pet.size*1.7,px=fromX-pet.x,py=fromY-pet.y;
+                    const projection=px*dx+py*dy;
+                    const discriminant=projection*projection-length2*(px*px+py*py-radius*radius);
+                    if(discriminant<0)continue;
+                    const start=Math.max(0,(-projection-Math.sqrt(discriminant))/length2);
+                    const end=Math.min(firstT,1,(-projection+Math.sqrt(discriminant))/length2);
+                    if(end<start)continue;
+                    const samples=Math.max(1,Math.ceil((end-start)*Math.sqrt(length2)/2));
+                    for(let sample=0;sample<=samples;sample++) {
+                        const t=start+(end-start)*sample/samples;
+                        const hit=spriteHitArea(pet,fromX+dx*t,fromY+dy*t);
+                        if(hit){target=pet;area=hit;firstT=t;break;}
+                    }
+                }
+                bullet.previousX = fromX; bullet.previousY = fromY;
+                bullet.x=target?fromX+dx*firstT:toX;
+                bullet.y=target?fromY+dy*firstT:toY;
+                if (target) {
+                    const profile = weaponProfiles[bullet.weapon];
+                    const head = area === 'head', force = profile.knockback * (head ? 1.35 : 1);
+                    applyNonlethalHit(target, { source: 'gun',
+                        vx: bullet.vx / profile.speed * force,
+                        vy: Math.min(-force * .72, bullet.vy / profile.speed * force - 5),
+                        cap: bullet.weapon === 'awm' ? 48 : bullet.weapon === 'double_barrel' ? 30 : 24,
+                        squish: head ? 1.32 : 1.2, holdMs: head ? 550 : 400,
+                        damage: profile.damage * (head ? 1.5 : 1),
+                        hitX: bullet.x, hitY: bullet.y,
+                        numberOffset: profile.count > 1 ? (bullet.pellet % 5 - 2) * 22 : 0,
+                        numberLift: profile.count > 1 ? Math.floor(bullet.pellet / 5) * 25 : 0,
+                        weapon: bullet.weapon });
+                    screenEffects.add('shot', { x: bullet.x, y: bullet.y,
+                        originX: bullet.originX, originY: bullet.originY, weapon: bullet.weapon }, 140);
+                    addImpact(bullet.x, bullet.y, 'rgba(171,241,255,.95)', 6);
+                    addParticles(bullet.x, bullet.y, '#79d9ee', 9, 5);
+                    bullets.splice(i, 1);
+                } else if(arrived) {
+                    bullets.splice(i,1);
+                } else if (bullet.x < -32 || bullet.y < -32 || bullet.x > width + 32 || bullet.y > height + 32) {
+                    bullets.splice(i, 1);
+                }
+            }
+        }
+
         function fireBomb(x, y) {
-            const radius = 61 + Math.random() * 10;
+            const radius = 78 + Math.random() * 12;
             screenEffects.add('crater', { x, y, radius,
-                edge: Array.from({ length: 24 }, () => .78 + Math.random() * .42) }, 5000);
-            addRing(x, y, 'rgba(255,105,42,.96)', 240, 38);
-            addImpact(x, y, 'rgba(255,239,181,.98)', 25);
-            addParticles(x, y, '#f28a53', 50, 8);
+                edge: Array.from({ length: 32 }, (_, i) => .72 + (i % 4 === 0 ? .27 : i % 3 === 0 ? .11 : 0)
+                    + Math.random() * .36),
+                burst: Array.from({ length: 16 }, (_, i) => 1.38 + (i % 3 === 0 ? .42 : 0)
+                    + Math.random() * .35) }, 5000);
+            addRing(x, y, 'rgba(255,105,42,.96)', 320, 42);
+            addRing(x, y, 'rgba(255,196,72,.88)', 160, 16);
+            addImpact(x, y, 'rgba(255,239,181,.98)', 10);
+            addParticles(x, y, '#f28a53', 34, 11);
+            addParticles(x, y, '#ffd06a', 22, 12);
+            addParticles(x, y, '#813a31', 12, 9);
             body.classList.remove('shake-bomb');
             void body.offsetWidth;
             if (auxiliaryEffectsEnabled) body.classList.add('shake-bomb');
@@ -1067,13 +1277,82 @@
                 if (distance >= 360) continue;
                 const force = 17 * Math.pow(1 - distance / 360, 1.25);
                 const angle = distance > 1 ? Math.atan2(dy, dx) : Math.random() * Math.PI * 2;
-                pet.vx = Math.max(-19, Math.min(19, pet.vx + Math.cos(angle) * force));
-                pet.vy = Math.max(-19, Math.min(19, pet.vy + Math.sin(angle) * force));
-                pet.squish = 1.3;
-                pet.interruptAutonomy(700);
-                pet.beginImpact();
-                pet.climbing = null; pet.climbingDown = false; pet.targetLadderId = null; pet.supportId = null;
+                const probeY = Math.max(pet.y-pet.size*.8,Math.min(y,pet.y+pet.size*.8));
+                const head = spriteHitArea(pet,pet.x,probeY) === 'head';
+                applyNonlethalHit(pet, { source: 'bomb', vx: Math.cos(angle) * force * (head ? 1.15 : 1),
+                    vy: -(4 + force * (head ? .82 : .65)), cap: 19, squish: 1.3,
+                    holdMs: 700, damage: (12 + force * 2.5) * (head ? 1.4 : 1) });
             }
+        }
+
+        function throwGrenade(startX, startY, endX = startX, endY = startY) {
+            const dx = endX - startX, dy = endY - startY;
+            const dragged = Math.hypot(dx,dy) >= 8;
+            const vx = dragged ? Math.max(-18,Math.min(18,dx*.12)) : [-7,7,0][Math.floor(Math.random()*3)];
+            const vy = dragged ? Math.max(-19,Math.min(12,dy*.12-5)) : -12;
+            return screenEffects.add('grenade', { x: startX, y: startY,
+                vx, vy, rotation: 0 }, 3000);
+        }
+
+        function updateGrenades(elapsedMs) {
+            if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return;
+            for (let i = grenades.length - 1; i >= 0; i--) {
+                const grenade = grenades[i];
+                const travelMs = Math.min(elapsedMs, grenade.remainingMs);
+                const steps = Math.max(1,Math.ceil(travelMs / physicsFrameMs));
+                const dt = travelMs / steps / physicsFrameMs;
+                for (let step = 0; step < steps; step++) {
+                    grenade.vy += .3 * dt;
+                    grenade.x += grenade.vx * dt;
+                    grenade.y += grenade.vy * dt;
+                    grenade.rotation += grenade.vx * dt * .015;
+                    if (grenade.x < 16) { grenade.x = 16; grenade.vx = Math.abs(grenade.vx) * .58; }
+                    if (grenade.x > width-16) { grenade.x = width-16; grenade.vx = -Math.abs(grenade.vx) * .58; }
+                    if (grenade.y > height-16) {
+                        grenade.y = height-16;
+                        grenade.vy = Math.abs(grenade.vy) > 1 ? -Math.abs(grenade.vy) * .48 : 0;
+                        grenade.vx *= .88;
+                    }
+                }
+                if (grenade.remainingMs <= elapsedMs) {
+                    grenades.splice(i,1);
+                    fireBomb(grenade.x, grenade.y);
+                } else grenade.remainingMs -= elapsedMs;
+            }
+        }
+
+        function strikeHammer(x, y) {
+            // The head's bottom-center, glass fracture and Pet hit all share x/y.
+            const hammer = screenEffects.add('hammer', { x, y, visualFired: false }, 430);
+            showHammerContact(hammer);
+            // A narrow, single-target hit; Grab and orbit keep their existing priority.
+            for (let i = petInstances.length - 1; i >= 0; i--) {
+                const pet = petInstances[i];
+                if (pet.isDragging || pet.blackHoleOrbit) continue;
+                const dx = pet.x - x, dy = pet.y - y;
+                const distance = Math.hypot(dx, dy);
+                if (distance > pet.size + 18) continue;
+                const area = spriteHitArea(pet,x,y);
+                if (!area) continue;
+                const horizontal = distance > 1 ? dx / distance : (pet.facingRight ? 1 : -1);
+                const vertical = distance > 1 ? dy / distance : -.35;
+                const head = area === 'head';
+                applyNonlethalHit(pet, { source: 'hammer', vx: horizontal * (head ? 17 : 13),
+                    vy: vertical * 11 - (head ? 12 : 8), cap: 24, squish: 1.28,
+                    holdMs: 500, damage: (22 + 16 * (1 - distance / (pet.size + 18))) * (head ? 1.5 : 1) });
+                break;
+            }
+        }
+
+        function showHammerContact(hammer) {
+            if (!hammer || hammer.visualFired) return;
+            hammer.visualFired = true;
+            const nearby = screenEffects.groups.crack.filter(crack =>
+                Math.hypot(crack.x-hammer.x,crack.y-hammer.y) < 65).length;
+            screenEffects.addCrack(hammer.x, hammer.y, Math.min(116,76 + nearby*10));
+            addRing(hammer.x, hammer.y, 'rgba(197,231,248,.9)', 88, 11);
+            addImpact(hammer.x, hammer.y, 'rgba(241,251,255,.98)', 7);
+            addParticles(hammer.x, hammer.y, '#8fbdd0', 24, 8, 'glass');
         }
 
         const blackHoleConsumeRadius = 22;
@@ -1392,23 +1671,51 @@
         }
 
         function drawEffects(elapsedMs = physicsFrameMs) {
+            for (const grenade of grenades) {
+                ctx.save(); ctx.translate(grenade.x,grenade.y); ctx.rotate(grenade.rotation);
+                if (grenadeSprite.complete && grenadeSprite.naturalWidth)
+                    ctx.drawImage(grenadeSprite,-19,-19,38,38);
+                else { ctx.fillStyle='#536c38';ctx.beginPath();ctx.arc(0,0,13,0,Math.PI*2);ctx.fill(); }
+                ctx.restore();
+            }
             for (const hole of holes) {
                 const alpha = Math.min(1, hole.remainingMs / (35 * physicsFrameMs));
-                const gradient = ctx.createRadialGradient(hole.x, hole.y, 4, hole.x, hole.y, hole.radius * 1.45);
-                gradient.addColorStop(0, `rgba(13,11,16,${alpha})`);
-                gradient.addColorStop(.57, `rgba(34,16,17,${alpha * .94})`);
-                gradient.addColorStop(.79, `rgba(239,77,31,${alpha * .8})`);
-                gradient.addColorStop(1, 'rgba(255,138,48,0)');
-                ctx.fillStyle = gradient;
-                ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.radius * 1.45, 0, Math.PI * 2); ctx.fill();
-                ctx.strokeStyle = `rgba(255,103,45,${alpha * .88})`; ctx.lineWidth = 5;
+                const burstAge = hole.durationMs - hole.remainingMs;
+                if (burstAge < 250) {
+                    ctx.save(); ctx.globalAlpha = (1 - burstAge / 250) * alpha;
+                    ctx.fillStyle = '#ff9b36'; ctx.beginPath();
+                    for (let i = 0; i < hole.burst.length * 2; i++) {
+                        const angle = i * Math.PI / hole.burst.length;
+                        const reach = hole.radius * (i % 2 ? hole.burst[(i - 1) / 2] : .82);
+                        const px = hole.x + Math.cos(angle) * reach;
+                        const py = hole.y + Math.sin(angle) * reach;
+                        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath(); ctx.fill(); ctx.restore();
+                }
+                const glow = ctx.createRadialGradient(hole.x, hole.y, hole.radius * .35,
+                    hole.x, hole.y, hole.radius * 1.48);
+                glow.addColorStop(0, `rgba(255,192,65,${alpha * .36})`);
+                glow.addColorStop(.65, `rgba(255,92,35,${alpha * .35})`);
+                glow.addColorStop(1, 'rgba(255,100,40,0)');
+                ctx.fillStyle = glow;
+                ctx.beginPath(); ctx.arc(hole.x, hole.y, hole.radius * 1.48, 0, Math.PI * 2); ctx.fill();
+                const center = ctx.createRadialGradient(hole.x, hole.y, 2,
+                    hole.x, hole.y, hole.radius * 1.15);
+                center.addColorStop(0, `rgba(13,11,16,${alpha})`);
+                center.addColorStop(.58, `rgba(28,13,16,${alpha * .97})`);
+                center.addColorStop(.84, `rgba(164,47,27,${alpha * .92})`);
+                center.addColorStop(1, `rgba(255,135,43,${alpha * .9})`);
+                ctx.fillStyle = center;
                 ctx.beginPath();
-                for (let i = 0; i <= hole.edge.length; i++) {
+                for (let i = 0; i < hole.edge.length; i++) {
                     const angle = i * Math.PI * 2 / hole.edge.length;
-                    const radius = hole.radius * hole.edge[i % hole.edge.length];
+                    const radius = hole.radius * hole.edge[i];
                     const px = hole.x + Math.cos(angle) * radius, py = hole.y + Math.sin(angle) * radius;
                     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
                 }
+                ctx.closePath(); ctx.fill();
+                ctx.strokeStyle = `rgba(255,112,39,${alpha * .94})`; ctx.lineWidth = 4;
                 ctx.stroke();
             }
             for (const ring of rings) {
@@ -1429,26 +1736,150 @@
                     ctx.globalAlpha = 1;
                 }
             }
+            for (const bullet of bullets) {
+                const age = bullet.durationMs - bullet.remainingMs;
+                if (auxiliaryEffectsEnabled && age < 75) {
+                    const angle = Math.atan2(bullet.vy, bullet.vx);
+                    ctx.save(); ctx.translate(bullet.originX, bullet.originY); ctx.rotate(angle);
+                    ctx.globalAlpha = 1 - age / 75;
+                    ctx.fillStyle = '#fff1b5';
+                    ctx.beginPath(); ctx.moveTo(24, 0); ctx.lineTo(-9, -10);
+                    ctx.lineTo(-3, 0); ctx.lineTo(-9, 10); ctx.closePath(); ctx.fill();
+                    ctx.restore();
+                }
+                ctx.save();
+                ctx.strokeStyle = auxiliaryEffectsEnabled ? 'rgba(255,199,104,.36)' : 'rgba(213,178,118,.8)';
+                ctx.lineWidth = auxiliaryEffectsEnabled ? 5 : 2;
+                ctx.lineCap = 'round'; ctx.beginPath();
+                ctx.moveTo(bullet.previousX, bullet.previousY);
+                ctx.lineTo(bullet.x, bullet.y); ctx.stroke();
+                if (auxiliaryEffectsEnabled) {
+                    ctx.strokeStyle = '#fff4bf'; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+                ctx.fillStyle = '#fff7d9'; ctx.beginPath();
+                ctx.arc(bullet.x, bullet.y, bullet.weapon === 'awm' ? 3.5 : 2.3, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+            if (auxiliaryEffectsEnabled) for (const shot of screenEffects.groups.shot) {
+                const progress = 1 - shot.remainingMs / shot.durationMs;
+                ctx.save(); ctx.globalAlpha = 1 - progress;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'rgba(255,199,104,.38)'; ctx.lineWidth = 5;
+                ctx.beginPath(); ctx.moveTo(shot.originX, shot.originY); ctx.lineTo(shot.x, shot.y); ctx.stroke();
+                ctx.strokeStyle = '#fff5c6'; ctx.lineWidth = 1.5; ctx.stroke();
+                ctx.translate(shot.x, shot.y);
+                ctx.strokeStyle = '#ffd179'; ctx.lineWidth = 2.5;
+                ctx.beginPath(); ctx.arc(0, 0, 13 + progress * 15, 0, Math.PI * 2); ctx.stroke();
+                for (let ray = 0; ray < 8; ray++) {
+                    const angle = ray * Math.PI / 4;
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(angle) * 8, Math.sin(angle) * 8);
+                    ctx.lineTo(Math.cos(angle) * (22 + progress * 10),
+                        Math.sin(angle) * (22 + progress * 10)); ctx.stroke();
+                }
+                ctx.fillStyle = '#fff9db'; ctx.beginPath(); ctx.arc(0, 0, 5, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
+            if (auxiliaryEffectsEnabled) for (const hammer of screenEffects.groups.hammer) {
+                const age = hammer.durationMs - hammer.remainingMs + elapsedMs;
+                ctx.save();
+                ctx.translate(hammer.x, hammer.y);
+                ctx.globalAlpha = Math.min(1, hammer.remainingMs / 110);
+                const swing = age < 105 ? -.55 * (1-age/105)
+                    : age < 155 ? .12 * ((age-105)/50)
+                        : .12-.4*Math.min(1,(age-155)/275);
+                ctx.rotate(swing);
+                // Brief offset echoes suggest a local jolt without moving the desktop or hit point.
+                ctx.strokeStyle = 'rgba(207,237,249,.68)'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.arc(-2, 1, 23 + age * .4, .25, 2.55); ctx.stroke();
+                ctx.beginPath(); ctx.arc(2, -1, 23 + age * .4, 3.4, 5.7); ctx.stroke();
+                if (hammerSprite.complete && hammerSprite.naturalWidth)
+                    ctx.drawImage(hammerSprite,-17,-34,96,96);
+                else {
+                    ctx.strokeStyle = '#55453d'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+                    ctx.beginPath(); ctx.moveTo(-3, -21); ctx.lineTo(-28, -70); ctx.stroke();
+                    ctx.fillStyle = '#718899'; ctx.fillRect(-26, -24, 52, 24);
+                }
+                // The metal striking face is anchored at the stored click / impact coordinate.
+                ctx.restore();
+            }
             for (const particle of particles) {
                 if (auxiliaryEffectsEnabled) {
-                    ctx.fillStyle = particle.color;
                     ctx.globalAlpha = Math.min(1, particle.remainingMs / (15 * physicsFrameMs));
-                    ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = particle.color;
+                    if (particle.shape === 'glass') {
+                        const a = particle.angle + (1 - particle.remainingMs / particle.durationMs) * 2;
+                        const tip = particle.size * 1.8;
+                        ctx.beginPath();
+                        ctx.moveTo(particle.x + Math.cos(a) * tip, particle.y + Math.sin(a) * tip);
+                        ctx.lineTo(particle.x + Math.cos(a + 2.4) * particle.size,
+                            particle.y + Math.sin(a + 2.4) * particle.size);
+                        ctx.lineTo(particle.x + Math.cos(a - 2.4) * particle.size,
+                            particle.y + Math.sin(a - 2.4) * particle.size);
+                        ctx.closePath(); ctx.fill();
+                        ctx.strokeStyle = 'rgba(65,105,126,.68)'; ctx.lineWidth = .8; ctx.stroke();
+                    } else {
+                        ctx.beginPath(); ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2); ctx.fill();
+                    }
                     ctx.globalAlpha = 1;
                 }
             }
             // Cracks are auxiliary visuals, never Draw geometry or Pet colliders.
             if (auxiliaryEffectsEnabled) for (const crack of screenEffects.groups.crack) {
-                ctx.strokeStyle = 'rgba(90,75,105,.8)'; ctx.lineWidth = 1.5;
+                ctx.save();
+                ctx.translate(crack.x, crack.y);
                 ctx.globalAlpha = screenEffects.crackMode === 'accumulate' ? 1 : Math.min(1, crack.remainingMs / 500);
-                for (const path of crack.paths) {
-                    ctx.beginPath(); ctx.moveTo(crack.x + path[0].x, crack.y + path[0].y);
-                    for (let i = 1; i < path.length; i++) ctx.lineTo(crack.x + path[i].x, crack.y + path[i].y);
-                    ctx.stroke();
+                const spread = Math.min(1,Math.max(.08,(crack.durationMs - crack.remainingMs + elapsedMs)/260));
+                ctx.scale(spread,spread);
+                ctx.fillStyle = 'rgba(44,68,82,.48)';
+                ctx.beginPath();
+                crack.core.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = 'rgba(191,227,241,.36)';
+                for (const shard of crack.shards) {
+                    ctx.beginPath(); ctx.moveTo(shard[0].x, shard[0].y);
+                    ctx.lineTo(shard[1].x, shard[1].y); ctx.lineTo(shard[2].x, shard[2].y);
+                    ctx.closePath(); ctx.fill();
                 }
-                ctx.globalAlpha = 1;
+                ctx.strokeStyle = 'rgba(64,92,110,.76)'; ctx.lineWidth = 2.4;
+                ctx.beginPath();
+                for (const path of crack.paths) {
+                    ctx.moveTo(path[0].x, path[0].y);
+                    for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
+                }
+                ctx.stroke();
+                ctx.translate(.7, -.8); ctx.strokeStyle = 'rgba(244,253,255,.82)'; ctx.lineWidth = .85;
+                ctx.stroke();
+                ctx.restore();
             }
+            drawDamageNumbers();
             screenEffects.update(elapsedMs, { width, height });
+        }
+
+        function drawDamageNumbers() {
+            if (auxiliaryEffectsEnabled) for (const number of screenEffects.groups.damage) {
+                const progress = 1 - number.remainingMs / number.durationMs;
+                const bounce = 1 + .26 * Math.sin(Math.min(1, progress * 3) * Math.PI);
+                const fade = Math.min(1, number.remainingMs / 280);
+                ctx.save();
+                ctx.translate(number.x + number.drift * progress + Math.sin(progress * 28) * (1 - progress) * 2,
+                    number.y - 38 * (1 - Math.pow(1 - progress, 2)));
+                ctx.scale(bounce, bounce); ctx.globalAlpha = fade;
+                ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                const gunProfile = number.source === 'gun' ? weaponProfiles[number.weapon] : null;
+                ctx.font = `900 ${gunProfile ? number.weapon === 'awm' ? 43
+                    : number.weapon === 'uzi' ? 21 : number.weapon === 'double_barrel' ? 23 : 29 : 27}px sans-serif`;
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = 'rgba(39,34,58,.94)'; ctx.lineWidth = 6;
+                ctx.strokeText(String(number.amount), 0, 0);
+                ctx.strokeStyle = number.source === 'bomb' ? '#e75c32'
+                    : gunProfile ? gunProfile.color : '#448fb6'; ctx.lineWidth = gunProfile ? 3 : 2;
+                ctx.strokeText(String(number.amount), 0, 0);
+                ctx.fillStyle = number.source === 'bomb' ? '#ffe387'
+                    : gunProfile ? '#fff7dd' : '#eefaff';
+                ctx.fillText(String(number.amount), 0, 0);
+                ctx.restore();
+            }
         }
 
         let draggedPet = null;
@@ -1560,7 +1991,12 @@
             if (currentMode === 'spawn') {
                 spawnPet(selectedPetId, mouseX, mouseY);
             } else if (currentMode === 'bomb') {
-                fireBomb(mouseX, mouseY);
+                grenadeDrag = { x: mouseX, y: mouseY };
+            } else if (currentMode === 'hammer') {
+                strikeHammer(mouseX, mouseY);
+            } else if (currentMode === 'gun') {
+                gunTriggerHeld = true;
+                shootGun(mouseX, mouseY);
             } else if (currentMode === 'blackhole') {
                 addBlackHole(mouseX, mouseY);
             } else if (currentMode === 'draw') {
@@ -1581,6 +2017,7 @@
                         p.climbing = null; p.targetLadderId = null; p.supportId = null;
                         p.climbingDown = false;
                         p.isDragging = true;
+                        canvas.classList.add('is-grabbing');
                         p.squish = 1.4; // 잡힐 때 길어짐
                         p.vy = 0; p.vx = 0;
                         break;
@@ -1602,8 +2039,14 @@
         });
 
         window.addEventListener('mouseup', (e) => {
+            const wasDown = pointerDown;
             pointerDown = false;
+            gunTriggerHeld = false;
             activeStroke = null;
+            if (wasDown && currentMode === 'bomb' && grenadeDrag) {
+                throwGrenade(grenadeDrag.x, grenadeDrag.y, e.clientX, e.clientY);
+                grenadeDrag = null;
+            }
             if (draggedPet) {
                 mouseX = e.clientX; mouseY = e.clientY;
                 recordDragSample(e);
@@ -1621,6 +2064,7 @@
                     draggedPet.updateImagePosition();
                 }
                 draggedPet = null;
+                canvas.classList.remove('is-grabbing');
                 dragSamples = [];
             }
         });
@@ -1631,11 +2075,70 @@
             window.playground.setMode('pc');
         }, true);
 
+        function drawToolCursor() {
+            if (!enabled || currentMode === 'pc' || currentMode === 'touch' || currentMode === 'gun') return;
+            const x=mouseX,y=mouseY;
+            ctx.save();ctx.translate(x,y);
+            ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=2;
+            ctx.strokeStyle='rgba(27,40,53,.95)';ctx.fillStyle='rgba(248,253,255,.9)';
+            if(currentMode==='hammer') {
+                if (!screenEffects.groups.hammer.some(hit=>Math.hypot(hit.x-x,hit.y-y)<5)
+                    && hammerSprite.complete && hammerSprite.naturalWidth)
+                    ctx.drawImage(hammerSprite,-8,-15,44,44);
+            } else if(currentMode==='bomb') {
+                if(grenadeSprite.complete && grenadeSprite.naturalWidth)
+                    ctx.drawImage(grenadeSprite,-14,-14,28,28);
+            } else if(currentMode==='spawn') {
+                ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);ctx.stroke();
+                ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);
+                ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();
+            } else if(currentMode==='draw' && eraser) {
+                ctx.beginPath();ctx.rect(-8,-6,16,12);ctx.fill();ctx.stroke();
+                ctx.beginPath();ctx.moveTo(-5,3);ctx.lineTo(5,3);ctx.stroke();
+            } else if(currentMode==='draw') {
+                ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(9,-19);ctx.lineTo(14,-16);
+                ctx.lineTo(3,2);ctx.closePath();ctx.fill();ctx.stroke();
+            } else if(currentMode==='blackhole') {
+                ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.stroke();
+                ctx.beginPath();ctx.arc(0,0,7,-2.4,3.5);ctx.stroke();
+                ctx.fillStyle='#273b56';ctx.beginPath();ctx.arc(0,0,2,0,Math.PI*2);ctx.fill();
+            }
+            ctx.restore();
+        }
+
+        function drawGunOverlay() {
+            if (currentMode !== 'gun' || !enabled) return;
+            const profile = weaponProfiles[gunWeapon], pose = gunPose(mouseX, mouseY, profile);
+            const recoil = Math.max(0, 1 - (world.now() - lastGunShotAt) / 105) *
+                (gunWeapon === 'awm' || gunWeapon === 'double_barrel' ? 9 : 4);
+            const image = weaponSprites[gunWeapon];
+            ctx.save();
+            // Recoil pivots around the muzzle so the flash and projectile never detach.
+            ctx.translate(pose.muzzleX,pose.muzzleY);
+            ctx.rotate(pose.angle+recoil*.012);
+            ctx.scale(1,pose.flipY);
+            if (image.complete && image.naturalWidth > 0) {
+                ctx.drawImage(image, -profile.width * profile.muzzle[0],
+                    -profile.height * profile.muzzle[1], profile.width, profile.height);
+            }
+            ctx.restore();
+            // The dot is also the coordinate used to select a Pet before any projectile moves.
+            ctx.save(); ctx.translate(mouseX, mouseY);
+            ctx.fillStyle = 'rgba(20,24,32,.92)'; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0,0,3.5,0,Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#ef303a'; ctx.beginPath(); ctx.arc(0,0,2.4,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
         function animate(dt = 1, effectElapsedMs = dt * physicsFrameMs) {
+            if (gunTriggerHeld && currentMode === 'gun' && weaponProfiles[gunWeapon].auto)
+                shootGun(mouseX, mouseY);
             cleanupStructures();
             ctx.clearRect(0, 0, width, height);
             drawStructures();
 
+            updateGrenades(effectElapsedMs);
+            updateBullets(effectElapsedMs);
             drawEffects(effectElapsedMs);
             ctx.drawImage(drawingCanvas, 0, 0);
             updateBlackHoles(dt);
@@ -1645,7 +2148,11 @@
                 pet.update(dt, effectElapsedMs);
                 pet.draw(ctx);
             });
+            // Keep arcade numbers legible in front of the Pet that was hit.
+            drawDamageNumbers();
             drawTrash();
+            drawGunOverlay();
+            drawToolCursor();
 
 
         }
@@ -1682,6 +2189,7 @@
         }
 
         function clearPlayground(kind) {
+            if (kind === 'crack') screenEffects.clear('crack');
             if (kind === 'drawing' || kind === 'all') {
                 strokes = world.drawnShapes = [];
                 world.drawnColliders = [];
@@ -1715,8 +2223,11 @@
         function applyAppState(nextState) {
             if (!nextState || typeof nextState.enabled !== 'boolean') return;
             const changedMode = currentMode !== nextState.mode;
+            const changedWeapon = weaponProfiles[nextState.gunWeapon]
+                && gunWeapon !== nextState.gunWeapon;
             enabled = nextState.enabled;
             auxiliaryEffectsEnabled = nextState.auxiliaryEffectsEnabled !== false;
+            screenEffects.setCrackMode(nextState.crackMode === 'accumulate' ? 'accumulate' : 'auto');
             if (!auxiliaryEffectsEnabled) body.classList.remove('shake-bomb');
             const wasStructuresEnabled = structuresEnabled;
             structuresEnabled = nextState.structuresEnabled === true;
@@ -1734,21 +2245,28 @@
                 for (const structure of world.structures) structure.lastUsedAt = now;
             }
             currentMode = nextState.mode || 'pc';
+            if (weaponProfiles[nextState.gunWeapon]) gunWeapon = nextState.gunWeapon;
             selectedPetId = nextState.petId || null;
             drawShape = nextState.drawShape || drawShape;
             drawColor = nextState.drawColor || drawColor;
             drawSize = nextState.drawSize || drawSize;
             eraser = Boolean(nextState.eraser);
-            if (!enabled || changedMode) cancelInput();
-            canvas.className = currentMode === 'pc' || currentMode === 'touch' ? 'cursor-pointer' : 'cursor-tool';
+            if (!enabled || changedMode || changedWeapon) cancelInput();
+            canvas.className = currentMode === 'pc' ? 'cursor-pointer'
+                : currentMode === 'touch' ? 'cursor-touch'
+                : currentMode === 'hammer' ? 'cursor-hammer'
+                    : currentMode === 'gun' ? 'cursor-gun' : 'cursor-tool';
             if (enabled) startAnimation();
             else stopAnimation();
         }
 
         function cancelInput() {
             pointerDown = false;
+            gunTriggerHeld = false;
+            grenadeDrag = null;
             activeStroke = null;
             releaseDraggedPet();
+            canvas.classList.remove('is-grabbing');
         }
 
         window.playground.onState(applyAppState);

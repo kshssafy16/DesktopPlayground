@@ -1,8 +1,16 @@
-DesktopPlayground v1.1 Sprite Platform 문서 패키지
+DesktopPlayground v1.1 Gun Planning + Pixel Art Assets Pack
 
-1. 이 ZIP을 D:\DesktopPlayground 프로젝트 루트에 압축 해제합니다.
-2. docs/v1.1/ 아래에 Markdown 4개가 추가됩니다. 기존 문서를 덮어쓰지 않습니다.
-3. Codex에게 docs/v1.1/CODEX_SPRITE_PROMPT.md 파일 내용 또는 그 파일 경로를 전달합니다.
-4. 작업 범위는 Phase 2-B 품질 보완이며 새 자산을 덮어쓰거나 빌드/commit/push하지 않습니다.
+1. 이 ZIP을 D:\DesktopPlayground\ 프로젝트 루트에 압축 해제합니다.
+   - docs/v1.1/GUN_WEAPON_SPEC.md
+   - docs/v1.1/CODEX_GUN_RESUME.md
+   - assets/weapons/awm.png
+   - assets/weapons/ak47.png
+   - assets/weapons/uzi.png
+   - assets/weapons/double_barrel.png
+   - assets/weapons/README.md
 
-기준: 사용자가 업로드한 pets.zip의 9개 패키지. 최신 feature/v1.1 renderer는 직접 받지 못했으므로 Codex가 로컬 현재 소스를 대조해야 합니다.
+2. 기존 AGENTS.md, 원본 펫 에셋, 사용자 설정과 제품 코드는 덮어쓰지 않습니다.
+3. Codex 사용량이 복구되면 CODEX_GUN_RESUME.md의 전체 내용을 기존 앱 개발 Codex 채팅에 전송합니다.
+4. 중단된 Phase 3-C의 미커밋 변경을 삭제하거나 초기화하면 안 됩니다.
+5. 무기별 PNG는 투명 배경 오른쪽 방향 게임용 비주얼 자산입니다. 앱에서 에셋 로드 경로, 표시 크기, 총구/조준 앵커, package.json의 build.files 추가가 필요합니다.
+6. 이번 단계에서는 개발용 렌더와 테스트까지 진행하고 portable 빌드, 커밋, Push는 하지 않습니다.

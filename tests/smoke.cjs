@@ -77,6 +77,7 @@ async function run() {
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});
   fs.copyFileSync(path.join(project,'assets','icon.png'),path.join(appDir,'assets','icon.png'));
   fs.cpSync(path.join(project,'assets','pets'),path.join(appDir,'assets','pets'),{recursive:true});
+  for (const kind of ['weapons','tools']) fs.cpSync(path.join(project,'assets',kind),path.join(appDir,'assets',kind),{recursive:true});
   const mainPath = path.join(appDir,'main.js');
   fs.writeFileSync(mainPath, fs.readFileSync(mainPath,'utf8').replace(
     "const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');",
@@ -85,15 +86,29 @@ async function run() {
   fs.writeFileSync(mainPath,fs.readFileSync(mainPath,'utf8').replace('tray.setContextMenu(menu);','smokeTrayMenu=menu;tray.setContextMenu(menu);'));
   fs.appendFileSync(mainPath, `
 let smokeTrayMenu;
+ipcMain.handle('smoke:overlay-bounds', event => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  return { actual: overlayWindow.getBounds(), desired: screen.getPrimaryDisplay().bounds };
+});
 ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
   const item=smokeTrayMenu.getMenuItemById('auxiliary-effects');
   if(item.checked!==enabled)item.click(item);await petWriteChain;return state.auxiliaryEffectsEnabled;
 });
+ipcMain.handle('smoke:crack-mode', async (event, mode) => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  const item=smokeTrayMenu.getMenuItemById('crack-'+mode);
+  if (!item) throw new Error('Unknown crack mode');
+  item.click(item);await petWriteChain;return state.crackMode;
+});
+ipcMain.handle('smoke:clear-crack', event => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  const item=smokeTrayMenu.getMenuItemById('clear-crack');item.click(item);return true;
+});
 `);
   const preloadPath=path.join(appDir,'preload.js');
   fs.writeFileSync(preloadPath,fs.readFileSync(preloadPath,'utf8').replace(
-    "getState: () =>", "smokeAuxiliaryEffects: enabled => ipcRenderer.invoke('smoke:auxiliary-effects',enabled),\n  getState: () =>"));
+    "getState: () =>", "smokeOverlayBounds: () => ipcRenderer.invoke('smoke:overlay-bounds'),\n  smokeAuxiliaryEffects: enabled => ipcRenderer.invoke('smoke:auxiliary-effects',enabled),\n  smokeCrackMode: mode => ipcRenderer.invoke('smoke:crack-mode',mode),\n  smokeClearCrack: () => ipcRenderer.invoke('smoke:clear-crack'),\n  getState: () =>"));
   // Legacy schema 1 has no effects field: retain all old settings and default ON.
   const settingsFile=path.join(appData,'desktop-playground','playground','settings.json');
   fs.mkdirSync(path.dirname(settingsFile),{recursive:true});
@@ -111,8 +126,20 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   const overlay = await connect(debugPort,'index.html');
   await until(() => controls.eval("document.getElementById('pc-button')?.title"), 'toolbar ready');
   await until(() => overlay.eval("typeof buildRoute === 'function'"), 'overlay ready');
+  const extent=await overlay.eval('({inner:window.innerHeight,screen:window.screen.height,available:window.screen.availHeight})');
+  const nativeBounds=await controls.eval('window.playground.smokeOverlayBounds()');
+  assert.equal(extent.inner,extent.screen,
+    'overlay and Pet floor include the primary display taskbar strip: '+JSON.stringify({extent,nativeBounds}));
+  assert.deepEqual(nativeBounds.actual,nativeBounds.desired);
+  if (process.argv.includes('--viewport-only')) {
+    console.log('PASS: native overlay bounds include the full primary display and taskbar strip');
+    return;
+  }
   assert.equal(await controls.eval("document.getElementById('pc-button')?.title"), 'PC 모드');
-  assert.equal(await controls.eval("document.querySelectorAll('#control-bar button').length"), 10);
+  assert.equal(await controls.eval("document.querySelectorAll('#control-bar button').length"), 13);
+  assert.equal(await controls.eval("document.getElementById('hammer-button').title"), '망치 타격');
+  assert.equal(await controls.eval("document.getElementById('gun-button').title"), '장난감 총');
+  assert.equal(await controls.eval("document.getElementById('control-bar').scrollWidth<=document.getElementById('control-bar').clientWidth"),true);
   assert.equal(await controls.eval("window.playground.getState().then(s=>s.structuresEnabled)"), false);
   assert.equal(await overlay.eval("structuresEnabled"), false);
   assert.equal(await overlay.eval("buildRoute({definition:{category:'cat'}},world.now())"), null);
@@ -137,7 +164,7 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   await controls.eval("document.querySelector('[data-pet-id=cat_brown]').click()");
   await until(() => overlay.eval("selectedPetId === 'cat_brown' && currentMode === 'spawn'"), 'local variant selection');
   for (const [button, mode] of [['touch-button','touch'],['draw-button','draw'],
-    ['bomb-button','bomb'],['blackhole-button','blackhole'],['pets-button','spawn']]) {
+    ['bomb-button','bomb'],['hammer-button','hammer'],['gun-button','gun'],['blackhole-button','blackhole'],['pets-button','spawn']]) {
     if (mode === 'spawn') {
       await controls.eval("document.getElementById('pets-button').click();document.querySelector('[data-pet-id=blob]').click()");
     } else await controls.eval("document.getElementById('" + button + "').click()");
@@ -293,6 +320,191 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   assert.ok(autonomy.quiet && autonomy.impulse && autonomy.profile);
   assert.ok(Math.abs(autonomy.remaining-1000)<1e-6);
   console.log('PASS: native rest/idle Sprite, elapsed state timer, Bomb interrupts rest');
+  await controls.eval("document.getElementById('hammer-button').click()");
+  await until(() => overlay.eval("currentMode==='hammer' && canvas.className==='cursor-hammer'"), 'Hammer mode and cursor');
+  const toyEffects = await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');
+    const pet=spawnPet('doge',320,320),other=spawnPet('doge',650,320);
+    canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:320,clientY:320,bubbles:true}));
+    pet.advanceAnimation(0);
+    const hammerHit=pet.externalMotion?.source==='hammer' && pet.animationVisualState==='hit'
+      && pet.vx>0 && pet.vy<0 && !other.externalMotion && petInstances.length===2;
+    const hammerCount=screenEffects.groups.hammer.length;
+    const immediateCrack=screenEffects.groups.crack.length;
+    ctx.clearRect(0,0,width,height);drawEffects(16);
+    const crack=screenEffects.groups.crack[0];
+    const hammerRadius=Math.max(...crack.paths.flat().map(point=>Math.hypot(point.x,point.y)));
+    const contact=crack.x===320 && crack.y===320 && screenEffects.groups.hammer[0].x===320
+      && screenEffects.groups.hammer[0].y===320;
+    const hammerAlpha=ctx.getImageData(320,315,1,1).data[3];
+    fireBomb(650,320);
+    return {hammerHit,hammerRadius,hammerCount,hammerAlpha,contact,immediateCrack,
+      bombCracks:screenEffects.groups.crack.length,bombEdge:holes[0].edge.length,
+      bombSource:other.externalMotion?.source,damageCount:screenEffects.groups.damage.length,
+      count:petInstances.length};
+  })()`);
+  assert.ok(toyEffects.hammerHit && toyEffects.hammerCount===1 && toyEffects.hammerAlpha>0
+    && toyEffects.contact && toyEffects.immediateCrack===1 && toyEffects.hammerRadius<=76.000001
+    && toyEffects.bombCracks===1 && toyEffects.bombEdge===32
+    && toyEffects.bombSource==='bomb' && toyEffects.damageCount>=2
+    && toyEffects.count===2,JSON.stringify(toyEffects));
+  console.log('PASS: native immediate Hammer contact/Hit/damage and Bomb irregular crater without cracks');
+  assert.ok(await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');
+    const pet=spawnPet('cat_sleepy',500,430);pet.enterAutonomy('sleep');
+    pet.isAutonomouslyStill=true;pet.advanceAnimation(0);
+    const sleeping=pet.animationVisualState==='sleep' && pet.autonomy.durationMs>=1800000;
+    auxiliaryEffectsEnabled=false;strikeHammer(500,430);
+    const awake=pet.autonomy.state==='roam' && pet.externalMotion?.source==='hammer';
+    for(const kind of ['crack','hammer','ring','impact','particle'])screenEffects.clear(kind);
+    const number=screenEffects.groups.damage[0];
+    const visiblePixels=()=>{ctx.clearRect(0,0,width,height);drawEffects(0);
+      const data=ctx.getImageData(number.x-38,number.y-24,76,48).data;
+      let alpha=0;for(let i=3;i<data.length;i+=4)alpha+=data[i];return alpha};
+    const hidden=visiblePixels()===0;auxiliaryEffectsEnabled=true;
+    const shown=visiblePixels()>0;
+    return sleeping && awake && hidden && shown && petInstances.length===1;
+  })()`),'native Sleep wake and damage number auxiliary ON/OFF');
+  console.log('PASS: native long Sleep wakes on Hammer, damage text hides without disabling impact');
+  await controls.eval("document.getElementById('gun-button').click()");
+  await until(() => overlay.eval("currentMode==='gun' && canvas.className==='cursor-gun'"), 'Gun mode and cursor');
+  for (const id of ['awm','ak47','uzi','double_barrel']) {
+    assert.ok(await controls.eval(`(() => {if(panelKind==='gun')closePanel();
+      document.getElementById('gun-button').click();
+      const open=panelKind==='gun' && !gunPanel.hidden;
+      document.querySelector('[data-weapon="${id}"]').click();return open})()`),id+' visible weapon menu');
+    await until(() => overlay.eval(`gunWeapon==='${id}' && currentMode==='gun'`),id+' tool selection');
+  }
+  await controls.eval("document.getElementById('gun-button').click();document.querySelector('[data-weapon=ak47]').click()");
+  await until(() => overlay.eval("gunWeapon==='ak47'"), 'restore AK-47');
+  assert.ok(await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');lastGunShotAt=-Infinity;
+    const pet=spawnPet('doge',500,400);pet.enterAutonomy('sleep');
+    canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:500,clientY:400,bubbles:true}));
+    const moving=screenEffects.groups.bullet.length===1 && !pet.externalMotion;
+    updateBullets(100);pet.advanceAnimation(0);
+    const hit=screenEffects.groups.bullet.length===0 && pet.externalMotion?.source==='gun'
+      && pet.animationVisualState==='hit' && pet.autonomy.state==='roam'
+      && screenEffects.groups.damage[0]?.source==='gun' && petInstances.length===1;
+    const damageCount=screenEffects.groups.damage.length;
+    canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:500,clientY:400,bubbles:true}));
+    window.dispatchEvent(new MouseEvent('mouseup',{button:0,clientX:500,clientY:400,bubbles:true}));
+    return moving && hit && screenEffects.groups.damage.length===damageCount && !gunTriggerHeld;
+  })()`),'native moving Gun projectile, nonlethal Hit, Sleep wake and cooldown');
+  console.log('PASS: native Gun projectile sweep/Hit/Sleep wake/cooldown and secure mode');
+  const gunGeometry=await overlay.eval(`(() => {
+    stopAnimation();clearPlayground('all');const pet=spawnPet('doge',500,400);
+    let transparent=null,opaque=null;
+    for(let y=pet.y-30;y<pet.y+31;y+=3)for(let x=pet.x-30;x<pet.x+31;x+=3) {
+      const area=spriteHitArea(pet,x,y);
+      if (!area && !transparent && x>pet.x+20 && y>pet.y+20) transparent={x,y};
+      if (area && !opaque) opaque={x,y};
+    }
+    const transparentPixel=spriteHitArea(pet,transparent.x,transparent.y)===null;
+    lastGunShotAt=-Infinity;gunWeapon='ak47';shootGun(800,800);updateBullets(100);
+    const miss=!pet.externalMotion && screenEffects.groups.damage.length===0 && transparentPixel;
+    clearPlayground('effects');lastGunShotAt=-Infinity;shootGun(opaque.x,opaque.y);updateBullets(100);
+    const hit=pet.externalMotion?.source==='gun' && screenEffects.groups.damage.length===1;
+    let within=true;
+    for(const profile of Object.values(weaponProfiles))for(const [x,y] of [[0,0],[width,0],[0,height],[width,height]]) {
+      const pose=gunPose(x,y,profile),c=Math.cos(pose.angle),s=Math.sin(pose.angle);
+      for(const [px,py] of [[0,0],[profile.width,0],[0,profile.height],[profile.width,profile.height]]) {
+        const dx=px-profile.width*profile.muzzle[0],dy=py-profile.height*profile.muzzle[1];
+        const sx=pose.muzzleX+dx*c-dy*pose.flipY*s,sy=pose.muzzleY+dx*s+dy*pose.flipY*c;
+        if(sx<-.01||sy<-.01||sx>width+.01||sy>height+.01)within=false;
+      }
+    }
+    return {miss,hit,within,transparent,opaque};
+  })()`);
+  assert.ok(gunGeometry.miss && gunGeometry.hit && gunGeometry.within,JSON.stringify(gunGeometry));
+  console.log('PASS: native Sprite alpha excludes transparent cell padding and red dot hits opaque pixels');
+  if (process.argv.includes('--gun-preview')) {
+    const png=await overlay.eval(`(() => {
+      stopAnimation();
+      const ids=['awm','ak47','uzi','double_barrel'];
+      const out=document.createElement('canvas');out.width=1680;out.height=720;
+      const qc=out.getContext('2d');qc.fillStyle='#edf2f6';qc.fillRect(0,0,out.width,out.height);
+      auxiliaryEffectsEnabled=true;currentMode='gun';enabled=true;
+      for (let col=0;col<4;col++) {
+        clearPlayground('all');lastGunShotAt=-Infinity;gunWeapon=ids[col];
+        mouseX=195;mouseY=240;
+        const pet=spawnPet('doge',195,240);
+        shootGun(mouseX,mouseY);updateBullets(18);
+        ctx.clearRect(0,0,width,height);drawEffects(0);pet.draw(ctx);drawDamageNumbers();drawGunOverlay();
+        qc.drawImage(canvas,0,0,420,330,col*420,0,420,330);
+        updateBullets(100);pet.advanceAnimation(0);
+        ctx.clearRect(0,0,width,height);drawEffects(0);pet.draw(ctx);drawDamageNumbers();drawGunOverlay();
+        qc.drawImage(canvas,0,0,420,330,col*420,360,420,330);
+        qc.fillStyle='#263f53';qc.font='bold 16px sans-serif';
+        qc.fillText(weaponProfiles[ids[col]].label+' · flight',col*420+12,348);
+        qc.fillText(weaponProfiles[ids[col]].label+' · hit',col*420+12,708);
+      }
+      return out.toDataURL('image/png').split(',')[1];
+    })()`);
+    const qaDir=path.join(project,'docs/v1.1/qa/phase3c');fs.mkdirSync(qaDir,{recursive:true});
+    fs.writeFileSync(path.join(qaDir,'native-weapons.png'),Buffer.from(png,'base64'));
+    console.log('Native Gun preview: '+path.join(qaDir,'native-weapons.png'));
+    const toy=await overlay.eval(`(() => {
+      stopAnimation();const out=document.createElement('canvas');out.width=1260;out.height=360;
+      const qc=out.getContext('2d');qc.fillStyle='#edf2f6';qc.fillRect(0,0,out.width,out.height);
+      clearPlayground('all');throwGrenade(100,280);updateGrenades(250);drawEffects(250);
+      ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,0,0,420,330,0,0,420,330);
+      updateGrenades(2750);const blast=holes[0];
+      ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,blast.x-210,blast.y-165,420,330,420,0,420,330);
+      clearPlayground('all');strikeHammer(210,165);strikeHammer(212,166);
+      drawEffects(100);ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,0,0,420,330,840,0,420,330);
+      qc.fillStyle='#263f53';qc.font='bold 16px sans-serif';
+      qc.fillText('Grenade · flight',12,350);qc.fillText('Grenade · blast (no crack)',432,350);
+      qc.fillText('Hammer · repeated local fracture',852,350);
+      return out.toDataURL('image/png').split(',')[1];
+    })()`);
+    fs.writeFileSync(path.join(qaDir,'native-grenade-hammer.png'),Buffer.from(toy,'base64'));
+    console.log('Native toy preview: '+path.join(qaDir,'native-grenade-hammer.png'));
+  }
+  if (process.argv.includes('--toy-preview')) {
+    const png=await overlay.eval(`(() => {
+      const out=document.createElement('canvas');out.width=900;out.height=420;
+      const qc=out.getContext('2d');qc.fillStyle='#edf2f6';qc.fillRect(0,0,900,420);
+      clearPlayground('all');spawnPet('doge',225,230);ctx.clearRect(0,0,width,height);strikeHammer(225,200);
+      drawEffects(16);ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,0,0,450,400,0,0,450,400);
+      clearPlayground('all');spawnPet('doge',675,230);ctx.clearRect(0,0,width,height);fireBomb(675,200);
+      drawEffects(80);ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,450,0,450,400,450,0,450,400);
+      qc.fillStyle='#263f53';qc.font='16px sans-serif';qc.fillText('Hammer · local',16,414);
+      qc.fillText('Bomb · broad',466,414);
+      return out.toDataURL('image/png').split(',')[1];
+    })()`);
+    const qaDir=path.join(project,'docs/v1.1/qa/phase3b');fs.mkdirSync(qaDir,{recursive:true});
+    fs.writeFileSync(path.join(qaDir,'native-toys-hit.png'),Buffer.from(png,'base64'));
+    console.log('Native hit preview: '+path.join(qaDir,'native-toys-hit.png'));
+    const motion=await overlay.eval(`(() => {
+      const out=document.createElement('canvas');out.width=900;out.height=420;
+      const qc=out.getContext('2d');qc.fillStyle='#edf2f6';qc.fillRect(0,0,900,420);
+      clearPlayground('all');spawnPet('doge',225,230);ctx.clearRect(0,0,width,height);strikeHammer(225,200);
+      drawEffects(48);drawEffects(90);ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,0,0,450,400,0,0,450,400);
+      clearPlayground('all');spawnPet('doge',675,230);ctx.clearRect(0,0,width,height);fireBomb(675,200);
+      drawEffects(250);ctx.clearRect(0,0,width,height);drawEffects(0);
+      qc.drawImage(canvas,450,0,450,400,450,0,450,400);
+      qc.fillStyle='#263f53';qc.font='16px sans-serif';qc.fillText('Hammer · shards / crack only',16,414);
+      qc.fillText('Bomb · expanding blast',466,414);
+      return out.toDataURL('image/png').split(',')[1];
+    })()`);
+    fs.writeFileSync(path.join(qaDir,'native-toys-hit-motion.png'),Buffer.from(motion,'base64'));
+    console.log('Native hit motion preview: '+path.join(qaDir,'native-toys-hit-motion.png'));
+  }
+  assert.ok(await overlay.eval(`(() => {
+    clearPlayground('effects');screenEffects.setCrackMode('auto');
+    strikeHammer(300,300);drawEffects(48);fireBomb(650,300);
+    drawEffects(6000);ctx.clearRect(0,0,width,height);drawEffects(0);
+    return screenEffects.groups.crack.length===0 && screenEffects.groups.crater.length===0
+      && screenEffects.groups.hammer.length===0 && ctx.getImageData(300,300,1,1).data[3]===0
+      && ctx.getImageData(650,300,1,1).data[3]===0;
+  })()`),'native effects must leave no pixels after recovery');
   const spriteAudit = await overlay.eval(`(async () => {
     stopAnimation(); clearPlayground('all');
     const definitions=[...petDefinitions.values()].filter(d=>d.renderKind==='sprite');
@@ -568,8 +780,20 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   })()`));
   assert.equal(await controls.eval("playground.smokeAuxiliaryEffects(false)"),false);
   await until(()=>overlay.eval("auxiliaryEffectsEnabled===false"),'Tray effects broadcast');
+  assert.equal(await controls.eval("playground.getState().then(s=>s.crackMode)"),'auto');
+  assert.equal(await controls.eval("playground.smokeCrackMode('accumulate')"),'accumulate');
+  await until(()=>overlay.eval("screenEffects.crackMode==='accumulate'"),'Tray crack mode broadcast');
+  assert.ok(await overlay.eval(`(() => {
+    clearPlayground('effects');screenEffects.addCrack(300,300);screenEffects.update(6000);
+    world.drawnShapes.push({id:777});world.drawnColliders.push({id:777});
+    return screenEffects.groups.crack.length===1 && world.drawnShapes.length===1;
+  })()`));
+  assert.equal(await controls.eval("playground.smokeClearCrack()"),true);
+  await until(()=>overlay.eval("screenEffects.groups.crack.length===0"),'Tray crack-only clear');
+  assert.equal(await overlay.eval("world.drawnShapes.length===1 && world.drawnColliders.length===1"),true);
   const persisted=JSON.parse(fs.readFileSync(settingsFile,'utf8'));
   assert.equal(persisted.auxiliaryEffectsEnabled,false);
+  assert.equal(persisted.crackMode,'accumulate');
   assert.equal(persisted.defaultPets.cat_brown,false);
   assert.equal(persisted.schemaVersion,1);
   assert.deepEqual(persisted.customPets,[legacyCustom]);
@@ -587,6 +811,11 @@ ipcMain.handle('smoke:auxiliary-effects', async (event, enabled) => {
   await until(()=>restoredOverlay.eval("definitionsLoaded && enabled"),'restart ready');
   assert.equal(await restored.eval("playground.getState().then(s=>s.auxiliaryEffectsEnabled)"),false);
   assert.equal(await restoredOverlay.eval("auxiliaryEffectsEnabled"),false);
+  assert.equal(await restored.eval("playground.getState().then(s=>s.crackMode)"),'accumulate');
+  assert.equal(await restoredOverlay.eval("screenEffects.crackMode"),'accumulate');
+  assert.equal(await restored.eval("playground.smokeCrackMode('auto')"),'auto');
+  await until(()=>restoredOverlay.eval("screenEffects.crackMode==='auto'"),'Tray auto-heal broadcast');
+  assert.equal(await restoredOverlay.eval("screenEffects.addCrack(300,300);screenEffects.update(5000);screenEffects.groups.crack.length"),0);
   assert.equal(await restored.eval("playground.smokeAuxiliaryEffects(true)"),true);
   await until(()=>restoredOverlay.eval("auxiliaryEffectsEnabled===true"),'effects re-enable');
   assert.equal(JSON.parse(fs.readFileSync(settingsFile,'utf8')).auxiliaryEffectsEnabled,true);
