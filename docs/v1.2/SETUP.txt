@@ -1,0 +1,22 @@
+DesktopPlayground v1.2 planning pack
+
+현재 v1.1.0이 main에 병합되어 배포된 상태라고 가정한다.
+먼저 실제 git status와 branch를 확인한다.
+
+기존 앱 개발 worktree:
+  cd /d/DesktopPlayground
+  git status -sb
+  git switch main
+  git pull --ff-only origin main
+  git switch -c feature/v1.2
+
+기존 애니메이션 worktree (이전 feature/pet-animation 변경이 clean일 때만):
+  cd /d/DesktopPlayground-animation
+  git status -sb
+  git switch -c feature/v1.2-animation main
+
+이 ZIP은 다음 두 폴더에 각각 풀어서 각 Codex가 문서를 참조할 수 있게 한다.
+  unzip -o ~/Downloads/DesktopPlayground-v1.2-planning.zip -d /d/DesktopPlayground
+  unzip -o ~/Downloads/DesktopPlayground-v1.2-planning.zip -d /d/DesktopPlayground-animation
+
+주의: 같은 문서가 양쪽에서 변경되면 병합 충돌이 날 수 있으므로 애니메이션 담당은 ROADMAP을 읽기만 하고 ANIMATION_HANDOFF만 추가/편집한다.

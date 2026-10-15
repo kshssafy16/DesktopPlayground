@@ -62,7 +62,7 @@ for (const [id, profile] of Object.entries(catalog.profiles)) {
 const face = catalog.profiles.cat_face;
 for(const [id,row,frames] of [
   ['cat_brown',5,[3,4]],['cat_face',8,[1,5]],['cat_sleepy',0,[0,1,2,3,4,5]],
-  ['salary-cat',8,[0]],['doge',0,[3]],['puddle',5,[4]],
+  ['salary-cat',0,[0]],['doge',0,[3]],['puddle',5,[4]],
   ['usagi',0,[3]],['kirby',6,[3]],['kirby_sleepy',5,[2,3,4]]
 ]) {
   const sleep=resolveClip(catalog.profiles[id],'sleep').clip;
@@ -78,6 +78,9 @@ assert.deepEqual(resolveClip(poodle,'walkRight').clip.frames, [0,1,2,3,4,5,6,7])
 assert.equal(resolveClip(poodle,'walkRight').clip.row, 1);
 assert.equal(resolveClip(poodle,'walkLeft').clip.row, 2);
 const salary = catalog.profiles['salary-cat'];
+assert.equal(resolveClip(salary,'idle').clip.row, 8);
+assert.equal(resolveClip(salary,'rest').clip.row, 8);
+assert.equal(resolveClip(salary,'sleep').clip.foot, 188/208);
 assert.deepEqual(resolveClip(salary,'walkRight').clip.frames, [0,1,2,3,4,5,6]);
 assert.equal(resolveClip(salary,'walkRight').clip.row, 1);
 assert.equal(resolveClip(salary,'walkLeft').clip.row, 2);
