@@ -1,8 +1,23 @@
 const assert = require('node:assert/strict');
 require('./autonomy.cjs');
-const { evaluate, pet, test, event, passed } = require('./grab-throw.cjs');
+const { evaluate, pet, test, event, passed, sandbox } = require('./grab-throw.cjs');
 const inherited = passed();
 const sprites = ['cat_brown','cat_face','cat_sleepy','salary-cat','doge','puddle','usagi','kirby','kirby_sleepy'];
+
+test('sleep z is visual-only and disappears on wake, hit, grab and removal', () => {
+  pet('doge', 500, 850);
+  evaluate("p.enterAutonomy('sleep');p.isAutonomouslyStill=true;p.vy=0;drawSleepEffect(p)");
+  assert.ok(sandbox.drawingCalls.some(call => call[0] === 'fillText' && call[1] === 'z'));
+  sandbox.drawingCalls.length = 0;
+  evaluate("p.interruptAutonomy();drawSleepEffect(p)");
+  assert.equal(sandbox.drawingCalls.length, 0);
+  evaluate("p.enterAutonomy('sleep');p.isAutonomouslyStill=true;applyNonlethalHit(p,{source:'hammer',vx:2,vy:-5,cap:30,squish:1.2,holdMs:300,damage:10});drawSleepEffect(p)");
+  assert.equal(sandbox.drawingCalls.length, 0);
+  evaluate("p.enterAutonomy('sleep');p.externalMotion=null;p.vy=0;p.isDragging=true;drawSleepEffect(p)");
+  assert.equal(sandbox.drawingCalls.length, 0);
+  evaluate("p.isDragging=false;removePetInstance(p.instanceId)");
+  assert.equal(evaluate('petInstances.length'), 0);
+});
 
 test('Gun moves a bullet to the red dot and reuses nonlethal Hit', () => {
   pet('doge',500,400);
@@ -45,6 +60,108 @@ test('cooldown and 24-bullet cap bound sustained fire; misses expire', () => {
   evaluate('updateBullets(2000);drawEffects(2000)');
   assert.equal(evaluate('bullets.length'),0);
   assert.equal(evaluate('petInstances.length'),0);
+});
+test('empty red-dot shots leave weapon-scaled overlay fractures; a Pet hit leaves none', () => {
+  for (const [weapon, radius, style, count] of [
+    ['awm',124,'gun-heavy',1],['ak47',71,'gun-medium',1],
+    ['uzi',40,'gun-light',1],['double_barrel',28,'gun-pellet',10]
+  ]) {
+    evaluate(`clearPlayground('all');gunWeapon='${weapon}';lastGunShotAt=-Infinity;shootGun(700,300);updateBullets(120)`);
+    assert.equal(evaluate('screenEffects.groups.crack.length'), count, weapon);
+    assert.ok(evaluate(`screenEffects.groups.crack.every(c => c.style === '${style}' &&
+      Math.max(...c.paths.flat().map(p => Math.hypot(p.x,p.y))) <= ${radius} + 1e-7)`), weapon);
+  }
+  evaluate("clearPlayground('effects')");
+  pet('doge',500,400);
+  evaluate("lastGunShotAt=-Infinity;shootGun(500,400);updateBullets(120)");
+  assert.equal(evaluate('p.externalMotion.source'), 'gun');
+  assert.equal(evaluate('screenEffects.groups.crack.length'), 0);
+});
+
+test('Gun and Hammer hits chain through the visible fade, cap at 999 and reset at 3s', () => {
+  pet('doge',500,400);
+  evaluate('__now=0;gunWeapon="ak47";lastGunShotAt=-Infinity;shootGun(500,400);updateBullets(120)');
+  assert.equal(evaluate('combo.count'),1);
+  evaluate('__now=1000;p.x=500;p.y=400;strikeHammer(500,400)');
+  assert.equal(evaluate('combo.count'),2);
+  assert.ok(evaluate('comboDisplayMs===3000 && comboChainMs===3000'));
+  evaluate('__now=2801;p.x=500;p.y=400;strikeHammer(500,400)');
+  assert.equal(evaluate('combo.count'),3);
+  evaluate('for(let i=0;i<1100;i++)registerComboHit("gun")');
+  assert.equal(evaluate('combo.count'),999);
+  evaluate('__now=5800;drawCombo()');
+  assert.equal(evaluate('combo.count'),999,'the chain survives until the fade finishes');
+  evaluate('__now=5801;drawCombo()');
+  assert.equal(evaluate('combo.count'),0); // The completed fade resets the chain.
+  evaluate('__now=6000;registerComboHit("gun")');
+  assert.equal(evaluate('combo.count'),1);
+  evaluate('__now=9000;registerComboHit("gun")');
+  assert.equal(evaluate('combo.count'),1,'a hit at the fade endpoint starts a new chain');
+  evaluate("clearPlayground('effects')");
+  assert.equal(evaluate('combo.count'),0);
+});
+
+test('Bomb also chains on actual Pet damage and a finished fade restarts at 001', () => {
+  pet('doge',500,400);
+  evaluate('__now=0;fireBomb(500,400)');
+  assert.equal(evaluate('combo.count'),1);
+  evaluate('__now=900;fireBomb(500,400)');
+  assert.equal(evaluate('combo.count'),2);
+  evaluate('__now=3900;drawCombo()');
+  assert.equal(evaluate('combo.count'),0);
+  evaluate('__now=4000;fireBomb(500,400)');
+  assert.equal(evaluate('combo.count'),1);
+  evaluate('clearPlayground("pets");__now=4200;fireBomb(500,400)');
+  assert.equal(evaluate('combo.count'),1,'an empty explosion does not increase combo');
+});
+
+test('only manually summoned rare bosses have HP, sleep and fade on defeat', () => {
+  evaluate("clearPlayground('all');Math.random=()=>.01;currentMode='spawn';selectedPetId='doge'");
+  event('canvas:mousedown',500,400,0);
+  assert.equal(evaluate('petInstances.length'),1);
+  assert.equal(evaluate('petInstances[0].boss.health'),620);
+  assert.ok(evaluate('petInstances[0].boss.scale > 1.4'));
+  evaluate('Math.random=()=>.5;globalThis.ordinary=spawnPet("doge",700,400)');
+  assert.equal(evaluate('ordinary.boss'),null);
+  evaluate('globalThis.bossPet=petInstances[0];applyNonlethalHit(bossPet,{source:"hammer",vx:1,vy:-3,cap:24,squish:1.2,holdMs:500,damage:100})');
+  assert.equal(evaluate('bossPet.boss.health'),520);
+  evaluate('applyNonlethalHit(ordinary,{source:"gun",vx:1,vy:-3,cap:24,squish:1.2,holdMs:500,damage:1000})');
+  assert.equal(evaluate('ordinary.boss'),null);
+  evaluate('applyNonlethalHit(bossPet,{source:"gun",vx:1,vy:-3,cap:24,squish:1.2,holdMs:500,damage:700})');
+  assert.equal(evaluate('bossPet.boss.defeated'),true);
+  assert.equal(evaluate('bossPet.spriteClip().state'),'bossSleep');
+  assert.equal(evaluate('petInstances.length'),2);
+  evaluate('animate(1,600)');
+  assert.equal(evaluate('bossPet.boss.fadeRemainingMs'),600);
+  evaluate('animate(1,600)');
+  assert.equal(evaluate('petInstances.length'),1);
+  assert.equal(evaluate('petInstances[0].instanceId'),evaluate('ordinary.instanceId'));
+  assert.equal(sandbox.petSnapshots.at(-1).length,1);
+});
+
+test('all nine sprite bosses resolve an existing sleep fallback during fade', () => {
+  for (const id of sprites) {
+    evaluate("clearPlayground('all')");
+    pet(id,500,400);
+    evaluate('p.becomeBoss();p.beginBossDeath();p.advanceAnimation(100)');
+    assert.equal(evaluate('p.spriteClip().state'),'bossSleep',id);
+    assert.ok(evaluate('p.spriteGeometry().column >= 0 && p.spriteGeometry().column < 8'),id);
+  }
+});
+
+test('boss species use distinct health, sprite scale and health-bar lengths', () => {
+  const expectedHealth = {
+    cat_brown:520, cat_face:420, cat_sleepy:560, 'salary-cat':550,
+    doge:620, puddle:470, usagi:390, kirby:510, kirby_sleepy:580, blob:360
+  };
+  for (const [id, health] of Object.entries(expectedHealth)) {
+    evaluate("clearPlayground('all')");
+    pet(id,500,400);
+    evaluate('globalThis.normalSize=p.size;p.becomeBoss()');
+    assert.equal(evaluate('p.boss.maxHealth'),health,id);
+    assert.ok(evaluate('p.size/normalSize > 1.3'),id);
+    assert.equal(evaluate('p.boss.barWidth'),Math.round(100+(health-360)*.11),id);
+  }
 });
 
 test('long-frame arrival catches the red dot and chooses the eligible Pet', () => {
@@ -222,6 +339,19 @@ test('short grenade clicks select left, right or near-vertical arcs', () => {
     evaluate(`clearPlayground('effects');Math.random=()=>${chance};throwGrenade(500,450)`);
     assert.equal(Math.sign(evaluate('grenades[0].vx')),sign);
     assert.ok(evaluate('grenades[0].vy<0'));
+  }
+});
+
+test('grenades sweep against drawn walls and detonate inside closed shapes', () => {
+  for (const kind of ['rect','ellipse']) {
+    evaluate(`clearPlayground('all');strokes=world.drawnShapes=[{id:1,kind:'${kind}',size:6,
+      points:[{x:350,y:300},{x:650,y:650}]}];rebuildDrawnColliders();
+      screenEffects.add('grenade',{x:500,y:480,vx:18,vy:-5,rotation:0},3000)`);
+    evaluate('updateGrenades(300)');
+    assert.ok(evaluate('grenades[0].x<645 && grenades[0].x>355'),`${kind}: x=${evaluate('grenades[0].x')}`);
+    evaluate('updateGrenades(2700)');
+    assert.equal(evaluate('grenades.length'),0,kind);
+    assert.ok(evaluate('holes[0].x>350 && holes[0].x<650'),`${kind}: blast x=${evaluate('holes[0].x')}`);
   }
 });
 

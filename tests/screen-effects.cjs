@@ -54,7 +54,7 @@ check('cracks auto heal; accumulated cracks remain bounded; auto resumes healing
   effects.update(1); assert.equal(effects.groups.crack.length, 0);
   effects.setCrackMode('accumulate');
   for (let i = 0; i < 1000; i++) effects.addCrack(i, 10, 10000);
-  effects.update(3600000); assert.equal(effects.groups.crack.length, 64);
+  effects.update(3600000); assert.equal(effects.groups.crack.length, 96);
   assert.equal(effects.groups.crack[0].paths.length, 13);
   assert.equal(effects.groups.crack[0].core.length, 9);
   assert.equal(effects.groups.crack[0].shards.length, 5);
@@ -66,8 +66,27 @@ check('cracks auto heal; accumulated cracks remain bounded; auto resumes healing
   assert.equal(effects.setCrackMode('invalid'), false);
   assert.equal(effects.crackMode, 'accumulate');
   effects.setCrackMode('auto'); effects.update(4999);
-  assert.equal(effects.groups.crack.length, 64);
+  assert.equal(effects.groups.crack.length, 96);
   effects.update(1); assert.equal(effects.groups.crack.length, 0);
+});
+check('Hammer fracture has more connected glass geometry than a small Gun miss', () => {
+  const effects = new ScreenEffects();
+  const miss = effects.addCrack(10, 10, 54);
+  const hammer = effects.addCrack(10, 10, 138, 'hammer');
+  assert.ok(hammer.paths.length > miss.paths.length);
+  assert.ok(hammer.shards.length > miss.shards.length);
+  assert.ok(hammer.paths.flat().every(point => Math.hypot(point.x, point.y) <= 138 + 1e-7));
+});
+check('Gun hole size follows weapon style without changing the crack lifetime', () => {
+  const effects = new ScreenEffects();
+  const heavy = effects.addCrack(10, 10, 124, 'gun-heavy');
+  const medium = effects.addCrack(10, 10, 71, 'gun-medium');
+  const light = effects.addCrack(10, 10, 40, 'gun-light');
+  const pellet = effects.addCrack(10, 10, 28, 'gun-pellet');
+  const hole = crack => Math.max(...crack.core.map(p => Math.hypot(p.x, p.y)));
+  assert.ok(hole(heavy) > hole(medium) && hole(medium) > hole(light) && hole(light) > hole(pellet));
+  assert.ok(heavy.paths.length > medium.paths.length);
+  assert.ok([heavy,medium,light,pellet].every(crack => crack.durationMs === 5000));
 });
 check('clear crack is independent; clear all preserves bucket identity and is idempotent', () => {
   const effects = new ScreenEffects();
@@ -171,7 +190,7 @@ test('Hammer has a narrow single-target impulse, Hit fallback and no deletion', 
   assert.equal(evaluate('petInstances.length'),2);
   assert.equal(evaluate('screenEffects.groups.hammer.length'),1);
   assert.equal(evaluate('screenEffects.groups.crack.length'),1);
-  assert.ok(evaluate('Math.max(...screenEffects.groups.crack[0].paths.flat().map(q=>Math.hypot(q.x,q.y)))<=76.000001'));
+  assert.ok(evaluate('screenEffects.groups.crack[0].style==="hammer" && Math.max(...screenEffects.groups.crack[0].paths.flat().map(q=>Math.hypot(q.x,q.y)))<=170.000001'));
   assert.ok(evaluate('particles.every(q=>q.shape==="glass")'));
   assert.ok(evaluate('screenEffects.groups.damage.length===1 && screenEffects.groups.damage[0].source==="hammer"'));
   evaluate('p.advanceAnimation(180)');
@@ -194,7 +213,7 @@ test('Hammer mode input, accumulated cracks and crack-only Clear remain independ
   event('canvas:mousedown',500,400,0);
   assert.equal(evaluate('p.externalMotion.source'),'hammer');
   evaluate('for(let i=0;i<100;i++)strikeHammer(500,400)');
-  assert.equal(evaluate('screenEffects.groups.crack.length'),64);
+  assert.equal(evaluate('screenEffects.groups.crack.length'),96);
   assert.ok(evaluate('screenEffects.groups.hammer.length===12 && screenEffects.groups.damage.length<=40 && particles.length<=160 && rings.length<=24 && impacts.length<=24'));
   evaluate('drawEffects(3600000)');
   assert.equal(evaluate('screenEffects.groups.hammer.length'),0);

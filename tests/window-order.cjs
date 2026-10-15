@@ -25,11 +25,14 @@ Add-Type @'
 using System; using System.Runtime.InteropServices;
 public class WinOrder {
  [StructLayout(LayoutKind.Sequential)] public struct Point { public int X,Y; }
+ [StructLayout(LayoutKind.Sequential)] public struct Rect { public int Left,Top,Right,Bottom; }
  [DllImport("user32.dll")] public static extern IntPtr GetTopWindow(IntPtr h);
+ [DllImport("user32.dll",CharSet=CharSet.Auto)] public static extern IntPtr FindWindow(string cls,string name);
  [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h,uint cmd);
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
  [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(Point p);
+ [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out Rect rect);
  [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h,uint flag);
  [DllImport("user32.dll")] public static extern IntPtr GetWindowLongPtr(IntPtr h,int index);
 }
@@ -37,9 +40,12 @@ public class WinOrder {
 if($Activate -gt 0){[void][WinOrder]::SetForegroundWindow([IntPtr]$Activate);Start-Sleep -Milliseconds 250}
 $rank=@{};$h=[WinOrder]::GetTopWindow([IntPtr]::Zero);$i=0
 while($h -ne [IntPtr]::Zero -and $i -lt 2000){$rank[$h.ToInt64()]=$i;$h=[WinOrder]::GetWindow($h,2);$i++}
+$taskbar=[WinOrder]::FindWindow('Shell_TrayWnd',$null).ToInt64()
 $point=New-Object WinOrder+Point;$point.X=$X;$point.Y=$Y
 $target=[WinOrder]::GetAncestor([WinOrder]::WindowFromPoint($point),2).ToInt64()
-[pscustomobject]@{overlayRank=$rank[$Overlay];controlsRank=$rank[$Controls];probeRank=$rank[$Probe];activateRank=$rank[$Activate];foreground=[WinOrder]::GetForegroundWindow().ToInt64();hit=$target;overlayTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Overlay,-20).ToInt64() -band 8) -ne 0;controlsTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Controls,-20).ToInt64() -band 8) -ne 0;probeTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Probe,-20).ToInt64() -band 8) -ne 0}|ConvertTo-Json -Compress
+$taskbarHit=0
+if($taskbar -gt 0){$rect=New-Object WinOrder+Rect;if([WinOrder]::GetWindowRect([IntPtr]$taskbar,[ref]$rect)){$point.X=[int](($rect.Left+$rect.Right)/2);$point.Y=[int](($rect.Top+$rect.Bottom)/2);$taskbarHit=[WinOrder]::GetAncestor([WinOrder]::WindowFromPoint($point),2).ToInt64()}}
+[pscustomobject]@{overlayRank=$rank[$Overlay];controlsRank=$rank[$Controls];probeRank=$rank[$Probe];taskbarRank=$rank[$taskbar];taskbarHit=$taskbarHit;taskbar=$taskbar;activateRank=$rank[$Activate];foreground=[WinOrder]::GetForegroundWindow().ToInt64();hit=$target;overlayTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Overlay,-20).ToInt64() -band 8) -ne 0;controlsTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Controls,-20).ToInt64() -band 8) -ne 0;probeTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Probe,-20).ToInt64() -band 8) -ne 0}|ConvertTo-Json -Compress
 `;
 function native(handles,activate=0) {
   return JSON.parse(execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(scratch,'order.ps1'),String(handles.overlay),String(handles.controls),String(handles.probe),String(handles.x),String(handles.y),String(activate)],{encoding:'utf8'}));
@@ -48,7 +54,7 @@ async function run() {
   fs.mkdirSync(appDir,{recursive:true});fs.mkdirSync(appData,{recursive:true});
   fs.mkdirSync(path.join(appDir,'animation'),{recursive:true});
   for(const file of ['pet-animation.cjs','profiles.browser.js'])fs.copyFileSync(path.join(project,'animation',file),path.join(appDir,'animation',file));
-  for(const file of ['main.js','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css','controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'])fs.copyFileSync(path.join(project,file),path.join(appDir,file));
+  for(const file of ['main.js','taskbar-zorder.ps1','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css','controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'])fs.copyFileSync(path.join(project,file),path.join(appDir,file));
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});fs.copyFileSync(path.join(project,'assets/icon.png'),path.join(appDir,'assets/icon.png'));fs.cpSync(path.join(project,'assets/pets'),path.join(appDir,'assets/pets'),{recursive:true});
   for(const kind of ['weapons','tools'])fs.cpSync(path.join(project,'assets',kind),path.join(appDir,'assets',kind),{recursive:true});
   const main=path.join(appDir,'main.js');let code=fs.readFileSync(main,'utf8').replace("const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');","app.setPath('appData', process.env.WINDOW_TEST_APPDATA);\nconst USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');");
@@ -63,8 +69,8 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   else if (action === 'maximize') { windowOrderProbe.maximize(); windowOrderProbe.focus(); }
   else if (action === 'minimize') windowOrderProbe.minimize();
   else if (action === 'restore') { windowOrderProbe.restore(); windowOrderProbe.focus(); }
-  else if (action === 'hide-overlay') setState({enabled:false});
-  else if (action === 'show-overlay') setState({enabled:true,mode:'pc'});
+  else if (action === 'hide-overlay') setPlaygroundVisible(false);
+  else if (action === 'show-overlay') setPlaygroundVisible(true);
   else if (action === 'pc') setState({mode:'pc'});
   else if (['touch','draw','spawn','bomb','hammer','gun','blackhole'].includes(action)) setState({mode:action});
   else if (action === 'toolbar') showControls();
@@ -75,11 +81,17 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
     item.click();
   }
   else if (action === 'demote') { overlayWindow.setAlwaysOnTop(false); controlsWindow.emit('blur'); }
+  else if (action === 'external-demote') {
+    overlayWindow.setAlwaysOnTop(false);
+    const external = new BrowserWindow({ x: 100, y: 100, width: 500, height: 400, show: true });
+    external.loadURL('data:text/html,<body>External foreground transition</body>');
+    external.focus();
+  }
   else if (action === 'minimize-overlay') overlayWindow.minimize();
   else if (action === 'restore-overlay') overlayWindow.restore();
   const handle = w => w && !w.isDestroyed() ? Number(w.getNativeWindowHandle().readBigUInt64LE()) : 0;
   const bounds=windowOrderProbe?.getBounds() || overlayWindow.getBounds();
-  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),controlsVisible:controlsWindow.isVisible(),mode:state.mode,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused()};
+  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),controlsVisible:controlsWindow.isVisible(),mode:state.mode,panelOpen:controlsPanelOpen,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused(),taskbarWatcherReady:taskbarOrderWatcherReady};
 });
 `;
   fs.writeFileSync(main,code);
@@ -95,7 +107,7 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
     const {h,z}=await state(action);
     if(action==='hide-overlay'||action==='minimize-overlay'){
       assert.equal(h.visible,false,`${action}: overlay hidden`);
-      assert.equal(h.controlsVisible,true,`${action}: toolbar stays visible`);
+      if(action==='hide-overlay')assert.equal(h.controlsVisible,false,'full hide also hides toolbar');
       continue;
     }
     if(action==='minimize')continue;
@@ -104,6 +116,10 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
     assert.equal(z.controlsTopmost,true,`${action}: controls topmost`);
     assert.ok(z.overlayRank<z.probeRank,`${action}: overlay above normal window ${JSON.stringify(z)}`);
     assert.ok(z.controlsRank<z.overlayRank,`${action}: toolbar above overlay ${JSON.stringify(z)}`);
+    if (z.taskbar && ['touch','draw','spawn','bomb','hammer','gun','blackhole'].includes(action))
+      assert.equal(z.taskbarHit,h.overlay,`${action}: tool input must cover taskbar strip ${JSON.stringify(z)}`);
+    else if (z.taskbar) assert.ok(z.taskbarHit!==h.overlay && z.taskbarHit!==h.controls,
+      `${action}: PC taskbar native hit must bypass Playground ${JSON.stringify(z)}`);
     assert.equal(h.overlayFocused,false,`${action}: overlay must not steal focus`);
     if(action==='toolbar')assert.equal(h.controlsFocused,false,'toolbar restore must not steal focus');
     if(action==='pc')assert.ok(z.hit!==h.overlay&&z.hit!==h.controls,`${action}: native hit target ${JSON.stringify(z)}`);
@@ -120,12 +136,12 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   let z=native(hidden);
   assert.equal(hidden.visible,true,'toolbar hide leaves Playground visible');
   assert.ok(z.overlayTopmost && z.overlayRank<z.probeRank,'hidden toolbar leaves overlay above normal window');
-  assert.ok(z.hit!==hidden.overlay && z.hit!==hidden.controls,'hidden toolbar PC input passes through');
+  assert.ok(z.hit!==hidden.overlay && z.hit!==hidden.controls,`hidden toolbar PC input passes through ${JSON.stringify({hidden,z})}`);
   console.log('PASS: toolbar hides independently and restores PC input passthrough');
   let result=await state('hide-overlay');
-  assert.equal(result.h.controlsVisible,false,'Playground hide does not restore toolbar');
+  assert.equal(result.h.controlsVisible,false,'Playground hide keeps both windows hidden');
   result=await state('tray-menu');
-  assert.ok(result.h.controlsVisible && !result.h.visible,'Tray menu restores toolbar while Playground stays hidden');
+  assert.ok(result.h.controlsVisible && result.h.visible,'Tray menu restores the entire Playground');
   assert.equal(result.z.controlsTopmost,true,'restored toolbar remains topmost');
   result=await state('show-overlay');
   assert.ok(result.h.controlsVisible && result.h.visible,'Playground show leaves restored toolbar visible');
@@ -135,7 +151,20 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   await until(async()=>!(await evaluate("window.playground.smokeWindowOrder('status')")).controlsVisible,'toolbar hidden again');
   result=await state('tray-click');
   assert.ok(result.h.controlsVisible && result.h.visible,'Tray icon click still restores toolbar');
-  console.log('PASS: Playground visibility is independent; Tray menu and icon restore toolbar');
+  console.log('PASS: full hide restores both windows; toolbar-only hide remains independent');
+  if(process.platform === 'win32') {
+    await until(async()=> (await evaluate("window.playground.smokeWindowOrder('status')")).taskbarWatcherReady,
+      'Windows taskbar event watcher ready');
+    await evaluate("window.playground.smokeWindowOrder('external-demote')");
+    const recovered=await until(async()=>{
+      const h=await evaluate("window.playground.smokeWindowOrder('status')");
+      const z=native(h);
+      return z.overlayTopmost && z.overlayRank<z.taskbarRank && z.controlsRank<z.overlayRank ? {h,z} : null;
+    },'external foreground event restores taskbar/Pet order');
+    assert.equal(recovered.h.overlayFocused,false,'event recovery must not focus overlay');
+    assert.equal(recovered.h.controlsFocused,false,'event recovery must not focus toolbar');
+    console.log('PASS: external foreground event restores Pet above taskbar without focus');
+  }
   if(process.argv.includes('--real-apps')){
     const targets=JSON.parse(execFileSync('powershell.exe',['-NoProfile','-Command',"Get-Process chrome,Code,ChatGPT -ErrorAction SilentlyContinue | Where-Object MainWindowHandle -ne 0 | Select-Object ProcessName,MainWindowHandle | ConvertTo-Json -Compress"],{encoding:'utf8'}));
     for(const target of [].concat(targets||[])){

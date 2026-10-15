@@ -11,11 +11,12 @@ const snapshot = require('../docs/v1.1/qa/sprite-final/after-profiles.json');
 const hashes = {cat_brown:'a12f1e408377',cat_face:'95f9d38500fa',
   cat_sleepy:'276cd3263e70','salary-cat':'69c485341384',doge:'e2c7216e564f',
   puddle:'5e1cfeace974',kirby:'10b66645a06d',kirby_sleepy:'eed96cfd7cd6',
-  usagi:'5cd25a775f0a'};
+  usagi:'5cd25a775f0a',call_duck:'542b2ef7487f',baby_harp_seal:'89b666fe24db'};
 assert.equal(catalog.schemaVersion, 1);
 assert.equal(catalog.sourceRendererSha256, snapshot.rendererSha256);
 // Preserve unrelated mappings while allowing reviewed grab, gait and quiet poses.
-const unchanged=structuredClone(catalog.profiles);
+const unchanged=structuredClone(Object.fromEntries(
+  Object.keys(snapshot.profiles).map(id => [id, catalog.profiles[id]])));
 for(const profile of Object.values(unchanged))delete profile.clips.grabStart;
 for(const id of ['cat_face','doge'])unchanged[id].clips.drag=snapshot.profiles[id].clips.drag;
 for(const state of ['walkRight','walkLeft'])unchanged['salary-cat'].clips[state]=snapshot.profiles['salary-cat'].clips[state];
@@ -26,7 +27,7 @@ for(const [id,states] of Object.entries({'salary-cat':['rest','sleep'],doge:['re
   }
 }
 assert.deepEqual(unchanged, snapshot.profiles);
-assert.equal(Object.keys(catalog.profiles).length, 9);
+assert.equal(Object.keys(catalog.profiles).length, 11);
 
 for (const [id, profile] of Object.entries(catalog.profiles)) {
   assertProfile(profile);
@@ -105,7 +106,7 @@ for (const hz of [30,60,144]) {
 }
 assert.throws(() => createPlayer({rows:9,origin:'feet',clips:{idle:{row:9,frames:[0],frameMs:100}}}));
 assert.throws(() => createPlayer(catalog.profiles.doge).update({}, -1));
-console.log('animation-platform: 9 profiles, state transitions, clip safety, timing PASS');
+console.log('animation-platform: 11 profiles, state transitions, clip safety, timing PASS');
 const priority = createPlayer(catalog.profiles.doge);
 assert.equal(priority.update({orbit:true,held:true},0).state,'held');
 assert.equal(priority.update({held:true,event:'grabStart'},20).state,'grabStart');
@@ -129,4 +130,4 @@ for(const profile of Object.values(catalog.profiles)) {
 assert.ok(Object.values(catalog.profiles).every(profile=>Object.values(profile.clips).every(clip=>!clip.sourceCrop)));
 const single=structuredClone(catalog.profiles.doge);single.clips.drag.frames=[0];
 assert.equal(createPlayer(single).update({held:true},2000).mode,'hold');
-console.log('animation-platform: nine sequential Held loops over 3.2s, GrabStart and full-cell sources PASS');
+console.log('animation-platform: eleven sequential Held loops over 3.2s, GrabStart and full-cell sources PASS');

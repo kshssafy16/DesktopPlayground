@@ -10,6 +10,7 @@ const {
   Tray
 } = require('electron');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const { pathToFileURL } = require('node:url');
 const { deflateSync } = require('node:zlib');
 const fsSync = require('node:fs');
@@ -27,6 +28,20 @@ app.setName('DesktopPlayground');
 const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');
 fsSync.mkdirSync(USER_DATA_PATH, { recursive: true });
 app.setPath('userData', USER_DATA_PATH);
+const LIFECYCLE_LOG = path.join(USER_DATA_PATH, 'lifecycle.log');
+function logLifecycle(event, detail = '') {
+  try {
+    if (fsSync.existsSync(LIFECYCLE_LOG) && fsSync.statSync(LIFECYCLE_LOG).size > 128 * 1024)
+      fsSync.truncateSync(LIFECYCLE_LOG, 0);
+    fsSync.appendFileSync(LIFECYCLE_LOG,
+      `${new Date().toISOString()} pid=${process.pid} ${event}${detail ? ` ${detail}` : ''}\n`);
+  } catch (error) {
+    console.warn('Could not write lifecycle log:', error);
+  }
+}
+logLifecycle('main-start');
+process.on('uncaughtExceptionMonitor', error => logLifecycle('uncaught-exception', error.stack || String(error)));
+process.on('exit', code => logLifecycle('process-exit', `code=${code}`));
 const DEFAULT_PET_IDS = ['basic', 'blob', 'robot', 'bug', 'ghost', 'star', 'cloud', 'cat', 'magpie', ...LOCAL_PET_IDS];
 const localPets = loadLocalPets(path.join(__dirname, 'assets', 'pets'));
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.gif']);
@@ -37,11 +52,17 @@ const MODES = new Set(['pc', 'touch', 'draw', 'bomb', 'hammer', 'gun', 'blackhol
 const BRUSH_COLORS = new Set(['#e85b6b', '#4a90e2', '#f2c94c', '#55b88a', '#30384c', '#ffffff']);
 const DRAW_SHAPES = new Set(['freehand', 'line', 'rect', 'ellipse']);
 const EMERGENCY_SHORTCUT = 'Control+Alt+Shift+P';
+// On this Electron/Windows version lower levels can drop behind normal windows.
+// Keep the stable topmost band. PC mode reserves the shell work area;
+// tool modes use the full display so their input reaches the bottom edge.
+const OVERLAY_TOPMOST_LEVEL = 'pop-up-menu';
 
 const hasSingleInstance = app.requestSingleInstanceLock();
 let overlayWindow = null;
 let controlsWindow = null;
 let tray = null;
+let taskbarOrderWatcher = null;
+let taskbarOrderWatcherReady = false;
 let quitting = false;
 let quitReady = false;
 let quitPromise = null;
@@ -59,11 +80,17 @@ let state = {
   eraser: false
 };
 const controlsUiState = { x: null, y: null, collapsed: false };
-const CONTROLS_EXPANDED = { width: 578, height: 56 };
+const CONTROLS_EXPANDED = { width: 440, height: 56 };
 const CONTROLS_COLLAPSED = { width: 152, height: 52 };
-const CONTROLS_PANEL = { width: 578, height: 335 };
+const CONTROLS_PANEL_HEIGHT = 340;
 const CONTROLS_EDGE_GUARD = 8;
 let controlsPanelOpen = false;
+let controlsPanelKind = null;
+let currentPetInstances = [];
+let currentPetRevision = 0;
+let controlsPanelBaseBounds = null;
+let overlayShapeKey = null;
+let taskbarPetRegions = [];
 let uiSaveTimer = null;
 let uiWriteChain = Promise.resolve();
 let petWriteChain = Promise.resolve();
@@ -82,17 +109,26 @@ function isAllowedPet(id) {
 }
 
 if (!hasSingleInstance) {
+  logLifecycle('second-instance-exit');
   app.quit();
 } else {
   app.setAppUserModelId(APP_ID);
 
   app.on('second-instance', () => showControls());
   app.on('before-quit', event => {
+    logLifecycle('before-quit', `quitting=${quitting} ready=${quitReady}`);
+    if (!quitting) {
+      event.preventDefault();
+      logLifecycle('unrequested-quit-blocked');
+      return;
+    }
     if (!quitReady) {
       event.preventDefault();
-      requestAppQuit();
     }
   });
+  app.on('will-quit', () => logLifecycle('will-quit'));
+  // Keep the Tray alive if an Electron window unexpectedly disappears.
+  app.on('window-all-closed', () => logLifecycle('window-all-closed'));
 
   app.whenReady().then(async () => {
     await loadUiState();
@@ -101,6 +137,7 @@ if (!hasSingleInstance) {
     state.crackMode = petSettings.crackMode;
     registerPetAssetProtocol();
     createWindows();
+    startTaskbarOrderWatcher();
     createTray();
     if (!globalShortcut.register(EMERGENCY_SHORTCUT, () => setState({ mode: 'pc' }))) {
       console.warn('Could not register PC Mode shortcut:', EMERGENCY_SHORTCUT);
@@ -109,7 +146,10 @@ if (!hasSingleInstance) {
     screen.on('display-added', resizeOverlay);
     screen.on('display-removed', resizeOverlay);
   }).catch(error => {
+    logLifecycle('startup-failed', error.stack || String(error));
     console.error('DesktopPlayground could not start:', error);
+    quitting = true;
+    quitReady = true;
     app.quit();
   });
 }
@@ -127,6 +167,7 @@ function createWindows() {
     transparent: true,
     backgroundColor: '#00000000',
     frame: false,
+    hasShadow: false,
     resizable: false,
     alwaysOnTop: true,
     focusable: false,
@@ -134,19 +175,31 @@ function createWindows() {
     show: false,
     webPreferences: secureWebPreferences('preload.js')
   });
-  overlayWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  overlayWindow.setAlwaysOnTop(true, OVERLAY_TOPMOST_LEVEL);
+  fitOverlayToDisplay(primary);
   overlayWindow.setIgnoreMouseEvents(true);
   overlayWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   overlayWindow.webContents.on('will-navigate', (event, url) => {
     if (url !== pathToFileUrl('index.html')) event.preventDefault();
   });
   overlayWindow.on('close', event => preventWindowClose(event, overlayWindow));
-  overlayWindow.on('show', () => { raiseOverlay(); setImmediate(raiseOverlay); });
-  overlayWindow.on('restore', () => { raiseOverlay(); setImmediate(raiseOverlay); });
-  const revealOverlay = () => {
-    overlayWindow.setBounds(safeOverlayBounds(screen.getPrimaryDisplay()));
-    if (state.enabled) overlayWindow.showInactive();
+  monitorWindow(overlayWindow, 'overlay');
+  overlayWindow.on('show', () => {
+    overlayShapeKey = null;
+    applyOverlayShape();
     raiseOverlay();
+  });
+  overlayWindow.on('restore', () => {
+    overlayShapeKey = null;
+    applyOverlayShape();
+    raiseOverlay();
+  });
+  let overlayRevealed = false;
+  const revealOverlay = () => {
+    if (overlayRevealed) return;
+    overlayRevealed = true;
+    fitOverlayToDisplay(screen.getPrimaryDisplay());
+    if (state.enabled) overlayWindow.showInactive();
     publishState();
   };
   overlayWindow.once('ready-to-show', revealOverlay);
@@ -164,18 +217,21 @@ function createWindows() {
     transparent: true,
     backgroundColor: '#00000000',
     frame: false,
+    hasShadow: false,
     resizable: false,
     alwaysOnTop: true,
+    focusable: false,
     skipTaskbar: true,
     show: false,
     webPreferences: secureWebPreferences('preload.js')
   });
-  controlsWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  controlsWindow.setAlwaysOnTop(true, OVERLAY_TOPMOST_LEVEL);
   controlsWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   controlsWindow.webContents.on('will-navigate', (event, url) => {
     if (url !== pathToFileUrl('controls.html')) event.preventDefault();
   });
   controlsWindow.on('close', event => preventWindowClose(event, controlsWindow));
+  monitorWindow(controlsWindow, 'controls');
   controlsWindow.on('show', raiseOverlay);
   controlsWindow.on('restore', raiseOverlay);
   controlsWindow.on('focus', raiseOverlay);
@@ -185,9 +241,11 @@ function createWindows() {
     controlsWindow = null;
   });
   controlsWindow.on('move', clampAndStoreControlsBounds);
+  let controlsRevealed = false;
   const revealControls = () => {
+    if (controlsRevealed) return;
+    controlsRevealed = true;
     controlsWindow.showInactive();
-    raiseOverlay();
     publishState();
   };
   controlsWindow.once('ready-to-show', revealControls);
@@ -196,27 +254,118 @@ function createWindows() {
 }
 
 function safeOverlayBounds(display) {
-  // Include the taskbar strip in both the Canvas and the Pet's floor.
-  // PC mode continues to forward native mouse input to the shell below it.
+  // Retain full-display coordinates for Pet physics and existing DPI behavior.
   return { ...display.bounds };
+}
+
+function fitOverlayToDisplay(display) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const bounds = safeOverlayBounds(display);
+  const current = overlayWindow.getBounds();
+  if (Object.keys(bounds).some(key => bounds[key] !== current[key])) overlayWindow.setBounds(bounds);
+  applyOverlayShape(display);
+}
+
+function applyOverlayShape(display = screen.getPrimaryDisplay()) {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return;
+  const bounds = safeOverlayBounds(display);
+  const full = { x: 0, y: 0, width: bounds.width, height: bounds.height };
+  let shape = [full];
+  if (state.mode === 'pc') {
+    // A full-screen pop-up-menu window sits above Explorer's taskbar even when
+    // its Canvas is transparent. Leave only the Pet-covered taskbar spans in
+    // our native shape; the rest belongs directly to the Windows shell.
+    const work = display.workArea;
+    const wx = Math.max(0, Math.min(full.width, work.x - bounds.x));
+    const wy = Math.max(0, Math.min(full.height, work.y - bounds.y));
+    const right = Math.max(wx, Math.min(full.width, work.x - bounds.x + work.width));
+    const bottom = Math.max(wy, Math.min(full.height, work.y - bounds.y + work.height));
+    const workRect = { x: wx, y: wy, width: right - wx, height: bottom - wy };
+    const strips = [
+      { x: 0, y: 0, width: full.width, height: wy },
+      { x: 0, y: bottom, width: full.width, height: full.height - bottom },
+      { x: 0, y: wy, width: wx, height: bottom - wy },
+      { x: right, y: wy, width: full.width - right, height: bottom - wy }
+    ].filter(rect => rect.width > 0 && rect.height > 0);
+    shape = [workRect];
+    for (const strip of strips) {
+      const spans = [];
+      const horizontal = strip.width >= strip.height;
+      for (const pet of taskbarPetRegions) {
+        const x = Math.max(strip.x, pet.x), y = Math.max(strip.y, pet.y);
+        const r = Math.min(strip.x + strip.width, pet.x + pet.width);
+        const b = Math.min(strip.y + strip.height, pet.y + pet.height);
+        if (r > x && b > y) spans.push(horizontal ? [x, r] : [y, b]);
+      }
+      spans.sort((a, b) => a[0] - b[0]);
+      for (const [start, end] of spans) {
+        const last = shape.at(-1);
+        if (last && last._strip === strip && start <= last._end) {
+          last._end = Math.max(last._end, end);
+          if (horizontal) last.width = last._end - last.x;
+          else last.height = last._end - last.y;
+        } else shape.push(horizontal
+          ? { x: start, y: strip.y, width: end - start, height: strip.height, _strip: strip, _end: end }
+          : { x: strip.x, y: start, width: strip.width, height: end - start, _strip: strip, _end: end });
+      }
+    }
+    shape = shape.map(({ x, y, width, height }) => ({ x, y, width, height }));
+  }
+  const shapeKey = JSON.stringify(shape);
+  if (overlayShapeKey === shapeKey) return;
+  overlayWindow.setShape(shape);
+  overlayShapeKey = shapeKey;
 }
 
 function raiseControls() {
   if (!controlsWindow || controlsWindow.isDestroyed() || !controlsWindow.isVisible()) return;
-  controlsWindow.setAlwaysOnTop(true, 'pop-up-menu');
+  controlsWindow.setAlwaysOnTop(true, OVERLAY_TOPMOST_LEVEL);
   controlsWindow.moveTop();
 }
 
 function raiseOverlay() {
   if (overlayWindow && !overlayWindow.isDestroyed() && overlayWindow.isVisible()) {
-    // Reapply the native topmost band after window/state transitions.
-    // moveTop changes z-order without activating the click-through overlay.
-    // The floating level can lose native topmost after hide/show on Windows.
-    // Use the same stable topmost band, then place controls above it.
-    overlayWindow.setAlwaysOnTop(true, 'pop-up-menu');
+    // Reasserting an existing topmost level does not reorder peers in that band.
+    // moveTop uses SWP_NOACTIVATE on Windows, so it restores the Pet layer
+    // without taking keyboard focus from the foreground application.
+    overlayWindow.setAlwaysOnTop(true, OVERLAY_TOPMOST_LEVEL);
     overlayWindow.moveTop();
   }
   raiseControls();
+}
+
+function startTaskbarOrderWatcher() {
+  if (process.platform !== 'win32' || !overlayWindow || overlayWindow.isDestroyed()) return;
+  try {
+    const handle = overlayWindow.getNativeWindowHandle().readBigUInt64LE().toString();
+    const script = fsSync.readFileSync(path.join(__dirname, 'taskbar-zorder.ps1'), 'utf8');
+    const command = `$OverlayHandle = [long]${handle}\n${script}`;
+    const watcher = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-EncodedCommand',
+      Buffer.from(command, 'utf16le').toString('base64')
+    ], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    taskbarOrderWatcher = watcher;
+    let output = '';
+    watcher.stdout.on('data', chunk => {
+      output += chunk.toString();
+      const lines = output.split(/\r?\n/);
+      output = lines.pop();
+      for (const line of lines) {
+        if (line.trim() === 'ready') taskbarOrderWatcherReady = true;
+        if (line.trim() === 'restore' && !quitting) raiseOverlay();
+      }
+    });
+    watcher.stderr.on('data', chunk =>
+      logLifecycle('taskbar-order-watch-error', chunk.toString().trim().slice(0, 500)));
+    watcher.on('error', error => logLifecycle('taskbar-order-watch-error', String(error)));
+    watcher.on('exit', code => {
+      if (taskbarOrderWatcher === watcher) taskbarOrderWatcher = null;
+      taskbarOrderWatcherReady = false;
+      if (!quitting) logLifecycle('taskbar-order-watch-exit', `code=${code}`);
+    });
+  } catch (error) {
+    logLifecycle('taskbar-order-watch-error', String(error));
+  }
 }
 
 function pathToFileUrl(filename) {
@@ -234,13 +383,23 @@ function secureWebPreferences(preloadFile) {
 
 function preventWindowClose(event, window) {
   if (quitting) return;
+  logLifecycle('window-close-blocked', window === controlsWindow ? 'controls' : 'overlay');
   event.preventDefault();
   if (window === controlsWindow) hideControls();
 }
 
+function monitorWindow(window, name) {
+  window.on('closed', () => logLifecycle('window-closed', name));
+  window.webContents.on('render-process-gone', (_event, details) =>
+    logLifecycle('render-process-gone', `${name} reason=${details.reason} exitCode=${details.exitCode}`));
+  window.webContents.on('unresponsive', () => logLifecycle('window-unresponsive', name));
+  window.webContents.on('did-fail-load', (_event, code, description) =>
+    logLifecycle('window-load-failed', `${name} code=${code} ${description}`));
+}
+
 function resizeOverlay() {
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setBounds(safeOverlayBounds(screen.getPrimaryDisplay()));
+    fitOverlayToDisplay(screen.getPrimaryDisplay());
   }
   clampAndStoreControlsBounds();
   raiseOverlay();
@@ -449,16 +608,20 @@ function clampAndStoreControlsBounds() {
   if (safe.x !== current.x || safe.y !== current.y || safe.width !== current.width || safe.height !== current.height) {
     controlsWindow.setBounds(safe);
   }
+  if (controlsPanelOpen && controlsPanelBaseBounds) {
+    controlsPanelBaseBounds.x = safe.x;
+    controlsPanelBaseBounds.y = safe.y + safe.height - CONTROLS_EXPANDED.height;
+  }
   controlsUiState.x = safe.x;
-  controlsUiState.y = safe.y;
+  controlsUiState.y = controlsPanelOpen ? safe.y + safe.height - CONTROLS_EXPANDED.height : safe.y;
   scheduleUiStateSave();
 }
 
 function scheduleUiStateSave() {
   if (!controlsWindow || controlsWindow.isDestroyed()) return;
-  const { x, y } = controlsWindow.getBounds();
+  const { x, y, height } = controlsWindow.getBounds();
   controlsUiState.x = x;
-  controlsUiState.y = y;
+  controlsUiState.y = controlsPanelOpen ? y + height - CONTROLS_EXPANDED.height : y;
   clearTimeout(uiSaveTimer);
   uiSaveTimer = setTimeout(() => {
     uiSaveTimer = null;
@@ -482,9 +645,9 @@ async function flushUiState() {
   clearTimeout(uiSaveTimer);
   uiSaveTimer = null;
   if (controlsWindow && !controlsWindow.isDestroyed()) {
-    const { x, y } = controlsWindow.getBounds();
+    const { x, y, height } = controlsWindow.getBounds();
     controlsUiState.x = x;
-    controlsUiState.y = y;
+    controlsUiState.y = controlsPanelOpen ? y + height - CONTROLS_EXPANDED.height : y;
   }
   await writeUiState();
 }
@@ -504,17 +667,28 @@ function setControlsCollapsed(event, collapsed) {
   raiseOverlay();
 }
 
-function resizeControlsPanel(open) {
-  if (!controlsWindow || controlsWindow.isDestroyed() || controlsPanelOpen === open) return;
+function resizeControlsPanel(open, kind = null) {
+  if (!controlsWindow || controlsWindow.isDestroyed()) return;
+  if (!open && !controlsPanelOpen) return;
   const current = controlsWindow.getBounds();
-  const delta = CONTROLS_PANEL.height - CONTROLS_EXPANDED.height;
+  if (open && !controlsPanelOpen) controlsPanelBaseBounds = { ...current };
+  const base = controlsPanelBaseBounds || { ...current, y: current.y + current.height - CONTROLS_EXPANDED.height };
+  const height = open ? CONTROLS_PANEL_HEIGHT : CONTROLS_EXPANDED.height;
   const target = open
-    ? { ...current, y: current.y - delta, ...CONTROLS_PANEL }
-    : { ...current, y: current.y + delta, ...CONTROLS_EXPANDED };
+    ? { ...base, y: base.y + base.height - height, height }
+    : { ...base, ...CONTROLS_EXPANDED };
   controlsPanelOpen = open;
+  controlsPanelKind = open ? kind : null;
   controlsWindow.setBounds(clampControlsBounds(target, screen.getDisplayMatching(current)));
-  scheduleUiStateSave();
+  applyOverlayShape();
+  if (overlayWindow && !overlayWindow.isDestroyed())
+    overlayWindow.setIgnoreMouseEvents(!state.enabled || (state.mode === 'pc' && !controlsPanelOpen));
+  if (!open) {
+    controlsPanelBaseBounds = null;
+    scheduleUiStateSave();
+  }
   raiseOverlay();
+  publishState();
 }
 
 function isTrustedSender(event, expectedWindow) {
@@ -527,33 +701,49 @@ function isTrustedSender(event, expectedWindow) {
 function publishState() {
   for (const window of [overlayWindow, controlsWindow]) {
     if (window && !window.isDestroyed() && !window.webContents.isLoading()) {
-      window.webContents.send('app:state', { ...state });
+      window.webContents.send('app:state', { ...state, controlsPanelOpen, controlsPanelKind });
     }
   }
   updateTrayMenu();
 }
 
 function setState(changes) {
+  const previous = state;
   const next = { ...state, ...changes };
+  const visibilityChanged = next.enabled !== state.enabled;
   state = next;
 
   if (overlayWindow && !overlayWindow.isDestroyed()) {
-    overlayWindow.setIgnoreMouseEvents(!state.enabled || state.mode === 'pc');
+    if (next.mode !== previous.mode || visibilityChanged) applyOverlayShape();
+    overlayWindow.setIgnoreMouseEvents(!state.enabled || (state.mode === 'pc' && !controlsPanelOpen));
     if (state.enabled) {
-      if (!overlayWindow.isVisible()) overlayWindow.showInactive();
+      if (!overlayWindow.isVisible()) {
+        overlayWindow.showInactive();
+        overlayShapeKey = null;
+        applyOverlayShape();
+      }
     } else if (overlayWindow.isVisible()) {
       overlayWindow.hide();
     }
   }
-  raiseOverlay();
+  // show emits its own z-order repair; hiding only needs the toolbar raised.
+  if (visibilityChanged && !state.enabled) raiseControls();
   publishState();
 }
 
 function showControls() {
+  if (!state.enabled) setState({ enabled: true, mode: 'pc' });
   if (!controlsWindow || controlsWindow.isDestroyed()) return;
   clampAndStoreControlsBounds();
-  controlsWindow.showInactive();
-  raiseOverlay();
+  if (controlsWindow.isVisible()) raiseOverlay();
+  else controlsWindow.showInactive();
+}
+
+function setPlaygroundVisible(enabled) {
+  if (!enabled && controlsPanelOpen) resizeControlsPanel(false);
+  setState({ enabled, mode: enabled ? state.mode : 'pc' });
+  if (enabled) showControls();
+  else if (controlsWindow && !controlsWindow.isDestroyed()) controlsWindow.hide();
 }
 
 function hideControls() {
@@ -561,17 +751,20 @@ function hideControls() {
   if (state.mode !== 'pc') setState({ mode: 'pc' });
   if (controlsPanelOpen) resizeControlsPanel(false);
   controlsWindow.hide();
-  raiseOverlay();
 }
 
 function setMode(event, mode) {
+  if (!state.enabled) return;
   if (!isTrustedSender(event, controlsWindow)
     && !(mode === 'pc' && isTrustedSender(event, overlayWindow))) return;
   if (!MODES.has(mode) || mode === 'spawn') return;
+  if (mode === 'pc' && isTrustedSender(event, overlayWindow) && controlsPanelOpen)
+    resizeControlsPanel(false);
   setState({ mode });
 }
 
 function setGunWeapon(event, weapon) {
+  if (!state.enabled) return;
   if (!isTrustedSender(event, controlsWindow)) return;
   if (!['awm', 'ak47', 'uzi', 'double_barrel'].includes(weapon)) return;
   setState({ gunWeapon: weapon, mode: 'gun' });
@@ -580,7 +773,7 @@ function setGunWeapon(event, weapon) {
 function setEnabled(event, enabled) {
   if (!isTrustedSender(event, controlsWindow) || typeof enabled !== 'boolean') return;
   if (!enabled && overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.setIgnoreMouseEvents(true);
-  setState({ enabled });
+  setPlaygroundVisible(enabled);
 }
 
 function setStructuresEnabled(event, enabled) {
@@ -589,6 +782,7 @@ function setStructuresEnabled(event, enabled) {
 }
 
 function selectPet(event, id) {
+  if (!state.enabled) return;
   if (!isTrustedSender(event, controlsWindow) || !isAllowedPet(id)) return;
   setState({ mode: 'spawn', petId: id });
 }
@@ -605,6 +799,7 @@ function setBrush(event, changes) {
 
 function requestAppQuit() {
   if (quitPromise) return quitPromise;
+  logLifecycle('requested-quit');
   quitting = true;
   quitPromise = (async () => {
     const results = await Promise.allSettled([flushUiState(), petWriteChain]);
@@ -612,6 +807,7 @@ function requestAppQuit() {
       if (result.status === 'rejected') console.warn('Could not finish state save before exit:', result.reason);
     }
     globalShortcut.unregisterAll();
+    taskbarOrderWatcher?.stdin.end();
     if (tray && !tray.isDestroyed()) tray.destroy();
     tray = null;
     for (const window of [controlsWindow, overlayWindow]) {
@@ -629,7 +825,7 @@ function requestAppQuit() {
 function installIpcHandlers() {
   ipcMain.handle('app:get-state', event => {
     if (!isTrustedSender(event, overlayWindow) && !isTrustedSender(event, controlsWindow)) return null;
-    return { ...state };
+    return { ...state, controlsPanelOpen, controlsPanelKind };
   });
   ipcMain.handle('app:get-controls-ui-state', event => {
     if (!isTrustedSender(event, controlsWindow)) return null;
@@ -638,6 +834,41 @@ function installIpcHandlers() {
   ipcMain.handle('app:get-pet-definitions', event => {
     if (!isTrustedSender(event, overlayWindow) && !isTrustedSender(event, controlsWindow)) return null;
     return publicPetDefinitions();
+  });
+  ipcMain.handle('app:get-pet-instances', event =>
+    isTrustedSender(event, controlsWindow)
+      ? { revision: currentPetRevision, instances: currentPetInstances } : null);
+  ipcMain.on('app:pet-instances-changed', (event, instances) => {
+    if (!isTrustedSender(event, overlayWindow) || !Array.isArray(instances)) return;
+    currentPetInstances = instances.filter(pet => Number.isSafeInteger(pet.instanceId)
+      && pet.instanceId > 0 && typeof pet.definitionId === 'string')
+      .map(({ instanceId, definitionId }) => ({ instanceId, definitionId }));
+    currentPetRevision++;
+    if (controlsWindow && !controlsWindow.isDestroyed() && !controlsWindow.webContents.isLoading())
+      controlsWindow.webContents.send('app:pet-instances', {
+        revision: currentPetRevision, instances: currentPetInstances
+      });
+  });
+  ipcMain.on('app:taskbar-pet-regions', (event, regions) => {
+    if (!isTrustedSender(event, overlayWindow) || !Array.isArray(regions)) return;
+    taskbarPetRegions = regions.slice(0, 1024).filter(rect => rect &&
+      [rect.x, rect.y, rect.width, rect.height].every(Number.isFinite) &&
+      rect.width > 0 && rect.height > 0).map(rect => ({
+      x: Math.round(rect.x), y: Math.round(rect.y),
+      width: Math.round(rect.width), height: Math.round(rect.height)
+    }));
+    if (state.enabled && state.mode === 'pc') applyOverlayShape();
+  });
+  ipcMain.on('app:remove-pet-instance', (event, instanceId) => {
+    if (!isTrustedSender(event, controlsWindow) || !Number.isSafeInteger(instanceId)
+      || instanceId <= 0 || !overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow.webContents.send('playground:remove-pet-instance', instanceId);
+  });
+  ipcMain.on('app:remove-pet-kind', (event, definitionId) => {
+    if (!isTrustedSender(event, controlsWindow) || typeof definitionId !== 'string'
+      || !currentPetInstances.some(pet => pet.definitionId === definitionId)
+      || !overlayWindow || overlayWindow.isDestroyed()) return;
+    overlayWindow.webContents.send('playground:remove-pet-kind', definitionId);
   });
   ipcMain.handle('app:set-pet-enabled', setPetEnabled);
   ipcMain.handle('app:remove-custom-pet', removeCustomPet);
@@ -651,9 +882,14 @@ function installIpcHandlers() {
     if (isTrustedSender(event, controlsWindow)) hideControls();
   });
   ipcMain.on('app:set-controls-collapsed', setControlsCollapsed);
-  ipcMain.on('app:set-controls-panel-open', (event, open) => {
-    if (isTrustedSender(event, controlsWindow) && typeof open === 'boolean' && !controlsUiState.collapsed) {
-      resizeControlsPanel(open);
+  ipcMain.on('app:set-controls-panel-open', (event, open, kind) => {
+    const fromControls = isTrustedSender(event, controlsWindow);
+    const dismissDrawPanel = open === false && state.mode === 'draw' && controlsPanelKind === 'draw'
+      && isTrustedSender(event, overlayWindow);
+    if ((fromControls || dismissDrawPanel) && typeof open === 'boolean' && (!open || state.enabled)
+      && (!open || (fromControls && ['pets', 'manage', 'draw', 'play'].includes(kind)))
+      && !controlsUiState.collapsed) {
+      resizeControlsPanel(open, kind);
     }
   });
   ipcMain.on('app:clear', (event, kind) => {
@@ -708,7 +944,7 @@ function updateTrayMenu() {
   };
   const menu = Menu.buildFromTemplate([
     { label: 'PC 모드', click: () => setState({ mode: 'pc' }) },
-    { label: state.enabled ? 'Playground 숨기기' : 'Playground 보이기', click: () => setState({ enabled: !state.enabled }) },
+    { label: state.enabled ? '전체 숨기기' : '전체 보이기', click: () => setPlaygroundVisible(!state.enabled) },
     { id: 'show-toolbar', label: '툴바 표시', click: showControls },
     { id: 'auxiliary-effects', label: '보조 효과 표시', type: 'checkbox',
       checked: state.auxiliaryEffectsEnabled,

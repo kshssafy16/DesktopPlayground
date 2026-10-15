@@ -2,7 +2,7 @@
 (function (root) {
     'use strict';
     const frameMs = 1000 / 60;
-    const limits = Object.freeze({ particle: 160, ring: 24, impact: 24, crater: 8, crack: 64, hammer: 12, damage: 40, bullet: 24, shot: 24, grenade: 24 });
+    const limits = Object.freeze({ particle: 160, ring: 24, impact: 24, crater: 8, crack: 96, hammer: 12, damage: 40, bullet: 24, shot: 24, grenade: 24 });
     class ScreenEffects {
         constructor() {
             this.groups = Object.fromEntries(Object.keys(limits).map(kind => [kind, []]));
@@ -21,13 +21,15 @@
             group.push(effect);
             return effect;
         }
-        addCrack(x, y, radius = 45) {
+        addCrack(x, y, radius = 45, style = 'normal') {
             if (!Number.isFinite(radius) || radius <= 0) return null;
             radius = Math.min(radius, 200);
             // A small broken center, a chipped inner ring and short kinked glass fractures.
             const point = (angle, distance) => ({ x: Math.cos(angle) * distance, y: Math.sin(angle) * distance });
+            const holeScale = style === 'gun-heavy' ? 2.15 : style === 'gun-medium' ? 1.45
+                : style === 'gun-light' ? .8 : style === 'gun-pellet' ? .55 : 1;
             const core = Array.from({ length: 9 }, (_, i) => point(i * Math.PI * 2 / 9,
-                radius * (.075 + Math.random() * .05)));
+                radius * (.075 + Math.random() * .05) * holeScale));
             const inner = Array.from({ length: 9 }, (_, i) => point(i * Math.PI * 2 / 9,
                 radius * (.19 + Math.random() * .1)));
             const paths = [[...inner, inner[0]]];
@@ -43,8 +45,29 @@
                 }
             }
             const shards = Array.from({ length: 5 }, (_, i) => [core[i], inner[i], inner[i + 1]]);
-            // 9 inner edges + 8*3 spokes + 4*2 forks = 41 bounded segments.
-            return this.add('crack', { x, y, paths, core, shards }, 5000);
+            if (style === 'hammer') {
+                // Short linked fractures make a broad impact read as shattered glass.
+                const web = Array.from({ length: 16 }, (_, i) => point(
+                    i * Math.PI / 8 + (Math.random() - .5) * .13,
+                    radius * (.37 + Math.random() * .2)));
+                for (let i = 0; i < web.length; i += 2)
+                    paths.push([web[i], web[(i + 1) % web.length], web[(i + 2) % web.length]]);
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i + .5) * Math.PI / 4;
+                    paths.push([inner[i], point(angle, radius * (.5 + Math.random() * .13)),
+                        point(angle + (Math.random() - .5) * .3, radius * (.75 + Math.random() * .2))]);
+                    shards.push([core[i], inner[i], web[i * 2]]);
+                }
+                paths.push([...web.filter((_, i) => i % 2 === 0), web[0]]);
+            } else if (style === 'gun-heavy') {
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i + .5) * Math.PI / 4;
+                    paths.push([core[i], point(angle, radius * (.3 + Math.random() * .1)),
+                        point(angle + (Math.random() - .5) * .25, radius * (.58 + Math.random() * .15))]);
+                }
+            }
+            // Weapon styles share bounded geometry, with damage-scaled center holes.
+            return this.add('crack', { x, y, paths, core, shards, style }, 5000);
         }
         setCrackMode(mode) {
             if (!['auto', 'accumulate'].includes(mode)) return false;

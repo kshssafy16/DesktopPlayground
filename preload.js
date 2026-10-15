@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   getState: () => ipcRenderer.invoke('app:get-state'),
   getControlsUiState: () => ipcRenderer.invoke('app:get-controls-ui-state'),
   getPetDefinitions: () => ipcRenderer.invoke('app:get-pet-definitions'),
+  getPetInstances: () => ipcRenderer.invoke('app:get-pet-instances'),
   setPetEnabled: (id, enabled) => ipcRenderer.invoke('app:set-pet-enabled', id, enabled),
   removeCustomPet: id => ipcRenderer.invoke('app:remove-custom-pet', id),
   setMode: mode => {
@@ -28,6 +29,19 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   selectPet: id => {
     if (typeof id === 'string') ipcRenderer.send('app:select-pet', id);
   },
+  removePetInstance: instanceId => {
+    if (Number.isSafeInteger(instanceId) && instanceId > 0)
+      ipcRenderer.send('app:remove-pet-instance', instanceId);
+  },
+  removePetKind: definitionId => {
+    if (typeof definitionId === 'string') ipcRenderer.send('app:remove-pet-kind', definitionId);
+  },
+  publishPetInstances: instances => {
+    if (Array.isArray(instances)) ipcRenderer.send('app:pet-instances-changed', instances);
+  },
+  publishTaskbarPetRegions: regions => {
+    if (Array.isArray(regions)) ipcRenderer.send('app:taskbar-pet-regions', regions);
+  },
   setBrush: changes => {
     if (changes && typeof changes === 'object') ipcRenderer.send('app:set-brush', {
       drawColor: changes.drawColor,
@@ -40,8 +54,9 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   setControlsCollapsed: collapsed => {
     if (typeof collapsed === 'boolean') ipcRenderer.send('app:set-controls-collapsed', collapsed);
   },
-  setControlsPanelOpen: open => {
-    if (typeof open === 'boolean') ipcRenderer.send('app:set-controls-panel-open', open);
+  setControlsPanelOpen: (open, kind) => {
+    if (typeof open === 'boolean' && (!open || ['pets', 'manage', 'draw', 'play'].includes(kind)))
+      ipcRenderer.send('app:set-controls-panel-open', open, open ? kind : null);
   },
   clear: kind => {
     if (['crack', 'effects', 'drawing', 'structures', 'pets', 'all'].includes(kind)) ipcRenderer.send('app:clear', kind);
@@ -49,5 +64,8 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   exit: () => ipcRenderer.send('app:exit'),
   onState: callback => subscribe('app:state', callback),
   onClear: callback => subscribe('playground:clear', callback),
-  onPetDefinitions: callback => subscribe('app:pet-definitions', callback)
+  onPetDefinitions: callback => subscribe('app:pet-definitions', callback),
+  onPetInstances: callback => subscribe('app:pet-instances', callback),
+  onRemovePetInstance: callback => subscribe('playground:remove-pet-instance', callback),
+  onRemovePetKind: callback => subscribe('playground:remove-pet-kind', callback)
 }));

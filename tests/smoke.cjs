@@ -71,7 +71,7 @@ async function run() {
   for (const file of ['pet-animation.cjs','profiles.browser.js'])
     fs.copyFileSync(path.join(project,'animation',file),path.join(appDir,'animation',file));
   for (const file of [
-    'main.js','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css',
+    'main.js','taskbar-zorder.ps1','local-pets.js','preload.js','index.html','renderer.js','screen-effects.js','styles.css',
     'controls.html','controls.js','controls.css','spritesheet.webp','spritesheet_2.webp','package.json'
   ]) fs.copyFileSync(path.join(project,file),path.join(appDir,file));
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});
@@ -105,10 +105,19 @@ ipcMain.handle('smoke:clear-crack', event => {
   if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
   const item=smokeTrayMenu.getMenuItemById('clear-crack');item.click(item);return true;
 });
+ipcMain.handle('smoke:restore-playground', event => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  showControls();
+  return { overlay: overlayWindow.isVisible(), controls: controlsWindow.isVisible(), enabled: state.enabled };
+});
+ipcMain.handle('smoke:window-visibility', event => {
+  if (!isTrustedSender(event, controlsWindow)) throw new Error('Untrusted smoke sender');
+  return { overlay: overlayWindow.isVisible(), controls: controlsWindow.isVisible(), enabled: state.enabled };
+});
 `);
   const preloadPath=path.join(appDir,'preload.js');
   fs.writeFileSync(preloadPath,fs.readFileSync(preloadPath,'utf8').replace(
-    "getState: () =>", "smokeOverlayBounds: () => ipcRenderer.invoke('smoke:overlay-bounds'),\n  smokeAuxiliaryEffects: enabled => ipcRenderer.invoke('smoke:auxiliary-effects',enabled),\n  smokeCrackMode: mode => ipcRenderer.invoke('smoke:crack-mode',mode),\n  smokeClearCrack: () => ipcRenderer.invoke('smoke:clear-crack'),\n  getState: () =>"));
+    "getState: () =>", "smokeOverlayBounds: () => ipcRenderer.invoke('smoke:overlay-bounds'),\n  smokeAuxiliaryEffects: enabled => ipcRenderer.invoke('smoke:auxiliary-effects',enabled),\n  smokeCrackMode: mode => ipcRenderer.invoke('smoke:crack-mode',mode),\n  smokeClearCrack: () => ipcRenderer.invoke('smoke:clear-crack'),\n  smokeRestorePlayground: () => ipcRenderer.invoke('smoke:restore-playground'),\n  smokeWindowVisibility: () => ipcRenderer.invoke('smoke:window-visibility'),\n  getState: () =>"));
   // Legacy schema 1 has no effects field: retain all old settings and default ON.
   const settingsFile=path.join(appData,'desktop-playground','playground','settings.json');
   fs.mkdirSync(path.dirname(settingsFile),{recursive:true});
@@ -135,38 +144,127 @@ ipcMain.handle('smoke:clear-crack', event => {
     console.log('PASS: native overlay bounds include the full primary display and taskbar strip');
     return;
   }
-  assert.equal(await controls.eval("document.getElementById('pc-button')?.title"), 'PC 모드');
-  assert.equal(await controls.eval("document.querySelectorAll('#control-bar button').length"), 13);
-  assert.equal(await controls.eval("document.getElementById('hammer-button').title"), '망치 타격');
-  assert.equal(await controls.eval("document.getElementById('gun-button').title"), '장난감 총');
+  assert.equal(await controls.eval("document.getElementById('pc-button')?.title"), 'PC');
+  assert.equal(await controls.eval("document.querySelectorAll('#control-bar button').length"), 9);
+  assert.equal(await controls.eval("document.getElementById('hammer-button').title"), '망치');
   assert.equal(await controls.eval("document.getElementById('control-bar').scrollWidth<=document.getElementById('control-bar').clientWidth"),true);
   assert.equal(await controls.eval("window.playground.getState().then(s=>s.structuresEnabled)"), false);
   assert.equal(await overlay.eval("structuresEnabled"), false);
   assert.equal(await overlay.eval("buildRoute({definition:{category:'cat'}},world.now())"), null);
   const local = await controls.eval("window.playground.getPetDefinitions().then(s=>s.localPets.map(p=>p.id))");
-  assert.equal(local.length, 9);
+  assert.equal(local.length, 11);
   assert.equal(await overlay.eval("['basic','ghost','star','cloud','usagi'].every(id=>petDefinitions.has(id)) && !petDefinitions.has('Ripple') && !petDefinitions.has('Patchi')"), true);
-  await until(() => overlay.eval("petInstances.length === 4"), 'four startup Pets');
-  assert.deepEqual(await overlay.eval("petInstances.map(p=>p.definitionId)"), ['blob','cat_brown','doge','kirby']);
+  await until(() => overlay.eval("petInstances.length === 3"), 'three startup Pets');
+  assert.deepEqual(await overlay.eval("petInstances.map(p=>p.definitionId)"), ['kirby','cat_brown','doge']);
   assert.equal(await controls.eval("document.querySelectorAll('.pet-category').length"), 4);
   assert.deepEqual(await controls.eval("Array.from(document.querySelectorAll('.pet-category')).map(row=>[row.querySelector('.category-label').textContent,Array.from(row.querySelectorAll('[data-pet-id]')).map(p=>p.dataset.petId)])"), [
     ['기본',['blob']],
     ['고양이',['cat_brown','cat_face','cat_sleepy','salary-cat']],
-    ['강아지',['puddle','doge']],['캐릭터',['usagi','kirby','kirby_sleepy']]
+    ['강아지',['puddle','doge']],['캐릭터',['usagi','kirby','kirby_sleepy','call_duck','baby_harp_seal']]
   ]);
-  assert.equal(await controls.eval("document.querySelectorAll('#blackhole-button svg path').length"),1);
+  assert.equal(await controls.eval("document.querySelector('[data-mode=blackhole] svg path')!==null"),true);
+  if (process.argv.includes('--startup-input-only')) {
+    await controls.eval("document.getElementById('pets-button').click();document.getElementById('pet-manage-entry').click()");
+    await until(() => controls.eval("panelKind==='manage' && petInstancesSnapshot.length===3"),'current Pet management list');
+    assert.equal(await controls.eval("document.querySelectorAll('.manage-pet-row').length===3 && document.querySelector('.manage-header strong').textContent==='총 3마리 · 3종'"),true);
+    await overlay.eval("for(let i=0;i<4;i++)spawnPet('kirby',500+i*20,400);spawnPet('blob',600,400);spawnPet('cat',650,400)");
+    await until(() => controls.eval("petInstancesSnapshot.length===9 && document.querySelector('[data-definition-id=kirby] .manage-pet-count').textContent==='5마리'"),'Pet management grouped count');
+    await controls.eval("document.querySelector('[data-definition-id=kirby] .manage-remove').click()");
+    await until(() => controls.eval("petInstancesSnapshot.length===4 && !petInstancesSnapshot.some(p=>p.definitionId==='kirby')"),'Pet management removes one kind without confirmation');
+    assert.equal(await overlay.eval("petInstances.every(p=>p.definitionId!=='kirby') && petDefinitions.has('kirby')"),true);
+    await controls.eval("document.querySelector('.manage-footer button:last-child').click()");
+    assert.equal(await controls.eval("document.querySelector('.manage-footer').textContent.includes('2 / 2')"), true);
+    await controls.eval("document.querySelector('[data-definition-id=cat] .manage-remove').click()");
+    await until(() => controls.eval("petInstancesSnapshot.length===3 && managePage===0 && document.querySelector('.manage-footer').textContent.includes('1 / 1')"),'Pet management page clamps after kind deletion');
+    await controls.eval("document.getElementById('pets-button').click()");
+    assert.equal(await controls.eval("document.getElementById('play-button').textContent==='🎲' && Array.from(document.querySelectorAll('.play-choice img,.gun-choice img')).every(img=>img.naturalWidth>0)"),true);
+    for (const [button,mode,icon] of [
+      ['touch-button','touch','data:image/png'],['bomb','bomb','bomb-cursor.png'],
+      ['hammer','hammer','hammer-cursor.png'],['blackhole','blackhole','ui-vortex.svg']]) {
+      await controls.eval(button==='touch-button' ? "document.getElementById('touch-button').click()"
+        : `document.getElementById('play-button').click();document.querySelector('[data-mode=${button}]').click()`);
+      await until(() => overlay.eval(`currentMode==='${mode}'`),`${mode} mode`);
+      assert.match(await overlay.eval('getComputedStyle(canvas).cursor'),new RegExp(icon.replace('.','\\.')+(button==='bomb' ? '.*24 24' : button==='hammer' ? '.*11 18' : '.*16 16')));
+    }
+    await controls.eval("document.getElementById('pets-button').click();document.querySelector('[data-pet-id=blob]').click()");
+    await until(() => overlay.eval("currentMode==='spawn'"),'Pet tool');
+    assert.match(await overlay.eval('getComputedStyle(canvas).cursor'),/data:image\/png.*16 16/);
+    await controls.eval("document.getElementById('draw-button').click()");
+    await until(() => overlay.eval("currentMode==='draw'"),'Draw tool');
+    assert.match(await overlay.eval('getComputedStyle(canvas).cursor'),/ui-pencil\.svg.*16 16/);
+    await until(() => overlay.eval('controlsPanelOpen'),'Draw menu open');
+    const drawCount = await overlay.eval('world.drawnShapes.length');
+    await overlay.eval("canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:500,clientY:400,bubbles:true}));canvas.dispatchEvent(new MouseEvent('mousemove',{button:0,clientX:540,clientY:400,bubbles:true}));window.dispatchEvent(new MouseEvent('mouseup',{button:0,clientX:540,clientY:400,bubbles:true}))");
+    await until(() => overlay.eval('!controlsPanelOpen'),'Draw menu dismissed by stroke');
+    await until(() => controls.eval('panelKind===null'),'Draw menu closed in controls');
+    assert.equal(await overlay.eval(`currentMode==='draw' && world.drawnShapes.length===${drawCount + 1}`),true);
+    await controls.eval("document.getElementById('draw-button').click()");
+    await until(() => overlay.eval('controlsPanelOpen'),'Draw menu reopened');
+    await controls.eval("document.querySelector('[data-eraser]').click()");
+    await until(() => overlay.eval("canvas.className==='cursor-eraser'"),'Eraser cursor');
+    assert.match(await overlay.eval('getComputedStyle(canvas).cursor'),/ui-eraser\.svg.*16 16/);
+    await controls.eval("document.getElementById('play-button').click();document.querySelector('[data-mode=gun]').click()");
+    await until(() => overlay.eval("controlsPanelOpen"),'Gun menu open');
+    await overlay.eval("canvas.dispatchEvent(new MouseEvent('mousedown',{button:0,clientX:500,clientY:400,bubbles:true}))");
+    await until(() => overlay.eval("currentMode==='pc' && !controlsPanelOpen"),'outside Gun menu click returns PC');
+    assert.equal(await overlay.eval('bullets.length'),0);
+    await until(() => controls.eval("panelKind===null"),'Gun menu dismissed in controls');
+    await controls.eval("document.getElementById('play-button').click();document.querySelector('[data-mode=gun]').click();document.querySelector('[data-weapon=awm]').click()");
+    await until(() => overlay.eval("currentMode==='gun' && gunWeapon==='awm' && !controlsPanelOpen"),'Gun selection');
+    assert.match(await overlay.eval('getComputedStyle(canvas).cursor'),/ui-aim\.svg.*16 16/);
+    assert.equal(await controls.eval("document.getElementById('play-button').title"),'놀이');
+    assert.equal(await controls.eval("document.querySelectorAll('.play-choice').length===5 && document.querySelectorAll('.gun-choice').length===4 && !document.getElementById('more-button')"),true);
+    await controls.eval("document.getElementById('play-button').click()");
+    await until(() => overlay.eval('controlsPanelOpen'),'Play menu open');
+    await until(() => controls.eval('window.innerHeight>56'),'Play menu sized');
+    const panelHeight = await controls.eval("document.getElementById('control-panel').getBoundingClientRect().height");
+    assert.equal(await controls.eval("panelKind==='play' && document.querySelectorAll('#control-bar button').length===9 && getComputedStyle(document.body).backgroundColor==='rgba(0, 0, 0, 0)'"),true);
+    assert.equal(await controls.eval("(() => {const r=document.getElementById('control-panel').getBoundingClientRect();return r.top>=0 && r.left>=0 && r.right<=innerWidth && r.bottom<=innerHeight})()"),true);
+    assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight<=document.getElementById('panel-list').clientHeight"),true);
+    await overlay.eval('screenEffects.addCrack(400,400)');
+    await controls.eval("document.querySelector('.play-clear-cracks').click()");
+    await until(() => overlay.eval('screenEffects.groups.crack.length===0'),'Play crack clear');
+    await controls.eval("document.querySelector('[data-mode=gun]').click()");
+    assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight<=document.getElementById('panel-list').clientHeight"),true);
+    await controls.eval("document.getElementById('pets-button').click()");
+    assert.equal(await controls.eval("document.getElementById('control-panel').getBoundingClientRect().height"),panelHeight);
+    assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight<=document.getElementById('panel-list').clientHeight"),true);
+    assert.equal(await controls.eval("[...document.querySelectorAll('.pet-choice')].every(choice=>choice.querySelector('canvas'))"),true);
+    await controls.eval("document.getElementById('draw-button').click()");
+    assert.equal(await controls.eval("panelKind==='draw' && !document.querySelector('.panel-draw').hidden && document.getElementById('control-panel').getBoundingClientRect().height===260"),true);
+    assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight<=document.getElementById('panel-list').clientHeight"),true);
+    await controls.eval("document.getElementById('play-button').click()");
+    await controls.eval("document.getElementById('structures-button').click()");
+    await until(() => overlay.eval('structuresEnabled'),'structure toggle in Play menu');
+    await controls.eval("document.getElementById('structures-button').click()");
+    await until(() => overlay.eval('!structuresEnabled'),'structure toggle restored');
+    await controls.eval("document.getElementById('pc-button').click()");
+    await controls.eval("document.getElementById('visibility-button').click()");
+    await until(() => controls.eval("window.playground.smokeWindowVisibility().then(s=>!s.overlay&&!s.controls&&!s.enabled)"),'full Hide closes both windows');
+    await controls.eval("window.playground.smokeRestorePlayground()");
+    await until(() => controls.eval("window.playground.smokeWindowVisibility().then(s=>s.overlay&&s.controls&&s.enabled)"),'Tray-style restore opens both windows');
+    await controls.eval("document.getElementById('toolbar-hide-button').click()");
+    await until(() => controls.eval("window.playground.smokeWindowVisibility().then(s=>s.overlay&&!s.controls&&s.enabled)"),'toolbar-only Hide keeps Pets visible');
+    await controls.eval("window.playground.smokeRestorePlayground()");
+    console.log('PASS: 3 starters, 9-button toolbar, Play/Draw menus, cursor hotspots and outside-click dismissal');
+    return;
+  }
   assert.equal(await controls.eval("document.querySelectorAll('.shape-button').length===4 && document.querySelectorAll('.color-swatch').length===6 && document.getElementById('draw-size-slider').max==='100'"),true);
   await controls.eval("globalThis.__petChoice=document.querySelector('.pet-choice');document.getElementById('pets-button').click()");
   assert.equal(await controls.eval("document.getElementById('panel-list').scrollHeight <= document.getElementById('panel-list').clientHeight"), true);
   await controls.eval("document.getElementById('pets-button').click();document.getElementById('pets-button').click()");
   assert.equal(await controls.eval("globalThis.__petChoice===document.querySelector('.pet-choice')"), true);
-  assert.deepEqual(await controls.eval("['cat_brown','cat_face','cat_sleepy','salary-cat'].map(id=>document.querySelector('[data-pet-id=\"'+id+'\"]').textContent.trim())"),['🐈 황색냥','🐈 얼굴냥','🐈 실눈냥','🐈 영업냥']);
+  assert.deepEqual(await controls.eval("['cat_brown','cat_face','cat_sleepy','salary-cat'].map(id=>document.querySelector('[data-pet-id=\"'+id+'\"]').textContent.trim())"),['황색냥','얼굴냥','실눈냥','영업냥']);
+  assert.equal(await controls.eval("[...document.querySelectorAll('.pet-choice')].every(choice=>choice.querySelector('canvas'))"),true);
   await controls.eval("document.querySelector('[data-pet-id=cat_brown]').click()");
   await until(() => overlay.eval("selectedPetId === 'cat_brown' && currentMode === 'spawn'"), 'local variant selection');
   for (const [button, mode] of [['touch-button','touch'],['draw-button','draw'],
     ['bomb-button','bomb'],['hammer-button','hammer'],['gun-button','gun'],['blackhole-button','blackhole'],['pets-button','spawn']]) {
     if (mode === 'spawn') {
       await controls.eval("document.getElementById('pets-button').click();document.querySelector('[data-pet-id=blob]').click()");
+    } else if (['bomb','hammer','gun','blackhole'].includes(mode)) {
+      await controls.eval("document.getElementById('play-button').click();document.getElementById('" + button + "').click()" +
+        (mode === 'gun' ? ";document.querySelector('[data-weapon=ak47]').click()" : ''));
     } else await controls.eval("document.getElementById('" + button + "').click()");
     await until(() => overlay.eval("currentMode === '" + mode + "'"), mode + ' mode');
     await overlay.eval("canvas.dispatchEvent(new MouseEvent('mousedown',{button:2,bubbles:true,cancelable:true}))");
@@ -178,21 +276,21 @@ ipcMain.handle('smoke:clear-crack', event => {
   await until(() => overlay.eval("drawSize === 30 && drawColor === '#ffffff'"), 'Draw slider and white preset');
   await controls.eval("document.getElementById('pc-button').click()");
   await until(() => overlay.eval("currentMode === 'pc' && enabled"), 'visible PC mode');
-  await controls.eval("document.getElementById('bomb-button').click();document.getElementById('collapse-button').click()");
+  await controls.eval("document.getElementById('play-button').click();document.getElementById('bomb-button').click();document.getElementById('collapse-button').click()");
   await until(() => overlay.eval("currentMode === 'pc'"), 'collapse PC mode');
   assert.equal(await controls.eval("document.body.classList.contains('collapsed') && document.querySelectorAll('#mini-controls button').length === 3"), true);
   await controls.eval("document.getElementById('mini-visibility-button').click()");
-  await until(() => overlay.eval("enabled === false"), 'collapsed Hide');
-  await controls.eval("document.getElementById('mini-visibility-button').click()");
-  await until(() => overlay.eval("enabled === true"), 'collapsed Show');
+  await until(() => controls.eval("window.playground.smokeWindowVisibility().then(s=>!s.enabled&&!s.overlay&&!s.controls)"), 'collapsed Hide all');
+  await controls.eval("window.playground.smokeRestorePlayground()");
+  await until(() => overlay.eval("enabled === true"), 'collapsed Tray restore');
   await controls.eval("document.getElementById('expand-button').click()");
   assert.equal(await controls.eval("!document.body.classList.contains('collapsed')"), true);
   assert.equal(await overlay.eval("currentMode === 'pc'"), true);
   await controls.eval("document.getElementById('visibility-button').click()");
-  await until(() => overlay.eval("enabled === false"), 'Hide');
-  await controls.eval("document.getElementById('visibility-button').click()");
-  await until(() => overlay.eval("enabled === true && currentMode === 'pc'"), 'Show');
-  await controls.eval("document.getElementById('structures-button').click()");
+  await until(() => controls.eval("window.playground.smokeWindowVisibility().then(s=>!s.enabled&&!s.overlay&&!s.controls)"), 'Hide all');
+  await controls.eval("window.playground.smokeRestorePlayground()");
+  await until(() => overlay.eval("enabled === true && currentMode === 'pc'"), 'Tray restore all');
+  await controls.eval("document.getElementById('play-button').click();document.getElementById('structures-button').click()");
   await until(() => overlay.eval('structuresEnabled === true'), 'structures ON IPC');
   assert.equal(await controls.eval("document.getElementById('structures-button').getAttribute('aria-pressed')"), 'true');
   const structureOn = await overlay.eval(`(() => {
@@ -344,7 +442,8 @@ ipcMain.handle('smoke:clear-crack', event => {
       count:petInstances.length};
   })()`);
   assert.ok(toyEffects.hammerHit && toyEffects.hammerCount===1 && toyEffects.hammerAlpha>0
-    && toyEffects.contact && toyEffects.immediateCrack===1 && toyEffects.hammerRadius<=76.000001
+    && toyEffects.contact && toyEffects.immediateCrack===1
+    && toyEffects.hammerRadius>150 && toyEffects.hammerRadius<=170.000001
     && toyEffects.bombCracks===1 && toyEffects.bombEdge===32
     && toyEffects.bombSource==='bomb' && toyEffects.damageCount>=2
     && toyEffects.count===2,JSON.stringify(toyEffects));
@@ -366,16 +465,16 @@ ipcMain.handle('smoke:clear-crack', event => {
     return sleeping && awake && hidden && shown && petInstances.length===1;
   })()`),'native Sleep wake and damage number auxiliary ON/OFF');
   console.log('PASS: native long Sleep wakes on Hammer, damage text hides without disabling impact');
-  await controls.eval("document.getElementById('gun-button').click()");
+  await controls.eval("document.getElementById('play-button').click();document.getElementById('gun-button').click();document.querySelector('[data-weapon=ak47]').click()");
   await until(() => overlay.eval("currentMode==='gun' && canvas.className==='cursor-gun'"), 'Gun mode and cursor');
   for (const id of ['awm','ak47','uzi','double_barrel']) {
-    assert.ok(await controls.eval(`(() => {if(panelKind==='gun')closePanel();
-      document.getElementById('gun-button').click();
-      const open=panelKind==='gun' && !gunPanel.hidden;
+    assert.ok(await controls.eval(`(() => {if(panelKind)closePanel();
+      document.getElementById('play-button').click();document.getElementById('gun-button').click();
+      const open=panelKind==='play' && !gunPanel.hidden;
       document.querySelector('[data-weapon="${id}"]').click();return open})()`),id+' visible weapon menu');
     await until(() => overlay.eval(`gunWeapon==='${id}' && currentMode==='gun'`),id+' tool selection');
   }
-  await controls.eval("document.getElementById('gun-button').click();document.querySelector('[data-weapon=ak47]').click()");
+  await controls.eval("document.getElementById('play-button').click();document.getElementById('gun-button').click();document.querySelector('[data-weapon=ak47]').click()");
   await until(() => overlay.eval("gunWeapon==='ak47'"), 'restore AK-47');
   assert.ok(await overlay.eval(`(() => {
     stopAnimation();clearPlayground('all');lastGunShotAt=-Infinity;
@@ -823,7 +922,7 @@ ipcMain.handle('smoke:clear-crack', event => {
   await restored.eval("document.getElementById('exit-button').click()");
   await until(()=>child.exitCode!==null,'restart exit');restored.close();restoredOverlay.close();
   console.log('PASS: legacy effects fallback, native Tray toggle/broadcast, atomic settings persistence and restart');
-  console.log('PASS: 4 starters, current Pet variants, right-click PC, 3-button collapse, structure display/collision toggle, Draw collider, Grab/Throw/Trash, Hide/Show, HTTP 0, Exit');
+  console.log('PASS: 3 starters, current Pet variants, right-click PC, 3-button collapse, structure display/collision toggle, Draw collider, Grab/Throw/Trash, Hide/Show, HTTP 0, Exit');
 }
 run().catch(error => { console.error(error); process.exitCode=1; }).finally(async () => {
   if (child && child.exitCode === null) child.kill();

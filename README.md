@@ -20,6 +20,8 @@ GitHub Releases의 `DesktopPlayground-v1.0.0.zip`을 다운로드해 압축을 �
 
 ## 개발
 
+이 문서의 다운로드·조작 안내는 공개된 v1.0.0 ZIP 기준입니다. 배포 전 `feature/v1.2` 작업 트리의 현행 기능, 검증 상태와 남은 일은 [v1.2 로드맵](docs/v1.2/ROADMAP.md)과 [QA 체크리스트](docs/v1.2/QA_CHECKLIST.md)를 확인하세요. 해당 작업 트리는 아직 빌드·배포되지 않았습니다.
+
 Windows x64와 Electron 29 기반입니다. 소스에서 실행하거나 portable 빌드를 만들려면 개발 PC에서 다음을 사용하세요.
 
 ```sh

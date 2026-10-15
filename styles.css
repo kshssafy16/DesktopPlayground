@@ -33,25 +33,15 @@ body.overlay {
   cursor: default !important;
 }
 
-.cursor-tool {
-  cursor: none !important;
-}
-
-.cursor-hammer {
-  cursor: none !important;
-}
-
-.cursor-gun {
-  cursor: none !important;
-}
-
-.cursor-touch {
-  cursor: grab !important;
-}
-
-.cursor-touch.is-grabbing {
-  cursor: grabbing !important;
-}
+.cursor-spawn { cursor: var(--paw-cursor, url('assets/tools/ui-paw.svg') 16 16), crosshair !important; }
+.cursor-touch { cursor: var(--hand-cursor, url('assets/tools/ui-hand.svg') 16 16), grab !important; }
+.cursor-touch.is-grabbing { cursor: var(--fist-cursor, url('assets/tools/ui-hand-grab.svg') 16 16), grabbing !important; }
+.cursor-draw { cursor: url('assets/tools/ui-pencil.svg') 16 16, crosshair !important; }
+.cursor-eraser { cursor: url('assets/tools/ui-eraser.svg') 16 16, crosshair !important; }
+.cursor-bomb { cursor: url('assets/tools/bomb-cursor.png') 24 24, crosshair !important; }
+.cursor-hammer { cursor: url('assets/tools/hammer-cursor.png') 11 18, crosshair !important; }
+.cursor-gun { cursor: url('assets/tools/ui-aim.svg') 16 16, crosshair !important; }
+.cursor-blackhole { cursor: url('assets/tools/ui-vortex.svg') 16 16, crosshair !important; }
 
 @keyframes shake {
   0%, 100% { transform: translate(0, 0); }
