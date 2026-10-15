@@ -930,13 +930,13 @@ globalThis.PlaygroundPetProfiles = {
           "loop": false
         },
         "sleep": {
-          "row": 8,
+          "row": 0,
           "frames": [
             0
           ],
           "frameMs": 500,
           "center": 0.5,
-          "foot": 0.9327
+          "foot": 0.9038461538461539
         }
       },
       "fallback": {
@@ -1647,16 +1647,16 @@ globalThis.PlaygroundPetProfiles = {
         "idle": {
           "row": 0,
           "frames": [
+            7,
             0,
             1,
             2,
             3,
             4,
             5,
-            6,
-            7
+            6
           ],
-          "frameMs": 200,
+          "frameMs": 125,
           "loop": true,
           "center": 0.5,
           "foot": 0.9230769230769231,

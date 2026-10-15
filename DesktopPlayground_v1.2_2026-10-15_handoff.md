@@ -8,7 +8,7 @@
 - 앱 개발: `D:\DesktopPlayground`, 브랜치 `feature/v1.2`
 - 애니메이션 개발: `D:\DesktopPlayground-animation`, 브랜치 `feature/v1.2-animation`
 - 기준 공개 버전: `v1.1.0` (`main`의 이전 릴리스). 새 v1.2 작업이 아직 병합/배포되었다고 가정하면 안 됨.
-- 두 로컬 폴더는 Git worktree 관계일 수 있으므로 `git worktree list`와 `git rev-parse --git-common-dir`로 먼저 확인.
+- 두 로컬 폴더는 같은 Git 저장소의 worktree임을 `git worktree list`로 확인했다. `feature/v1.2-animation`의 `5d97c5d`는 원격에도 보존됐다.
 - 역할: 앱 Codex(런타임/툴바/빌드), 애니메이션 Codex(WebP·프로필·ZIP), ChatGPT 이미지 제작 채팅(원화 PNG), PM 채팅(계획/인계).
 
 ## 구현된 기능 (사용자·Codex 보고)
@@ -20,7 +20,7 @@
 - 콜덕(`call_duck`)과 아기 하프물범(`baby_harp_seal`) 앱 등록 완료. 아기 펭귄 패키지는 완성했으나 앱 통합은 별도 확인 필요.
 - 시작 펫은 커비, 황색냥, 시바 3마리. 기존 9종 원본 유지.
 - 최근 앱 수정: 작업 표시줄 Z-order 복구(`main.js`, `taskbar-zorder.ps1`, 테스트), 아직 사용자가 Windows에서 최종 확인 필요.
-- 최근 애니메이션 수정: 영업냥 Sleep을 기존 시트 0행 0열로 매핑; 하프물범 Idle 8프레임 순서 조정. **앱 worktree에 동기화되었는지 확인 필요**.
+- 최근 애니메이션 수정: 영업냥 Sleep을 기존 시트 0행 0열로 매핑; 하프물범 Idle 8프레임 순서 조정. 앱 공통 프로필과 브라우저 사본에 동기화했다. 실제 Windows 화면 검수는 남았다.
 
 ## 애니메이션 제작 현황
 
@@ -37,7 +37,7 @@
 ## 현재 알려진 문제 및 후속 QA
 
 1. 아기 하프물범 Idle에서 시선/몸 방향이 좌우로 번갈아 튀는 듯한 현상. 단순 두 프레임 루프인지, 원화의 방향 변화인지, 앱에 프로필이 미반영된 것인지 구분. Idle은 고정 방향/숨쉬기/눈깜빡임 중심으로, 고개 돌리기는 Look 이벤트로 분리 권장.
-2. 최근 영업냥 Sleep 매핑과 하프물범 Idle 순서를 앱으로 동기화해야 함.
+2. 최근 영업냥 Sleep 매핑과 하프물범 Idle 순서는 앱에 동기화했다. 실제 앱 표시를 검수해야 함.
 3. 작업 표시줄 Z-order: WebP 뷰어, 탐색기, `Win+Shift+S`, 툴바/Playground 숨김-복원, PC 모드 클릭 통과 직접 확인 필요.
 4. 장시간 실행 중 종료 의심 이력: 재발 시 `%APPDATA%\desktop-playground\lifecycle.log` 확인.
 5. 수면 포즈 접지, 신규 펫 Walk→Idle/Jump/Sleep 전환감 확인.
