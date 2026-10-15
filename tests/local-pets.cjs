@@ -6,10 +6,28 @@ const { loadLocalPets, webpSize } = require('../local-pets');
 
 const project = path.resolve(__dirname, '..');
 const bundled = loadLocalPets(path.join(project, 'assets', 'pets'));
-assert.equal(bundled.length, 9);
+assert.equal(bundled.length, 11);
 assert.deepEqual(bundled.filter(pet => pet.category === 'cat').map(pet => [pet.id, pet.label]), [
   ['cat_brown', '황색냥'], ['cat_face', '얼굴냥'], ['cat_sleepy', '실눈냥'], ['salary-cat', '영업냥']
 ]);
+assert.deepEqual(bundled.filter(pet => ['call_duck', 'baby_harp_seal'].includes(pet.id))
+  .map(pet => [pet.id, pet.label, pet.rows, pet.category]), [
+  ['call_duck', '콜덕', 9, 'character'], ['baby_harp_seal', '아기 하프물범', 9, 'character']
+]);
+const animation = require('../animation/pet-animation.cjs');
+const profiles = require('../animation/profiles.v1.json').profiles;
+for (const id of ['call_duck', 'baby_harp_seal']) {
+  animation.assertProfile(profiles[id]);
+  for (const state of Object.keys(animation.STATES)) {
+    const { clip } = animation.resolveClip(profiles[id], state);
+    assert.ok(clip.row < 9 && clip.frames.every(frame => frame < 8), `${id}: ${state}`);
+  }
+  assert.deepEqual(profiles[id].clips.walkRight.frames, [0,1,2,3,4,5,6,7]);
+  assert.equal(profiles[id].clips.walkLeft.flip, true);
+  assert.equal(animation.resolveClip(profiles[id], 'held').name, 'drag');
+  assert.equal(animation.resolveClip(profiles[id], 'sleep').name, 'sleep');
+  assert.equal(animation.resolveClip(profiles[id], 'hit').name, 'hit');
+}
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-playground-local-'));
 try {
   for (const id of ['doge', 'kirby']) {

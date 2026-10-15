@@ -16,14 +16,15 @@ function element(surface) {
 const canvas = element('canvas');
 const pending = new Promise(() => {});
 const sandbox = {
-  __now: 0, console,
+  __now: 0, console, petSnapshots: [], drawingCalls,
   Image: class { constructor() { this.complete = true; this.naturalWidth = 1536; this.naturalHeight = 2288; } },
   document: { getElementById: id => id === 'playground-canvas' ? canvas : element('body'),
     createElement: () => element('created'), body: element('body') },
   performance: { now: () => sandbox.__now },
   window: { innerWidth: 1600, innerHeight: 900,
     addEventListener: (name, callback) => listeners.set('window:' + name, callback),
-    playground: { onState() {}, onClear() {}, onPetDefinitions() {}, setMode() {},
+    playground: { onState() {}, onClear() {}, onPetDefinitions() {}, onRemovePetInstance() {}, onRemovePetKind() {}, setMode() {},
+      publishPetInstances(instances) { sandbox.petSnapshots.push(instances); },
       getState: () => pending, getPetDefinitions: () => pending } },
   setTimeout() {}, requestAnimationFrame: () => 1, cancelAnimationFrame() {}
 };
@@ -46,8 +47,11 @@ function tick(count = 1, dt = 1) {
 function near(value, expected, message) { assert.ok(Math.abs(value - expected) < 1e-8, message || `${value} != ${expected}`); }
 let passed = 0;
 function test(name, body) {
+  if (process.argv.includes('--black-hole-only') && !/Black Hole|hole|orbit/i.test(name)) return;
+  if (process.argv.includes('--pet-management-only') && !/Pet management/.test(name)) return;
   sandbox.__now = 0;
   evaluate(`clearPlayground('all'); width=1600;height=900;structuresEnabled=false; enabled=true; currentMode='touch'; Math.random=()=>.5;`);
+  sandbox.petSnapshots.length = 0;
   drawingCalls.length = 0;
   body(); passed++;
   console.log('PASS:', name);
@@ -501,7 +505,7 @@ test('expired/replaced/cleared Black Holes release references without resuming o
   for(const action of ['expire','replace','clear']) {
     evaluate("clearPlayground('all')");pet();evaluate('p.beginThrow(30,0);addBlackHole(500,400);updateBlackHoles(1)');
     if(action==='expire')evaluate('blackHoles[0].life=.5;updateBlackHoles(1)');
-    if(action==='replace')evaluate('addBlackHole(1100,100);addBlackHole(1300,100)');
+    if(action==='replace')evaluate('for(let i=0;i<10;i++)addBlackHole(1100,100)');
     if(action==='clear')evaluate("clearPlayground('effects')");
     assert.equal(evaluate('p.blackHoleOrbit'),null);assert.equal(evaluate('p.externalMotion'),null);
     assert.ok(evaluate('Number.isFinite(p.x+p.y+p.vx+p.vy)'));tick();
@@ -510,13 +514,32 @@ test('expired/replaced/cleared Black Holes release references without resuming o
 });
 
 test('one orbit owner and consumption removes only its instance even with overlapping holes', () => {
-  pet();evaluate('globalThis.other=spawnPet("blob",1200,700);addBlackHole(500,400);addBlackHole(510,400);updateBlackHoles(1)');
+  pet();evaluate('globalThis.other=spawnPet("blob",1200,700);for(let i=0;i<10;i++)addBlackHole(500+i,400);updateBlackHoles(1)');
   assert.equal(evaluate('p.blackHoleOrbit.holeId'),evaluate('blackHoles[0].id'));
   evaluate('p.blackHoleOrbit.turns=3.5;updateBlackHoles(1)');
   assert.ok(evaluate('!petInstances.includes(p) && petInstances.includes(other) && petDefinitions.has("blob")'));
   assert.equal(evaluate('p.blackHoleOrbit'),null);assert.equal(evaluate('p.rescuedFromHoles.size'),0);
   const x=evaluate('p.x');evaluate('updateBlackHoles(1)');near(evaluate('p.x'),x);
-  assert.equal(evaluate('blackHoles.length'),2);
+  assert.equal(evaluate('blackHoles.length'),10);
+});
+
+test('eleventh Black Hole replaces oldest, clears rescue refs, and permits new capture', () => {
+  pet();evaluate('addBlackHole(500,400);updateBlackHoles(1)');
+  const oldest=evaluate('blackHoles[0].id');
+  event('canvas:mousedown',evaluate('p.x'),evaluate('p.y'),0);
+  assert.ok(evaluate(`p.rescuedFromHoles.has(${oldest})`));
+  event('window:mouseup',evaluate('p.x'),evaluate('p.y'),100);
+  evaluate('for(let i=0;i<9;i++)addBlackHole(1100,100)');
+  assert.equal(evaluate('blackHoles.length'),10);
+  assert.equal(evaluate('blackHoles[0].id'),oldest);
+  evaluate('addBlackHole(1100,100)');
+  assert.equal(evaluate('blackHoles.length'),10);
+  assert.ok(evaluate(`!blackHoles.some(hole=>hole.id===${oldest}) && p.rescuedFromHoles.size===0`));
+  evaluate("applyAppState({enabled:false,mode:'pc'});applyAppState({enabled:true,mode:'touch'})");
+  assert.equal(evaluate('blackHoles.length'),10);
+  evaluate('addBlackHole(p.x,p.y);updateBlackHoles(1)');
+  assert.equal(evaluate('p.blackHoleOrbit.holeId'),evaluate('blackHoles.at(-1).id'));
+  assert.equal(evaluate('petInstances.length'),1);
 });
 
 test('Grab rescue exclusions are removed on hole clear and Trash clears the held reference', () => {
@@ -589,6 +612,80 @@ test('Throw collision landing and autonomous recovery remain finite through rapi
     event('window:mouseup',evaluate('p.x'),evaluate('p.y'),10150+i*200);tick();
     assert.ok(evaluate('Number.isFinite(p.x+p.y+p.vx+p.vy)'));
   }
+});
+test('Pet management removes one stable instance without deleting its kind or shared structure', () => {
+  pet();
+  evaluate(`globalThis.other=spawnPet('blob',700,400);
+    world.structures=[{id:1,type:'platform',creatorPetId:p.instanceId}];
+    p.supportId=1;p.recentStructures.set(1,0);p.targetHistory=[1];
+    addBlackHole(500,400);updateBlackHoles(1)`);
+  const firstId = evaluate('p.instanceId'), otherId = evaluate('other.instanceId');
+  assert.ok(otherId > firstId);
+  assert.equal(evaluate(`removePetInstance(${firstId})`), true);
+  assert.ok(evaluate(`petInstances.length===1 && petInstances[0]===other
+    && petDefinitions.has('blob') && world.structures.length===1
+    && world.structures[0].creatorPetId===null && !p.blackHoleOrbit
+    && p.recentStructures.size===0 && p.targetHistory.length===0`));
+  assert.deepEqual(Array.from(sandbox.petSnapshots.at(-1), entry => entry.instanceId), [otherId]);
+  assert.equal(evaluate(`removePetInstance(${firstId})`), false);
+  assert.equal(evaluate('petInstances.length'), 1);
+});
+test('Pet management snapshots follow Black Hole absorption, Trash and pets-only clear', () => {
+  pet(); evaluate(`globalThis.other=spawnPet('blob',700,400);addBlackHole(500,400);
+    updateBlackHoles(1);p.blackHoleOrbit.turns=3.5;updateBlackHoles(1)`);
+  assert.equal(evaluate('petInstances.length'), 1);
+  assert.deepEqual(Array.from(sandbox.petSnapshots.at(-1), entry => entry.instanceId),
+    [evaluate('other.instanceId')]);
+  event('canvas:mousedown',700,400,0);
+  const trash=evaluate('trashRect()');event('window:mouseup',trash.x+40,trash.y+40,100);
+  assert.equal(evaluate('petInstances.length'), 0);
+  assert.equal(sandbox.petSnapshots.at(-1).length, 0);
+  evaluate(`spawnPet('blob',300,300);addBlackHole(900,400);
+    world.structures=[{id:7,type:'platform',creatorPetId:null}];clearPlayground('pets')`);
+  assert.ok(evaluate(`petInstances.length===0 && petDefinitions.has('blob')
+    && blackHoles.length===2 && world.structures.length===1`));
+  assert.equal(sandbox.petSnapshots.at(-1).length, 0);
+  evaluate(`globalThis.newPet=spawnPet('blob',500,500)`);
+  assert.ok(evaluate('newPet.instanceId>other.instanceId'));
+});
+test('Pet management kind deletion removes only matching instances and updates one snapshot', () => {
+  pet('blob');
+  evaluate(`globalThis.second=spawnPet('blob',620,400);
+    globalThis.other=spawnPet('cat',740,400);
+    world.structures=[{id:7,type:'platform',creatorPetId:p.instanceId}];`);
+  const otherId = evaluate('other.instanceId');
+  const before = sandbox.petSnapshots.length;
+  assert.equal(evaluate("removePetKind('blob')"), 2);
+  assert.equal(evaluate('petInstances.length'), 1);
+  assert.equal(evaluate('petInstances[0].instanceId'), otherId);
+  assert.equal(evaluate('world.structures[0].creatorPetId'), null);
+  assert.deepEqual(Array.from(sandbox.petSnapshots.at(-1), entry => entry.instanceId), [otherId]);
+  assert.equal(sandbox.petSnapshots.length, before + 1);
+  assert.equal(evaluate("removePetKind('blob')"), 0);
+  assert.equal(evaluate('petInstances.length'), 1);
+});
+test('Pet management supports both new Sprite kinds without changing other instances', () => {
+  evaluate(`applyPetDefinitions({defaultPets:{},localPets:[
+    {id:'call_duck',name:'콜덕',category:'character',rows:9,asset:'assets/pets/call_duck/spritesheet.webp'},
+    {id:'baby_harp_seal',name:'아기 하프물범',category:'character',rows:9,asset:'assets/pets/baby_harp_seal/spritesheet.webp'}
+  ],customPets:[]});
+  globalThis.duck=spawnPet('call_duck',400,400);
+  globalThis.secondDuck=spawnPet('call_duck',500,400);
+  globalThis.seal=spawnPet('baby_harp_seal',600,400);`);
+  assert.ok(evaluate("duck.spriteClip().clip.frames.length > 0 && seal.spriteClip().clip.frames.length > 0"));
+  for (const name of ['duck', 'seal']) {
+    evaluate(`${name}.enterAutonomy('sleep');${name}.isAutonomouslyStill=true;${name}.advanceAnimation(0)`);
+    assert.equal(evaluate(`${name}.spriteClip().clip.row`), 5);
+    evaluate(`applyNonlethalHit(${name},{source:'hammer',vx:1,vy:-3,cap:24,squish:1.2,holdMs:300,damage:10});${name}.advanceAnimation(0)`);
+    assert.equal(evaluate(`${name}.autonomy.state`), 'roam');
+    assert.equal(evaluate(`${name}.spriteClip().clip.row`), 6);
+  }
+  evaluate('seal.becomeBoss()');
+  assert.equal(evaluate('seal.boss.maxHealth'), 450);
+  assert.equal(evaluate("removePetKind('call_duck')"), 2);
+  assert.equal(evaluate('petInstances.length'), 1);
+  assert.equal(evaluate('petInstances[0].definitionId'), 'baby_harp_seal');
+  assert.equal(sandbox.petSnapshots.at(-1).length, 1);
 });
 console.log(`PASS: ${passed} Grab/Throw renderer regression cases (mock DOM/clock)`);
 

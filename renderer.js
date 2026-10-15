@@ -4,6 +4,20 @@
         const drawingCanvas = document.createElement('canvas');
         const drawingCtx = drawingCanvas.getContext('2d');
 
+        // Render the same system emoji used by the toolbar into native CSS cursors.
+        for (const [name, glyph] of [['paw', '🐾'], ['hand', '✋'], ['fist', '✊']]) {
+            const cursorCanvas = document.createElement('canvas');
+            if (typeof cursorCanvas.toDataURL !== 'function') continue;
+            cursorCanvas.width = cursorCanvas.height = 32;
+            const cursorContext = cursorCanvas.getContext('2d');
+            cursorContext.font = '26px "Segoe UI Emoji"';
+            cursorContext.textAlign = 'center';
+            cursorContext.textBaseline = 'middle';
+            cursorContext.fillText(glyph, 16, 17);
+            canvas.style.setProperty(`--${name}-cursor`,
+                `url("${cursorCanvas.toDataURL('image/png')}") 16 16`);
+        }
+
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
         drawingCanvas.width = width;
@@ -308,6 +322,8 @@
         let auxiliaryEffectsEnabled = true;
         let enabled = false;
         let currentMode = 'pc';
+        let controlsPanelOpen = false;
+        let controlsPanelKind = null;
         let selectedPetId = null;
         let drawColor = '#30384c';
         let drawSize = 7;
@@ -324,14 +340,14 @@
         const grenades = screenEffects.groups.grenade;
         const weaponProfiles = Object.freeze({
             awm: { label: 'AWM', cooldownMs: 4000, speed: 3.1, damage: 120, knockback: 34,
-                spread: 0, count: 1, width: 166, height: 62, muzzle: [.99,.32], color: '#e94c70' },
+                spread: 0, count: 1, width: 166, height: 62, muzzle: [.99,.32], color: '#e94c70', crackRadius: 124, crackStyle: 'gun-heavy' },
             ak47: { label: 'AK-47', cooldownMs: 120, speed: 2.35, damage: 20, knockback: 12,
-                spread: 0, count: 1, width: 137, height: 55, muzzle: [.98,.31], color: '#ff815d', auto: true },
+                spread: 0, count: 1, width: 137, height: 55, muzzle: [.98,.31], color: '#ff815d', auto: true, crackRadius: 71, crackStyle: 'gun-medium' },
             uzi: { label: 'UZI', cooldownMs: 65, speed: 2.25, damage: 9, knockback: 6,
-                spread: 0, count: 1, width: 105, height: 61, muzzle: [.98,.27], color: '#ffd15a', auto: true },
+                spread: 0, count: 1, width: 105, height: 61, muzzle: [.98,.27], color: '#ffd15a', auto: true, crackRadius: 40, crackStyle: 'gun-light' },
             double_barrel: { label: '더블배럴 샷건', cooldownMs: 1200, speed: 2.0, damage: 12,
                 knockback: 5, spread: .22, count: 10, width: 141, height: 42,
-                muzzle: [.99,.29], color: '#ff9b67' }
+                muzzle: [.99,.29], color: '#ff9b67', crackRadius: 28, crackStyle: 'gun-pellet' }
         });
         const weaponSprites = Object.fromEntries(Object.keys(weaponProfiles).map(id => {
             const image = new Image(); image.src = `assets/weapons/${id}.png`; return [id, image];
@@ -342,6 +358,19 @@
         let gunTriggerHeld = false;
         let grenadeDrag = null;
         let lastGunShotAt = -Infinity;
+        const combo = { count: 0, lastHitAt: -Infinity };
+        const comboDisplayMs = 3000;
+        const comboChainMs = comboDisplayMs; // A hit during the visible fade continues the chain.
+        const bossSpawnChance = .025;
+        const bossHealthById = Object.freeze({
+            cat_brown: 520, cat_face: 420, cat_sleepy: 560, 'salary-cat': 550,
+            doge: 620, puddle: 470, usagi: 390, kirby: 510,
+            kirby_sleepy: 580, blob: 360
+        });
+        const bossDefaultHealth = 450;
+        const bossFadeMs = 1200;
+        let lastPetRegionSentAt = -Infinity;
+        let lastPetRegionSignature = '';
         let blackHoles = [];
         let strokes = world.drawnShapes;
         let activeStroke = null;
@@ -376,7 +405,8 @@
         };
         const activityById = { cat_brown: 'calm', cat_face: 'normal', cat_sleepy: 'sleepy',
             'salary-cat': 'calm', doge: 'active', puddle: 'normal', usagi: 'veryActive',
-            kirby: 'lively', kirby_sleepy: 'sleepy', blob: 'normal' };
+            kirby: 'lively', kirby_sleepy: 'sleepy', blob: 'normal',
+            call_duck: 'lively', baby_harp_seal: 'calm' };
         const activityByCategory = { cat: 'calm', dog: 'normal' };
         const autonomousEvent = (chance, multiplier, dt) => Math.random() < 1 - Math.exp(-chance * multiplier * dt);
 
@@ -388,6 +418,7 @@
                 this.definitionId = definition.id;
                 this.definition = definition;
                 this.size = definition.defaultSize;
+                this.boss = null;
 
                 this.vx = definition.id === 'robot' ? (Math.random() < .5 ? -2 : 2) : (Math.random() - 0.5) * 4;
                 this.vy = 0;
@@ -439,8 +470,7 @@
                     this.imgElement.style.height = `${definition.displayHeight}px`;
                     this.imgElement.style.zIndex = '15';
                     this.imgElement.onerror = () => {
-                        this.remove();
-                        petInstances = petInstances.filter(pet => pet !== this);
+                        removePetInstance(this.instanceId);
                     };
                     document.body.appendChild(this.imgElement);
                     this.updateImagePosition();
@@ -457,7 +487,44 @@
                 this.rescuedFromHoles.clear();
                 this.externalMotion = null;
                 this.motionCause = null;
+                this.supportId = null;
+                this.climbing = null;
+                this.targetLadderId = null;
+                this.lastStructureId = null;
+                this.recentStructures.clear();
+                this.targetHistory = [];
+                this.zoneVisits.clear();
+                this.visitedZones = [];
+                this.visitedLevels.clear();
+                this.exploreX = null;
+                this.navigationUntil = 0;
+                for (const structure of world.structures)
+                    if (structure.creatorPetId === this.instanceId) structure.creatorPetId = null;
                 if (this.imgElement) this.imgElement.remove();
+            }
+
+            becomeBoss() {
+                const maxHealth = bossHealthById[this.definitionId] ?? bossDefaultHealth;
+                const scale = 1.34 + (maxHealth - 360) / 2600;
+                this.boss = { health: maxHealth, maxHealth, scale,
+                    barWidth: Math.round(100 + (maxHealth - 360) * .11),
+                    defeated: false, fadeRemainingMs: 0, spawnedAt: world.now() };
+                this.size *= scale;
+            }
+
+            beginBossDeath() {
+                if (!this.boss || this.boss.defeated) return;
+                this.boss.health = 0;
+                this.boss.defeated = true;
+                this.boss.fadeRemainingMs = bossFadeMs;
+                this.vx = 0; this.vy = 0;
+                this.externalMotion = null; this.motionCause = null;
+                this.climbing = null; this.climbingDown = false;
+                this.targetLadderId = null; this.supportId = null;
+                this.animationEvent = null;
+                this.animationReaction = null;
+                this.enterAutonomy('sleep');
+                this.isAutonomouslyStill = true;
             }
 
             enterAutonomy(state) {
@@ -530,6 +597,12 @@
             }
 
             update(dt = 1, animationElapsedMs = dt * physicsFrameMs) {
+                if (this.boss?.defeated) {
+                    this.boss.fadeRemainingMs = Math.max(0, this.boss.fadeRemainingMs - animationElapsedMs);
+                    this.advanceAnimation(animationElapsedMs);
+                    if (this.imgElement) this.imgElement.style.opacity = String(this.boss.fadeRemainingMs / bossFadeMs);
+                    return;
+                }
                 // Small physics steps keep fast throws consistent across refresh rates.
                 // Autonomous movement and ladder timing keep their existing update path.
                 const steps = this.externalMotion ? Math.max(1, Math.ceil(dt / throwPhysics.maxStep)) : 1;
@@ -784,6 +857,11 @@
 
             spriteClip(elapsedMs = 0) {
                 const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
+                if (this.boss?.defeated) {
+                    const clip = profile.clips?.sleep || profile.clips?.rest || profile.clips?.idle
+                        || this.definition.clips?.idle;
+                    if (clip) return { state: 'bossSleep', clip };
+                }
                 const platform = this.platformClip(profile, elapsedMs);
                 if (platform) return platform;
                 const clips = profile.clips || this.definition.clips || {};
@@ -864,7 +942,8 @@
                     this.imgElement.style.left = (this.x - this.definition.displayWidth / 2) + 'px';
                     this.imgElement.style.top = (this.y - this.definition.displayHeight / 2) + 'px';
                     const flip = this.facingRight ? 1 : -1;
-                    this.imgElement.style.transform = `scale(${flip * this.squish}, ${1 / this.squish})`;
+                    const bossScale = this.boss?.scale ?? 1;
+                    this.imgElement.style.transform = `scale(${flip * bossScale * this.squish}, ${bossScale / this.squish})`;
                 }
             }
 
@@ -888,10 +967,11 @@
 
             draw(ctx) {
                 ctx.save();
+                if (this.boss?.defeated) ctx.globalAlpha *= this.boss.fadeRemainingMs / bossFadeMs;
                 ctx.translate(this.x, this.y);
                 const quiet = this.quietAutonomy();
                 const looking = quiet && this.autonomy.state === 'look';
-                const resting = quiet && ['rest', 'sleep'].includes(this.autonomy.state);
+                const resting = this.boss?.defeated || quiet && ['rest', 'sleep'].includes(this.autonomy.state);
                 const profile = this.definition.animation || spriteProfiles[this.definitionId] || {};
                 const sleeping = resting && (this.autonomy.state === 'sleep' || profile.sleeping);
                 const restPhase = (this.autonomy.durationMs - this.autonomy.remainingMs) / 1000;
@@ -1071,10 +1151,18 @@
             screenEffects.add('impact', { x, y, color }, life * physicsFrameMs);
         }
 
+        function registerComboHit(source) {
+            if (source !== 'gun' && source !== 'hammer' && source !== 'bomb') return;
+            const now = world.now();
+            combo.count = now - combo.lastHitAt < comboChainMs
+                ? Math.min(999, combo.count + 1) : 1;
+            combo.lastHitAt = now;
+        }
+
         // Shared nonlethal toy hit path; future tools can supply their own impulse and number.
         function applyNonlethalHit(pet, { source, vx, vy, cap, squish, holdMs, damage,
             hitX = pet.x, hitY = pet.y, numberOffset = 0, numberLift = 0, weapon = null }) {
-            if (pet.isDragging || pet.blackHoleOrbit) return false;
+            if (pet.isDragging || pet.blackHoleOrbit || pet.boss?.defeated) return false;
             pet.vx = Math.max(-cap, Math.min(cap, pet.vx + vx));
             pet.vy = Math.max(-cap, Math.min(cap, pet.vy + vy));
             pet.squish = squish;
@@ -1082,15 +1170,22 @@
             pet.beginImpact(source);
             pet.climbing = null; pet.climbingDown = false;
             pet.targetLadderId = null; pet.supportId = null;
+            const amount = Math.max(1, Math.round(damage));
             screenEffects.add('damage', { x: hitX + numberOffset,
                 y: Math.max(32, hitY - (source === 'gun' ? 24 + numberLift : pet.size * 1.9)),
-                amount: Math.max(1, Math.round(damage)), source, weapon,
+                amount, source, weapon,
                 drift: ((pet.instanceId * 17 + numberOffset * 3) % 11 - 5) * 1.2 }, 850);
+            if (pet.boss) {
+                pet.boss.health = Math.max(0, pet.boss.health - amount);
+                if (pet.boss.health === 0) pet.beginBossDeath();
+            }
+            registerComboHit(source);
             return true;
         }
 
         const hitMaskCache = new WeakMap();
         function spriteHitArea(pet, x, y) {
+            if (pet.boss?.defeated) return null;
             if (pet.definition.renderKind !== 'sprite') {
                 if (Math.hypot(x - pet.x, y - pet.y) > pet.size) return null;
                 return y < pet.y - pet.size * .3 ? 'head' : 'body';
@@ -1210,7 +1305,7 @@
                 let target=null,area=null,firstT=Infinity;
                 if (length2>0) for(let p=petInstances.length-1;p>=0;p--) {
                     const pet=petInstances[p];
-                    if(pet.isDragging||pet.blackHoleOrbit)continue;
+                    if(pet.isDragging||pet.blackHoleOrbit||pet.boss?.defeated)continue;
                     const radius=pet.size*1.7,px=fromX-pet.x,py=fromY-pet.y;
                     const projection=px*dx+py*dy;
                     const discriminant=projection*projection-length2*(px*px+py*py-radius*radius);
@@ -1247,6 +1342,12 @@
                     addParticles(bullet.x, bullet.y, '#79d9ee', 9, 5);
                     bullets.splice(i, 1);
                 } else if(arrived) {
+                    // A miss reaches only the transparent overlay, never the desktop below.
+                    const profile = weaponProfiles[bullet.weapon];
+                    screenEffects.addCrack(bullet.x, bullet.y, profile.crackRadius, profile.crackStyle);
+                    addImpact(bullet.x, bullet.y, 'rgba(221,241,255,.9)', bullet.weapon === 'awm' ? 7 : 4);
+                    addParticles(bullet.x, bullet.y, '#b7d8e7', bullet.weapon === 'awm' ? 12
+                        : bullet.weapon === 'double_barrel' ? 2 : 4, 3, 'glass');
                     bullets.splice(i,1);
                 } else if (bullet.x < -32 || bullet.y < -32 || bullet.x > width + 32 || bullet.y > height + 32) {
                     bullets.splice(i, 1);
@@ -1271,7 +1372,7 @@
             void body.offsetWidth;
             if (auxiliaryEffectsEnabled) body.classList.add('shake-bomb');
             for (const pet of petInstances) {
-                if (pet.isDragging || pet.blackHoleOrbit) continue;
+                if (pet.isDragging || pet.blackHoleOrbit || pet.boss?.defeated) continue;
                 const dx = pet.x - x, dy = pet.y - y;
                 const distance = Math.hypot(dx, dy);
                 if (distance >= 360) continue;
@@ -1294,6 +1395,32 @@
                 vx, vy, rotation: 0 }, 3000);
         }
 
+        function moveGrenadeThroughDrawing(grenade, dt) {
+            let x = grenade.x, y = grenade.y, remaining = dt;
+            for (let pass = 0; pass < 4 && remaining > 1e-6; pass++) {
+                const dx = grenade.vx * remaining, dy = grenade.vy * remaining;
+                let first = null;
+                for (const segment of world.drawnColliders) {
+                    const radius = 13 + segment.thickness / 2;
+                    if (Math.max(x, x + dx) + radius < Math.min(segment.x1, segment.x2)
+                        || Math.min(x, x + dx) - radius > Math.max(segment.x1, segment.x2)
+                        || Math.max(y, y + dy) + radius < Math.min(segment.y1, segment.y2)
+                        || Math.min(y, y + dy) - radius > Math.max(segment.y1, segment.y2)) continue;
+                    const hit = sweptStrokeHit(x, y, dx, dy, radius, segment);
+                    if (hit && (!first || hit.time < first.time)) first = hit;
+                }
+                if (!first) { x += dx; y += dy; break; }
+                x += dx * first.time + first.nx * (first.depth + .05);
+                y += dy * first.time + first.ny * (first.depth + .05);
+                const normalSpeed = grenade.vx * first.nx + grenade.vy * first.ny;
+                const bounce = Math.abs(normalSpeed) > 1 ? .55 : 0;
+                grenade.vx = (grenade.vx - (1 + bounce) * normalSpeed * first.nx) * .96;
+                grenade.vy = (grenade.vy - (1 + bounce) * normalSpeed * first.ny) * .96;
+                remaining *= 1 - first.time;
+            }
+            grenade.x = x; grenade.y = y;
+        }
+
         function updateGrenades(elapsedMs) {
             if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return;
             for (let i = grenades.length - 1; i >= 0; i--) {
@@ -1303,8 +1430,7 @@
                 const dt = travelMs / steps / physicsFrameMs;
                 for (let step = 0; step < steps; step++) {
                     grenade.vy += .3 * dt;
-                    grenade.x += grenade.vx * dt;
-                    grenade.y += grenade.vy * dt;
+                    moveGrenadeThroughDrawing(grenade, dt);
                     grenade.rotation += grenade.vx * dt * .015;
                     if (grenade.x < 16) { grenade.x = 16; grenade.vx = Math.abs(grenade.vx) * .58; }
                     if (grenade.x > width-16) { grenade.x = width-16; grenade.vx = -Math.abs(grenade.vx) * .58; }
@@ -1328,7 +1454,7 @@
             // A narrow, single-target hit; Grab and orbit keep their existing priority.
             for (let i = petInstances.length - 1; i >= 0; i--) {
                 const pet = petInstances[i];
-                if (pet.isDragging || pet.blackHoleOrbit) continue;
+                if (pet.isDragging || pet.blackHoleOrbit || pet.boss?.defeated) continue;
                 const dx = pet.x - x, dy = pet.y - y;
                 const distance = Math.hypot(dx, dy);
                 if (distance > pet.size + 18) continue;
@@ -1349,13 +1475,14 @@
             hammer.visualFired = true;
             const nearby = screenEffects.groups.crack.filter(crack =>
                 Math.hypot(crack.x-hammer.x,crack.y-hammer.y) < 65).length;
-            screenEffects.addCrack(hammer.x, hammer.y, Math.min(116,76 + nearby*10));
-            addRing(hammer.x, hammer.y, 'rgba(197,231,248,.9)', 88, 11);
-            addImpact(hammer.x, hammer.y, 'rgba(241,251,255,.98)', 7);
-            addParticles(hammer.x, hammer.y, '#8fbdd0', 24, 8, 'glass');
+            screenEffects.addCrack(hammer.x, hammer.y, Math.min(200,170 + nearby*10), 'hammer');
+            addRing(hammer.x, hammer.y, 'rgba(197,231,248,.9)', 170, 11);
+            addImpact(hammer.x, hammer.y, 'rgba(241,251,255,.98)', 9);
+            addParticles(hammer.x, hammer.y, '#8fbdd0', 34, 9, 'glass');
         }
 
         const blackHoleConsumeRadius = 22;
+        const maxBlackHoles = 10;
         let nextBlackHoleId = 1;
         function pruneBlackHoleReferences() {
             const live = new Set(blackHoles.filter(hole => hole.life > 0).map(hole => hole.id));
@@ -1366,7 +1493,7 @@
         }
         function addBlackHole(x, y) {
             blackHoles.push({ id: nextBlackHoleId++, x, y, radius: 190, life: 540, angle: 0 });
-            if (blackHoles.length > 2) {
+            if (blackHoles.length > maxBlackHoles) {
                 blackHoles.shift();
                 pruneBlackHoleReferences();
             }
@@ -1400,19 +1527,21 @@
                     ctx.fillStyle = 'rgba(194,167,245,.65)';
                     ctx.beginPath(); ctx.arc(hole.x + Math.cos(a) * r, hole.y + Math.sin(a) * r, 1.4, 0, Math.PI * 2); ctx.fill();
                 }
+                const radiusSquared = hole.radius * hole.radius;
                 for (const pet of petInstances) {
-                    if (pet.isDragging || pet.absorbed) continue;
+                    if (pet.isDragging || pet.absorbed || pet.boss?.defeated) continue;
                     if (pet.blackHoleOrbit && pet.blackHoleOrbit.holeId !== hole.id) continue;
                     const dx = pet.x - hole.x, dy = pet.y - hole.y;
-                    const distance = Math.hypot(dx, dy);
+                    const distanceSquared = dx * dx + dy * dy;
                     // Grab owns position. A rescued Pet must leave this hole before fresh capture.
                     if (pet.rescuedFromHoles.has(hole.id)) {
-                        if (distance < hole.radius) continue;
+                        if (distanceSquared < radiusSquared) continue;
                         pet.rescuedFromHoles.delete(hole.id);
                     }
-                    if (!pet.blackHoleOrbit && distance < hole.radius) {
+                    if (!pet.blackHoleOrbit && distanceSquared >= radiusSquared) continue;
+                    if (!pet.blackHoleOrbit) {
                         pet.blackHoleOrbit = { holeId: hole.id, angle: Math.atan2(dy, dx),
-                            startRadius: Math.max(34, distance), turns: 0 };
+                            startRadius: Math.max(34, Math.sqrt(distanceSquared)), turns: 0 };
                         // Orbit supersedes Throw/AI; release never resumes a stale throw timer.
                         pet.externalMotion = null;
                         pet.motionCause = null;
@@ -1436,9 +1565,12 @@
                     if (orbit.turns >= 3.5 && radius <= blackHoleConsumeRadius + 1) { pet.remove(); pet.absorbed = true; }
                 }
             }
+            const previousPetCount = petInstances.length;
             petInstances = petInstances.filter(pet => !pet.absorbed);
+            if (petInstances.length !== previousPetCount) publishPetInstances();
+            const previousHoleCount = blackHoles.length;
             blackHoles = blackHoles.filter(hole => hole.life > 0);
-            pruneBlackHoleReferences();
+            if (blackHoles.length !== previousHoleCount) pruneBlackHoleReferences();
         }
 
         function shapeSegments(shape) {
@@ -1829,26 +1961,34 @@
                 ctx.save();
                 ctx.translate(crack.x, crack.y);
                 ctx.globalAlpha = screenEffects.crackMode === 'accumulate' ? 1 : Math.min(1, crack.remainingMs / 500);
-                const spread = Math.min(1,Math.max(.08,(crack.durationMs - crack.remainingMs + elapsedMs)/260));
+                const strong = crack.style === 'hammer';
+                const heavy = crack.style === 'gun-heavy';
+                const pellet = crack.style === 'gun-pellet';
+                const spread = Math.min(1,Math.max(strong ? .2 : .08,
+                    (crack.durationMs - crack.remainingMs + elapsedMs)/(strong ? 180 : 260)));
                 ctx.scale(spread,spread);
-                ctx.fillStyle = 'rgba(44,68,82,.48)';
+                ctx.fillStyle = heavy ? 'rgba(17,24,34,.94)' : strong ? 'rgba(34,52,68,.78)'
+                    : 'rgba(44,68,82,.65)';
                 ctx.beginPath();
                 crack.core.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
                 ctx.closePath(); ctx.fill();
-                ctx.fillStyle = 'rgba(191,227,241,.36)';
+                ctx.fillStyle = strong || heavy ? 'rgba(191,227,241,.62)' : 'rgba(191,227,241,.4)';
                 for (const shard of crack.shards) {
                     ctx.beginPath(); ctx.moveTo(shard[0].x, shard[0].y);
                     ctx.lineTo(shard[1].x, shard[1].y); ctx.lineTo(shard[2].x, shard[2].y);
                     ctx.closePath(); ctx.fill();
                 }
-                ctx.strokeStyle = 'rgba(64,92,110,.76)'; ctx.lineWidth = 2.4;
+                ctx.strokeStyle = strong ? 'rgba(33,54,75,.98)' : heavy
+                    ? 'rgba(39,60,77,.94)' : 'rgba(64,92,110,.78)';
+                ctx.lineWidth = strong ? 4.4 : heavy ? 3.2 : pellet ? 1.7 : 2.4;
                 ctx.beginPath();
                 for (const path of crack.paths) {
                     ctx.moveTo(path[0].x, path[0].y);
                     for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
                 }
                 ctx.stroke();
-                ctx.translate(.7, -.8); ctx.strokeStyle = 'rgba(244,253,255,.82)'; ctx.lineWidth = .85;
+                ctx.translate(.7, -.8); ctx.strokeStyle = 'rgba(244,253,255,.82)';
+                ctx.lineWidth = strong ? 1.6 : heavy ? 1.1 : pellet ? .55 : .85;
                 ctx.stroke();
                 ctx.restore();
             }
@@ -1879,6 +2019,98 @@
                     : gunProfile ? '#fff7dd' : '#eefaff';
                 ctx.fillText(String(number.amount), 0, 0);
                 ctx.restore();
+            }
+        }
+
+        function drawCombo() {
+            const age = world.now() - combo.lastHitAt;
+            if (combo.count && age >= comboDisplayMs) {
+                combo.count = 0;
+                combo.lastHitAt = -Infinity;
+            }
+            if (!auxiliaryEffectsEnabled || !combo.count || age < 0) return;
+            const opacity = Math.min(1, (comboDisplayMs - age) / 600);
+            const milestone = combo.count >= 50 ? 3 : combo.count >= 25 ? 2
+                : combo.count >= 10 ? 1 : combo.count >= 5 ? .5 : 0;
+            const scale = 1 + milestone * .035 + (age < 180 ? (.16 + milestone * .025) * (1 - age / 180) : 0);
+            ctx.save();
+            ctx.globalAlpha = opacity;
+            ctx.translate(width - 108, 112);
+            ctx.scale(scale, scale);
+            ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+            ctx.lineJoin = 'round';
+            ctx.font = '900 23px sans-serif';
+            ctx.lineWidth = 6; ctx.strokeStyle = 'rgba(29,38,54,.94)';
+            ctx.strokeText('COMBO', 0, -14);
+            ctx.fillStyle = '#fff0b3'; ctx.fillText('COMBO', 0, -14);
+            ctx.font = '900 49px sans-serif';
+            const digits = String(combo.count).padStart(3, '0');
+            ctx.lineWidth = 9; ctx.strokeText(digits, 0, 24);
+            ctx.fillStyle = milestone >= 2 ? '#ffe07c' : '#ffb852'; ctx.fillText(digits, 0, 24);
+            ctx.restore();
+        }
+
+        function drawSleepEffect(pet) {
+            if (!auxiliaryEffectsEnabled || pet.boss?.defeated || pet.autonomy.state !== 'sleep'
+                || !pet.quietAutonomy()) return;
+            ctx.save();
+            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.font = '600 13px sans-serif';
+            for (let i = 0; i < 2; i++) {
+                const phase = ((world.now() / 2300 + i * .5 + pet.instanceId * .13) % 1 + 1) % 1;
+                ctx.globalAlpha = .5 * Math.sin(Math.PI * phase);
+                ctx.fillStyle = '#7189a5';
+                ctx.fillText('z', pet.x + pet.size * .78 + i * 8,
+                    pet.y - pet.size * 1.25 - phase * 22);
+            }
+            ctx.restore();
+        }
+
+        function drawBossHealth(pet) {
+            if (!pet.boss) return;
+            const opacity = pet.boss.defeated ? pet.boss.fadeRemainingMs / bossFadeMs : 1;
+            const barWidth = pet.boss.barWidth;
+            const left = pet.x - barWidth / 2, top = pet.y - pet.size * 1.9 - 20;
+            ctx.save();
+            if (auxiliaryEffectsEnabled) {
+                const spawnAge = world.now() - pet.boss.spawnedAt;
+                const entrance = !pet.boss.defeated && spawnAge >= 0 && spawnAge < 500;
+                const defeat = pet.boss.defeated && pet.boss.fadeRemainingMs > 0;
+                if (entrance || defeat) {
+                    const progress = entrance ? spawnAge / 500 : 1 - pet.boss.fadeRemainingMs / bossFadeMs;
+                    ctx.globalAlpha = (1 - progress) * (entrance ? .28 : .38);
+                    ctx.strokeStyle = entrance ? '#ffd9a0' : '#f5a4b1';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(pet.x, pet.y - pet.size * .3, pet.size * (1 + progress * .45), 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+            ctx.globalAlpha = Math.max(0, opacity);
+            ctx.fillStyle = 'rgba(32,38,52,.8)'; ctx.fillRect(left - 2, top, barWidth + 4, 12);
+            ctx.fillStyle = '#f3d3bb'; ctx.fillRect(left, top + 2, barWidth, 8);
+            ctx.fillStyle = pet.boss.health / pet.boss.maxHealth <= .2 ? '#ff9568' : '#ed6473';
+            ctx.fillRect(left, top + 2, barWidth * pet.boss.health / pet.boss.maxHealth, 8);
+            ctx.restore();
+        }
+
+        function publishTaskbarPetRegions() {
+            if (currentMode !== 'pc' || !window.playground?.publishTaskbarPetRegions) return;
+            const now = performance.now();
+            if (now - lastPetRegionSentAt < 150) return;
+            lastPetRegionSentAt = now;
+            const regions = petInstances.map(pet => {
+                // Generous visual bounds include Sprite pose/anchor variation;
+                // the main process clips these to the taskbar strip.
+                const reach = Math.ceil(pet.size * 1.8 + 8);
+                const x = Math.floor((pet.x - reach) / 8) * 8;
+                const y = Math.floor((pet.y - reach) / 8) * 8;
+                return { x, y, width: reach * 2 + 8, height: reach * 2 + 8 };
+            });
+            const signature = JSON.stringify(regions);
+            if (signature !== lastPetRegionSignature) {
+                lastPetRegionSignature = signature;
+                window.playground.publishTaskbarPetRegions(regions);
             }
         }
 
@@ -1930,12 +2162,42 @@
             return { vx: vx * scale, vy: vy * scale };
         }
 
-        function spawnPet(id, x, y) {
+        function spawnPet(id, x, y, { allowBoss = false } = {}) {
             const definition = petDefinitions.get(id);
             if (!definition || !definition.enabled) return null;
             const pet = new Pet(x, y, definition);
+            if (allowBoss && Math.random() < bossSpawnChance) pet.becomeBoss();
             petInstances.push(pet);
+            publishPetInstances();
             return pet;
+        }
+
+        function publishPetInstances() {
+            window.playground.publishPetInstances(petInstances.map(pet => ({
+                instanceId: pet.instanceId, definitionId: pet.definitionId
+            })));
+        }
+
+        function removePetInstance(instanceId) {
+            const index = petInstances.findIndex(pet => pet.instanceId === instanceId);
+            if (index < 0) return false;
+            const [pet] = petInstances.splice(index, 1);
+            pet.remove();
+            publishPetInstances();
+            return true;
+        }
+
+        function removePetKind(definitionId) {
+            if (typeof definitionId !== 'string') return 0;
+            let removed = 0;
+            petInstances = petInstances.filter(pet => {
+                if (pet.definitionId !== definitionId) return true;
+                pet.remove();
+                removed++;
+                return false;
+            });
+            if (removed) publishPetInstances();
+            return removed;
         }
 
         function applyPetDefinitions(snapshot) {
@@ -1969,11 +2231,13 @@
                 });
             }
             if (draggedPet && !petDefinitions.get(draggedPet.definitionId)?.enabled) releaseDraggedPet();
+            const previousPetCount = petInstances.length;
             petInstances = petInstances.filter(pet => {
                 if (petDefinitions.get(pet.definitionId)?.enabled) return true;
                 pet.remove();
                 return false;
             });
+            if (petInstances.length !== previousPetCount) publishPetInstances();
             definitionsLoaded = true;
         }
 
@@ -1984,12 +2248,24 @@
                 window.playground.setMode('pc');
                 return;
             }
-            if (!enabled || currentMode === 'pc' || e.button !== 0) return;
+            if (!enabled || e.button !== 0) return;
+            if (controlsPanelOpen) {
+                if (currentMode === 'draw' && controlsPanelKind === 'draw') {
+                    // Dismiss Draw options and use this same press to start the stroke.
+                    controlsPanelOpen = false;
+                    window.playground.setControlsPanelOpen(false);
+                } else {
+                    // Other tools retain the outside-click safety behavior.
+                    window.playground.setMode('pc');
+                    return;
+                }
+            }
+            if (currentMode === 'pc') return;
             pointerDown = true;
             mouseX = e.clientX; mouseY = e.clientY;
 
             if (currentMode === 'spawn') {
-                spawnPet(selectedPetId, mouseX, mouseY);
+                spawnPet(selectedPetId, mouseX, mouseY, { allowBoss: true });
             } else if (currentMode === 'bomb') {
                 grenadeDrag = { x: mouseX, y: mouseY };
             } else if (currentMode === 'hammer') {
@@ -2004,6 +2280,7 @@
             } else if (currentMode === 'touch') {
                 for (let i = petInstances.length - 1; i >= 0; i--) {
                     const p = petInstances[i];
+                    if (p.boss?.defeated) continue;
                     if (Math.hypot(p.x - mouseX, p.y - mouseY) < p.size + 25) {
                         draggedPet = p;
                         dragOffsetX = p.x - mouseX; dragOffsetY = p.y - mouseY;
@@ -2037,6 +2314,7 @@
             }
             if (pointerDown && currentMode === 'draw' && (activeStroke || eraser)) extendDrawing(mouseX, mouseY);
         });
+        canvas.addEventListener('mouseleave', () => { mouseX = -1; mouseY = -1; cancelInput(); });
 
         window.addEventListener('mouseup', (e) => {
             const wasDown = pointerDown;
@@ -2053,9 +2331,7 @@
                 draggedPet.x = mouseX + dragOffsetX;
                 draggedPet.y = mouseY + dragOffsetY;
                 if (inTrash(draggedPet.x, draggedPet.y)) {
-                    const removedPet = draggedPet;
-                    removedPet.remove();
-                    petInstances = petInstances.filter(pet => pet !== removedPet);
+                    removePetInstance(draggedPet.instanceId);
                 } else {
                     const { vx, vy } = dragThrowVelocity();
                     draggedPet.beginThrow(vx, vy);
@@ -2075,39 +2351,9 @@
             window.playground.setMode('pc');
         }, true);
 
-        function drawToolCursor() {
-            if (!enabled || currentMode === 'pc' || currentMode === 'touch' || currentMode === 'gun') return;
-            const x=mouseX,y=mouseY;
-            ctx.save();ctx.translate(x,y);
-            ctx.lineCap='round';ctx.lineJoin='round';ctx.lineWidth=2;
-            ctx.strokeStyle='rgba(27,40,53,.95)';ctx.fillStyle='rgba(248,253,255,.9)';
-            if(currentMode==='hammer') {
-                if (!screenEffects.groups.hammer.some(hit=>Math.hypot(hit.x-x,hit.y-y)<5)
-                    && hammerSprite.complete && hammerSprite.naturalWidth)
-                    ctx.drawImage(hammerSprite,-8,-15,44,44);
-            } else if(currentMode==='bomb') {
-                if(grenadeSprite.complete && grenadeSprite.naturalWidth)
-                    ctx.drawImage(grenadeSprite,-14,-14,28,28);
-            } else if(currentMode==='spawn') {
-                ctx.beginPath();ctx.arc(0,0,10,0,Math.PI*2);ctx.stroke();
-                ctx.beginPath();ctx.moveTo(-5,0);ctx.lineTo(5,0);
-                ctx.moveTo(0,-5);ctx.lineTo(0,5);ctx.stroke();
-            } else if(currentMode==='draw' && eraser) {
-                ctx.beginPath();ctx.rect(-8,-6,16,12);ctx.fill();ctx.stroke();
-                ctx.beginPath();ctx.moveTo(-5,3);ctx.lineTo(5,3);ctx.stroke();
-            } else if(currentMode==='draw') {
-                ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(9,-19);ctx.lineTo(14,-16);
-                ctx.lineTo(3,2);ctx.closePath();ctx.fill();ctx.stroke();
-            } else if(currentMode==='blackhole') {
-                ctx.beginPath();ctx.arc(0,0,12,0,Math.PI*2);ctx.stroke();
-                ctx.beginPath();ctx.arc(0,0,7,-2.4,3.5);ctx.stroke();
-                ctx.fillStyle='#273b56';ctx.beginPath();ctx.arc(0,0,2,0,Math.PI*2);ctx.fill();
-            }
-            ctx.restore();
-        }
-
         function drawGunOverlay() {
-            if (currentMode !== 'gun' || !enabled) return;
+            if (currentMode !== 'gun' || !enabled || controlsPanelOpen
+                || mouseX < 0 || mouseY < 0 || mouseX > width || mouseY > height) return;
             const profile = weaponProfiles[gunWeapon], pose = gunPose(mouseX, mouseY, profile);
             const recoil = Math.max(0, 1 - (world.now() - lastGunShotAt) / 105) *
                 (gunWeapon === 'awm' || gunWeapon === 'double_barrel' ? 9 : 4);
@@ -2122,12 +2368,7 @@
                     -profile.height * profile.muzzle[1], profile.width, profile.height);
             }
             ctx.restore();
-            // The dot is also the coordinate used to select a Pet before any projectile moves.
-            ctx.save(); ctx.translate(mouseX, mouseY);
-            ctx.fillStyle = 'rgba(20,24,32,.92)'; ctx.beginPath(); ctx.arc(0,0,5,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0,0,3.5,0,Math.PI*2); ctx.fill();
-            ctx.fillStyle = '#ef303a'; ctx.beginPath(); ctx.arc(0,0,2.4,0,Math.PI*2); ctx.fill();
-            ctx.restore();
+            // The OS/CSS red dot has its hotspot at this same aim coordinate.
         }
 
         function animate(dt = 1, effectElapsedMs = dt * physicsFrameMs) {
@@ -2146,13 +2387,25 @@
             // 펫 업데이트 및 렌더링
             petInstances.forEach(pet => {
                 pet.update(dt, effectElapsedMs);
+                if (pet.boss?.defeated && pet.boss.fadeRemainingMs <= 0) return;
                 pet.draw(ctx);
+                drawBossHealth(pet);
+                drawSleepEffect(pet);
             });
+            let removedBoss = false;
+            petInstances = petInstances.filter(pet => {
+                if (!pet.boss?.defeated || pet.boss.fadeRemainingMs > 0) return true;
+                pet.remove();
+                removedBoss = true;
+                return false;
+            });
+            if (removedBoss) publishPetInstances();
+            publishTaskbarPetRegions();
             // Keep arcade numbers legible in front of the Pet that was hit.
             drawDamageNumbers();
             drawTrash();
             drawGunOverlay();
-            drawToolCursor();
+            drawCombo();
 
 
         }
@@ -2198,6 +2451,8 @@
             }
             if (kind === 'effects' || kind === 'all') {
                 screenEffects.clear();
+                combo.count = 0;
+                combo.lastHitAt = -Infinity;
                 blackHoles = [];
                 pruneBlackHoleReferences();
             }
@@ -2217,6 +2472,7 @@
                 releaseDraggedPet();
                 for (const pet of petInstances) pet.remove();
                 petInstances = [];
+                publishPetInstances();
             }
         }
 
@@ -2245,6 +2501,12 @@
                 for (const structure of world.structures) structure.lastUsedAt = now;
             }
             currentMode = nextState.mode || 'pc';
+            if (changedMode && currentMode === 'pc') {
+                lastPetRegionSentAt = -Infinity;
+                lastPetRegionSignature = '';
+            }
+            controlsPanelOpen = nextState.controlsPanelOpen === true;
+            controlsPanelKind = nextState.controlsPanelKind || null;
             if (weaponProfiles[nextState.gunWeapon]) gunWeapon = nextState.gunWeapon;
             selectedPetId = nextState.petId || null;
             drawShape = nextState.drawShape || drawShape;
@@ -2255,7 +2517,11 @@
             canvas.className = currentMode === 'pc' ? 'cursor-pointer'
                 : currentMode === 'touch' ? 'cursor-touch'
                 : currentMode === 'hammer' ? 'cursor-hammer'
-                    : currentMode === 'gun' ? 'cursor-gun' : 'cursor-tool';
+                : currentMode === 'gun' ? 'cursor-gun'
+                : currentMode === 'spawn' ? 'cursor-spawn'
+                : currentMode === 'draw' ? eraser ? 'cursor-eraser' : 'cursor-draw'
+                : currentMode === 'bomb' ? 'cursor-bomb'
+                : currentMode === 'blackhole' ? 'cursor-blackhole' : 'cursor-pointer';
             if (enabled) startAnimation();
             else stopAnimation();
         }
@@ -2271,7 +2537,10 @@
 
         window.playground.onState(applyAppState);
         window.playground.onClear(clearPlayground);
+        window.playground.onRemovePetInstance(removePetInstance);
+        window.playground.onRemovePetKind(removePetKind);
         window.playground.onPetDefinitions(applyPetDefinitions);
+        publishPetInstances();
         window.playground.getState().then(applyAppState);
         window.playground.getPetDefinitions().then(applyPetDefinitions);
         window.addEventListener('blur', cancelInput);
@@ -2287,10 +2556,9 @@
                 if (starterPetsCreated || !definitionsLoaded) return;
                 starterPetsCreated = true;
                 for (const [id, x, y] of [
-                    ['blob', width / 2, -100],
+                    ['kirby', width / 2 + 170, -130],
                     ['cat_brown', width / 2 - 90, -100],
-                    ['doge', width / 2 - 170, -90],
-                    ['kirby', width / 2 + 170, -130]
+                    ['doge', width / 2 - 170, -90]
                 ]) {
                     const pet = spawnPet(id, x, y);
                     if (pet) pet.startingPet = true;

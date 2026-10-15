@@ -930,13 +930,13 @@ globalThis.PlaygroundPetProfiles = {
           "loop": false
         },
         "sleep": {
-          "row": 8,
+          "row": 0,
           "frames": [
             0
           ],
           "frameMs": 500,
           "center": 0.5,
-          "foot": 0.9327
+          "foot": 0.9038461538461539
         }
       },
       "fallback": {
@@ -1393,6 +1393,467 @@ globalThis.PlaygroundPetProfiles = {
           "frameMs": 500,
           "center": 0.4974,
           "foot": 0.9712
+        }
+      },
+      "fallback": {
+        "sleep": "rest",
+        "look": "idle",
+        "rest": "idle",
+        "jump": "fall",
+        "fall": "idle",
+        "walkRight": "idle",
+        "walkLeft": "idle",
+        "climb": "idle",
+        "drag": "idle"
+      }
+    },
+    "call_duck": {
+      "rows": 9,
+      "origin": "feet",
+      "elasticity": 0.55,
+      "sleeping": false,
+      "clips": {
+        "idle": {
+          "row": 0,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 200,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "walkRight": {
+          "row": 1,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 90,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "walkLeft": {
+          "row": 1,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 90,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1,
+          "flip": true,
+          "mirrorOf": "walkRight"
+        },
+        "jump": {
+          "row": 3,
+          "frames": [
+            0,
+            1,
+            2
+          ],
+          "frameMs": 86.66666666666667,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "fall": {
+          "row": 3,
+          "frames": [
+            3,
+            4
+          ],
+          "frameMs": 100,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "land": {
+          "row": 3,
+          "frames": [
+            5,
+            6,
+            7
+          ],
+          "frameMs": 43.333333333333336,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "grabStart": {
+          "row": 4,
+          "frames": [
+            0,
+            1
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "drag": {
+          "row": 4,
+          "frames": [
+            2,
+            3,
+            4,
+            5
+          ],
+          "frameMs": 150,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "release": {
+          "row": 4,
+          "frames": [
+            6,
+            7
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "sleep": {
+          "row": 5,
+          "frames": [
+            0
+          ],
+          "frameMs": 1000,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "rest": {
+          "row": 5,
+          "frames": [
+            1,
+            2,
+            3,
+            4
+          ],
+          "frameMs": 320,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "wake": {
+          "row": 5,
+          "frames": [
+            5,
+            6,
+            7
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "hit": {
+          "row": 6,
+          "frames": [
+            0,
+            1,
+            2
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "stunned": {
+          "row": 6,
+          "frames": [
+            3
+          ],
+          "frameMs": 1000,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "look": {
+          "row": 7,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 180,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        }
+      },
+      "fallback": {
+        "sleep": "rest",
+        "look": "idle",
+        "rest": "idle",
+        "jump": "fall",
+        "fall": "idle",
+        "walkRight": "idle",
+        "walkLeft": "idle",
+        "climb": "idle",
+        "drag": "idle"
+      }
+    },
+    "baby_harp_seal": {
+      "rows": 9,
+      "origin": "feet",
+      "elasticity": 0.55,
+      "sleeping": false,
+      "clips": {
+        "idle": {
+          "row": 0,
+          "frames": [
+            7,
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          "frameMs": 125,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "walkRight": {
+          "row": 1,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 110,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "walkLeft": {
+          "row": 1,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 110,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1,
+          "flip": true,
+          "mirrorOf": "walkRight"
+        },
+        "jump": {
+          "row": 3,
+          "frames": [
+            0,
+            1,
+            2
+          ],
+          "frameMs": 85,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "fall": {
+          "row": 3,
+          "frames": [
+            3,
+            4
+          ],
+          "frameMs": 100,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "land": {
+          "row": 3,
+          "frames": [
+            5,
+            6,
+            7
+          ],
+          "frameMs": 43,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "grabStart": {
+          "row": 4,
+          "frames": [
+            0,
+            1
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "drag": {
+          "row": 4,
+          "frames": [
+            2,
+            3,
+            4
+          ],
+          "frameMs": 200,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "release": {
+          "row": 4,
+          "frames": [
+            5,
+            6,
+            7
+          ],
+          "frameMs": 40,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "rest": {
+          "row": 5,
+          "frames": [
+            0,
+            1
+          ],
+          "frameMs": 350,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "sleep": {
+          "row": 5,
+          "frames": [
+            2
+          ],
+          "frameMs": 1000,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "wake": {
+          "row": 5,
+          "frames": [
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 45,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "hit": {
+          "row": 6,
+          "frames": [
+            0,
+            1,
+            2
+          ],
+          "frameMs": 60,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "stunned": {
+          "row": 6,
+          "frames": [
+            4
+          ],
+          "frameMs": 1000,
+          "loop": false,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
+        },
+        "look": {
+          "row": 7,
+          "frames": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "frameMs": 180,
+          "loop": true,
+          "center": 0.5,
+          "foot": 0.9230769230769231,
+          "scale": 1
         }
       },
       "fallback": {

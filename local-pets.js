@@ -11,7 +11,9 @@ const LOCAL_PETS = [
   { id: 'puddle', sourceId: 'tudou', category: 'dog', label: '푸들' },
   { id: 'kirby', sourceId: 'kirby', category: 'character', label: '커비' },
   { id: 'kirby_sleepy', sourceId: 'haaap', category: 'character', label: '커비(잠)' },
-  { id: 'usagi', sourceId: 'usachi--jack', category: 'character', label: '우사기' }
+  { id: 'usagi', sourceId: 'usachi--jack', category: 'character', label: '우사기' },
+  { id: 'call_duck', sourceId: 'call_duck', category: 'character', label: '콜덕' },
+  { id: 'baby_harp_seal', sourceId: 'baby_harp_seal', category: 'character', label: '아기 하프물범' }
 ];
 const LOCAL_PET_IDS = LOCAL_PETS.map(pet => pet.id);
 

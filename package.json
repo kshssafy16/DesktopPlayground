@@ -1,7 +1,7 @@
 {
   "name": "desktopplayground",
   "productName": "DesktopPlayground",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Interactive desktop pets and playground for Windows",
   "main": "main.js",
   "scripts": {
@@ -17,6 +17,7 @@
     },
     "files": [
       "main.js",
+      "taskbar-zorder.ps1",
       "local-pets.js",
       "preload.js",
       "index.html",
@@ -56,9 +57,14 @@
       "assets/pets/salary-cat/spritesheet.webp",
       "assets/pets/usagi/pet.json",
       "assets/pets/usagi/spritesheet.webp",
+      "assets/pets/call_duck/pet.json",
+      "assets/pets/call_duck/spritesheet.webp",
+      "assets/pets/baby_harp_seal/pet.json",
+      "assets/pets/baby_harp_seal/spritesheet.webp",
       "animation/**",
       "assets/weapons/*.png",
-      "assets/tools/*.png"
+      "assets/tools/*.png",
+      "assets/tools/ui-*.svg"
     ],
     "win": {
       "icon": "electron-build/icon.ico",
