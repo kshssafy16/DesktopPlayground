@@ -22,6 +22,9 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const APP_ID = 'com.desktopplayground.app';
+
+// Windows 호환성 테스트용: Chromium Sandbox 비활성화
+app.commandLine.appendSwitch('no-sandbox');
 // Keep the existing %APPDATA%\desktop-playground UI-state location when
 // package.json supplies the Beta's capitalized productName.
 app.setName('DesktopPlayground');
