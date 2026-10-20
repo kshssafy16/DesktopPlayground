@@ -337,6 +337,26 @@ function raiseOverlay() {
   raiseControls();
 }
 
+function createTaskbarWatchStderrLogger(log) {
+  let pending = '';
+  const writeLine = line => {
+    const message = line.trim();
+    if (message && message !== '#< CLIXML') log(message.slice(0, 500));
+  };
+  return {
+    write(chunk) {
+      pending += chunk.toString();
+      const lines = pending.split(/\r?\n/);
+      pending = lines.pop();
+      for (const line of lines) writeLine(line);
+    },
+    flush() {
+      writeLine(pending);
+      pending = '';
+    }
+  };
+}
+
 function startTaskbarOrderWatcher() {
   if (process.platform !== 'win32' || !overlayWindow || overlayWindow.isDestroyed()) return;
   try {
@@ -358,13 +378,17 @@ function startTaskbarOrderWatcher() {
         if (line.trim() === 'restore' && !quitting) raiseOverlay();
       }
     });
-    watcher.stderr.on('data', chunk =>
-      logLifecycle('taskbar-order-watch-error', chunk.toString().trim().slice(0, 500)));
+    const stderr = createTaskbarWatchStderrLogger(message =>
+      logLifecycle('taskbar-order-watch-error', message));
+    watcher.stderr.on('data', chunk => stderr.write(chunk));
+    watcher.stderr.on('end', () => stderr.flush());
+    watcher.stderr.on('close', () => stderr.flush());
     watcher.on('error', error => logLifecycle('taskbar-order-watch-error', String(error)));
-    watcher.on('exit', code => {
+    watcher.on('exit', (code, signal) => {
       if (taskbarOrderWatcher === watcher) taskbarOrderWatcher = null;
       taskbarOrderWatcherReady = false;
-      if (!quitting) logLifecycle('taskbar-order-watch-exit', `code=${code}`);
+      if (!quitting || code !== 0)
+        logLifecycle('taskbar-order-watch-exit', `code=${code} signal=${signal}`);
     });
   } catch (error) {
     logLifecycle('taskbar-order-watch-error', String(error));

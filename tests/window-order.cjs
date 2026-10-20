@@ -9,7 +9,8 @@ const project = path.resolve(__dirname, '..');
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), 'desktop-playground-window-order-'));
 const appDir = path.join(scratch, 'app');
 const appData = path.join(scratch, 'appdata');
-let child, socket;
+let child, socket, evaluateApp;
+class EnvironmentLimit extends Error {}
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function port() { const s = net.createServer(); await new Promise(r => s.listen(0,'127.0.0.1',r)); const n=s.address().port; await new Promise(r=>s.close(r)); return n; }
 async function until(fn, label) { for(let i=0;i<120;i++){try{const x=await fn();if(x)return x}catch{}await pause(100)}throw new Error('Timed out: '+label); }
@@ -20,7 +21,7 @@ async function connect(n) {
   return expression=>new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method:'Runtime.evaluate',params:{expression,awaitPromise:true,returnByValue:true}}))}).then(r=>{if(r.exceptionDetails)throw new Error(r.exceptionDetails.text);return r.result.value});
 }
 const nativeScript = String.raw`
-param([long]$Overlay,[long]$Controls,[long]$Probe,[int]$X,[int]$Y,[long]$Activate)
+param([long]$Overlay,[long]$Controls,[long]$Probe,[int]$X,[int]$Y,[long]$Activate,[int]$PlaceBelowTaskbar)
 Add-Type @'
 using System; using System.Runtime.InteropServices;
 public class WinOrder {
@@ -31,24 +32,28 @@ public class WinOrder {
  [DllImport("user32.dll")] public static extern IntPtr GetWindow(IntPtr h,uint cmd);
  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+ [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr h,IntPtr after,int x,int y,int width,int height,uint flags);
  [DllImport("user32.dll")] public static extern IntPtr WindowFromPoint(Point p);
  [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out Rect rect);
  [DllImport("user32.dll")] public static extern IntPtr GetAncestor(IntPtr h,uint flag);
  [DllImport("user32.dll")] public static extern IntPtr GetWindowLongPtr(IntPtr h,int index);
 }
 '@
-if($Activate -gt 0){[void][WinOrder]::SetForegroundWindow([IntPtr]$Activate);Start-Sleep -Milliseconds 250}
+$activationSucceeded=$false
+if($Activate -gt 0){$activationSucceeded=[WinOrder]::SetForegroundWindow([IntPtr]$Activate);Start-Sleep -Milliseconds 250}
+$taskbar=[WinOrder]::FindWindow('Shell_TrayWnd',$null).ToInt64()
+$placementSucceeded=$false
+if($PlaceBelowTaskbar -ne 0 -and $taskbar -gt 0){$placementSucceeded=[WinOrder]::SetWindowPos([IntPtr]$Overlay,[IntPtr]$taskbar,0,0,0,0,0x13)}
 $rank=@{};$h=[WinOrder]::GetTopWindow([IntPtr]::Zero);$i=0
 while($h -ne [IntPtr]::Zero -and $i -lt 2000){$rank[$h.ToInt64()]=$i;$h=[WinOrder]::GetWindow($h,2);$i++}
-$taskbar=[WinOrder]::FindWindow('Shell_TrayWnd',$null).ToInt64()
 $point=New-Object WinOrder+Point;$point.X=$X;$point.Y=$Y
 $target=[WinOrder]::GetAncestor([WinOrder]::WindowFromPoint($point),2).ToInt64()
 $taskbarHit=0
 if($taskbar -gt 0){$rect=New-Object WinOrder+Rect;if([WinOrder]::GetWindowRect([IntPtr]$taskbar,[ref]$rect)){$point.X=[int](($rect.Left+$rect.Right)/2);$point.Y=[int](($rect.Top+$rect.Bottom)/2);$taskbarHit=[WinOrder]::GetAncestor([WinOrder]::WindowFromPoint($point),2).ToInt64()}}
-[pscustomobject]@{overlayRank=$rank[$Overlay];controlsRank=$rank[$Controls];probeRank=$rank[$Probe];taskbarRank=$rank[$taskbar];taskbarHit=$taskbarHit;taskbar=$taskbar;activateRank=$rank[$Activate];foreground=[WinOrder]::GetForegroundWindow().ToInt64();hit=$target;overlayTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Overlay,-20).ToInt64() -band 8) -ne 0;controlsTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Controls,-20).ToInt64() -band 8) -ne 0;probeTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Probe,-20).ToInt64() -band 8) -ne 0}|ConvertTo-Json -Compress
+[pscustomobject]@{overlayRank=$rank[$Overlay];controlsRank=$rank[$Controls];probeRank=$rank[$Probe];taskbarRank=$rank[$taskbar];taskbarHit=$taskbarHit;taskbar=$taskbar;activateRank=$rank[$Activate];activationSucceeded=$activationSucceeded;placementSucceeded=$placementSucceeded;foreground=[WinOrder]::GetForegroundWindow().ToInt64();hit=$target;overlayTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Overlay,-20).ToInt64() -band 8) -ne 0;controlsTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Controls,-20).ToInt64() -band 8) -ne 0;probeTopmost=([WinOrder]::GetWindowLongPtr([IntPtr]$Probe,-20).ToInt64() -band 8) -ne 0}|ConvertTo-Json -Compress
 `;
-function native(handles,activate=0) {
-  return JSON.parse(execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(scratch,'order.ps1'),String(handles.overlay),String(handles.controls),String(handles.probe),String(handles.x),String(handles.y),String(activate)],{encoding:'utf8'}));
+function native(handles, activate=0, placeBelowTaskbar=false) {
+  return JSON.parse(execFileSync('powershell.exe',['-NoProfile','-ExecutionPolicy','Bypass','-File',path.join(scratch,'order.ps1'),String(handles.overlay),String(handles.controls),String(handles.probe),String(handles.x),String(handles.y),String(activate),placeBelowTaskbar?'1':'0'],{encoding:'utf8'}));
 }
 async function run() {
   fs.mkdirSync(appDir,{recursive:true});fs.mkdirSync(appData,{recursive:true});
@@ -58,8 +63,11 @@ async function run() {
   fs.mkdirSync(path.join(appDir,'assets'),{recursive:true});fs.copyFileSync(path.join(project,'assets/icon.png'),path.join(appDir,'assets/icon.png'));fs.cpSync(path.join(project,'assets/pets'),path.join(appDir,'assets/pets'),{recursive:true});
   for(const kind of ['weapons','tools'])fs.cpSync(path.join(project,'assets',kind),path.join(appDir,'assets',kind),{recursive:true});
   const main=path.join(appDir,'main.js');let code=fs.readFileSync(main,'utf8').replace("const USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');","app.setPath('appData', process.env.WINDOW_TEST_APPDATA);\nconst USER_DATA_PATH = path.join(app.getPath('appData'), 'desktop-playground');");
+  code=code.replace("if (line.trim() === 'restore' && !quitting) raiseOverlay();",
+    "if (line.trim() === 'restore' && !quitting) { taskbarRestoreSignals++; raiseOverlay(); }");
   code+=String.raw`
-let windowOrderProbe;
+let windowOrderProbe, externalWindow;
+let taskbarRestoreSignals=0;
 ipcMain.handle('smoke:window-order', (_event, action) => {
   if (action === 'create') {
     windowOrderProbe = new BrowserWindow({ x: 90, y: 90, width: 760, height: 520, show: true, title: 'Window order normal probe' });
@@ -83,22 +91,22 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   else if (action === 'demote') { overlayWindow.setAlwaysOnTop(false); controlsWindow.emit('blur'); }
   else if (action === 'external-demote') {
     overlayWindow.setAlwaysOnTop(false);
-    const external = new BrowserWindow({ x: 100, y: 100, width: 500, height: 400, show: true });
-    external.loadURL('data:text/html,<body>External foreground transition</body>');
-    external.focus();
+    externalWindow = new BrowserWindow({ x: 100, y: 100, width: 500, height: 400, show: true });
+    externalWindow.loadURL('data:text/html,<body>External foreground transition</body>');
+    externalWindow.focus();
   }
   else if (action === 'minimize-overlay') overlayWindow.minimize();
   else if (action === 'restore-overlay') overlayWindow.restore();
   const handle = w => w && !w.isDestroyed() ? Number(w.getNativeWindowHandle().readBigUInt64LE()) : 0;
   const bounds=windowOrderProbe?.getBounds() || overlayWindow.getBounds();
-  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),controlsVisible:controlsWindow.isVisible(),mode:state.mode,panelOpen:controlsPanelOpen,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused(),taskbarWatcherReady:taskbarOrderWatcherReady};
+  return {overlay:handle(overlayWindow),controls:handle(controlsWindow),probe:handle(windowOrderProbe),external:handle(externalWindow),x:bounds.x+Math.floor(bounds.width/2),y:bounds.y+Math.floor(bounds.height/2),visible:overlayWindow.isVisible(),controlsVisible:controlsWindow.isVisible(),mode:state.mode,panelOpen:controlsPanelOpen,overlayFocused:overlayWindow.isFocused(),controlsFocused:controlsWindow.isFocused(),taskbarWatcherReady:taskbarOrderWatcherReady,taskbarRestoreSignals};
 });
 `;
   fs.writeFileSync(main,code);
   const preload=path.join(appDir,'preload.js');fs.writeFileSync(preload,fs.readFileSync(preload,'utf8').replace('getState: () =>',"smokeWindowOrder: action => ipcRenderer.invoke('smoke:window-order',action),\n  getState: () =>"));
   fs.writeFileSync(path.join(scratch,'order.ps1'),nativeScript);
   const n=await port();child=spawn(path.join(project,'node_modules/electron/dist/electron.exe'),[appDir,`--remote-debugging-port=${n}`,'--host-resolver-rules=MAP * ~NOTFOUND'],{cwd:appDir,env:{...process.env,WINDOW_TEST_APPDATA:appData},stdio:'ignore'});
-  const evaluate=await connect(n);await until(()=>evaluate('window.playground?.smokeWindowOrder'),'test hook');
+  const evaluate=await connect(n);evaluateApp=evaluate;await until(()=>evaluate('window.playground?.smokeWindowOrder'),'test hook');
   async function state(action){let h=await evaluate(`window.playground.smokeWindowOrder('${action}')`);
     if(['create','show-overlay','restore-overlay'].includes(action))h=await until(async()=>{const x=await evaluate("window.playground.smokeWindowOrder('status')");return x.visible?x:null},`${action} visible`);
     if(['hide-overlay','minimize-overlay'].includes(action))h=await until(async()=>{const x=await evaluate("window.playground.smokeWindowOrder('status')");return !x.visible?x:null},`${action} hidden`);
@@ -155,12 +163,27 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
   if(process.platform === 'win32') {
     await until(async()=> (await evaluate("window.playground.smokeWindowOrder('status')")).taskbarWatcherReady,
       'Windows taskbar event watcher ready');
+    const initial=await evaluate("window.playground.smokeWindowOrder('status')");
+    const initialOrder=native(initial);
+    console.log(`INFO: native foreground=${initialOrder.foreground} taskbarRank=${initialOrder.taskbarRank} overlayRank=${initialOrder.overlayRank}`);
     await evaluate("window.playground.smokeWindowOrder('external-demote')");
+    const demoted=await evaluate("window.playground.smokeWindowOrder('status')");
+    const foregroundOrder=native(demoted,demoted.external);
+    if(!demoted.external || foregroundOrder.foreground!==demoted.external)
+      throw new EnvironmentLimit(`foreground acquisition failed: external=${demoted.external} native=${foregroundOrder.foreground} activationSucceeded=${foregroundOrder.activationSucceeded}`);
+    const precondition=native(demoted,0,true);
+    if(!precondition.taskbar || precondition.taskbarRank==null || precondition.overlayRank==null ||
+       precondition.taskbarRank>=precondition.overlayRank)
+      throw new EnvironmentLimit(`taskbar-above-overlay order not established: ${JSON.stringify(precondition)}`);
+    console.log(`INFO: recovery precondition met: ${JSON.stringify(precondition)}`);
+    const restored=await until(async()=>
+      (await evaluate("window.playground.smokeWindowOrder('status')")).taskbarRestoreSignals>demoted.taskbarRestoreSignals,
+      'watcher restore signal after verified foreground and Z-order');
     const recovered=await until(async()=>{
       const h=await evaluate("window.playground.smokeWindowOrder('status')");
       const z=native(h);
       return z.overlayTopmost && z.overlayRank<z.taskbarRank && z.controlsRank<z.overlayRank ? {h,z} : null;
-    },'external foreground event restores taskbar/Pet order');
+    },`native order after restore signal ${restored.taskbarRestoreSignals}`);
     assert.equal(recovered.h.overlayFocused,false,'event recovery must not focus overlay');
     assert.equal(recovered.h.controlsFocused,false,'event recovery must not focus toolbar');
     console.log('PASS: external foreground event restores Pet above taskbar without focus');
@@ -176,4 +199,43 @@ ipcMain.handle('smoke:window-order', (_event, action) => {
     }
   }
 }
-run().catch(e=>{console.error(e);process.exitCode=1}).finally(async()=>{try{socket?.close();child?.kill()}catch{}await pause(200);fs.rmSync(scratch,{recursive:true,force:true})});
+async function cleanup() {
+  try { await evaluateApp?.('window.playground.exit()'); } catch {}
+  socket?.close();
+  if(child && child.exitCode==null) {
+    await Promise.race([new Promise(resolve=>child.once('exit',resolve)),pause(2000)]);
+    if(child.exitCode==null) child.kill();
+  }
+  const lifecycle=path.join(appData,'desktop-playground','lifecycle.log');
+  let clixmlHeaderLogged=false;
+  if(fs.existsSync(lifecycle)) {
+    clixmlHeaderLogged=/taskbar-order-watch-error #< CLIXML(?:\r?\n|$)/
+      .test(fs.readFileSync(lifecycle,'utf8'));
+  }
+  if(process.platform==='win32') {
+    const command='Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -and $_.CommandLine.Contains($env:WINDOW_TEST_SCRATCH) } | Select-Object -ExpandProperty ProcessId | ConvertTo-Json -Compress';
+    for(let attempt=0;attempt<5;attempt++) {
+      const output=execFileSync('powershell.exe',['-NoProfile','-Command',command],
+        {encoding:'utf8',env:{...process.env,WINDOW_TEST_SCRATCH:scratch}}).trim();
+      const pids=output? [].concat(JSON.parse(output)):[];
+      if(!pids.length) break;
+      for(const pid of pids) if(pid!==process.pid) {try{process.kill(pid)}catch{}}
+      await pause(200);
+    }
+  }
+  for(let attempt=0;attempt<10;attempt++) {
+    try {
+      fs.rmSync(scratch,{recursive:true,force:true});
+      break;
+    } catch(error) {
+      if(attempt===9) throw error;
+      await pause(200);
+    }
+  }
+  assert.equal(clixmlHeaderLogged,false,'standalone CLIXML header must not be logged as watcher error');
+  console.log('PASS: isolated watcher lifecycle has no standalone CLIXML error');
+}
+run().catch(e=>{
+  console.error(e instanceof EnvironmentLimit?'ENVIRONMENT_LIMITED: '+e.message:e);
+  process.exitCode=e instanceof EnvironmentLimit?2:1;
+}).finally(async()=>{try{await cleanup()}catch(error){console.error('CLEANUP_FAILED',error);process.exitCode=1}});
