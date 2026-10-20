@@ -2,6 +2,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const { loadLocalPets } = require('../local-pets');
+const bundledLocalPets = loadLocalPets(path.join(__dirname, '..', 'assets', 'pets'));
+const localPetRows = new Map(bundledLocalPets.map(({ id, rows }) => [id, rows]));
 
 // Execute the production renderer and its real input listeners with a controlled
 // clock/DOM. Native mouse delivery and visual feel still need Windows QA.
@@ -17,7 +20,15 @@ const canvas = element('canvas');
 const pending = new Promise(() => {});
 const sandbox = {
   __now: 0, console, petSnapshots: [], drawingCalls,
-  Image: class { constructor() { this.complete = true; this.naturalWidth = 1536; this.naturalHeight = 2288; } },
+  Image: class {
+    constructor() { this.complete = true; this.naturalWidth = 1536; this.naturalHeight = 2288; }
+    set src(value) {
+      this._src = value;
+      const id = /^assets\/pets\/([^/]+)\/spritesheet\.webp$/.exec(value)?.[1];
+      if (id && localPetRows.has(id)) this.naturalHeight = localPetRows.get(id) * 208;
+    }
+    get src() { return this._src; }
+  },
   document: { getElementById: id => id === 'playground-canvas' ? canvas : element('body'),
     createElement: () => element('created'), body: element('body') },
   performance: { now: () => sandbox.__now },
@@ -690,4 +701,4 @@ test('Pet management supports both new Sprite kinds without changing other insta
 console.log(`PASS: ${passed} Grab/Throw renderer regression cases (mock DOM/clock)`);
 
 // Share the real renderer/input harness; importing also runs the complete legacy suite.
-module.exports = { evaluate, pet, event, tick, test, sandbox, passed: () => passed };
+module.exports = { evaluate, pet, event, tick, test, sandbox, bundledLocalPets, passed: () => passed };

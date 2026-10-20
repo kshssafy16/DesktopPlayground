@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 require('./autonomy.cjs');
-const { evaluate, pet, tick, test, passed } = require('./grab-throw.cjs');
+const { assertProfile, resolveClip, STATES } = require('../animation/pet-animation.cjs');
+const { evaluate, pet, tick, test, sandbox, bundledLocalPets, passed } = require('./grab-throw.cjs');
 const before = passed();
 
 function quiet(id, state = 'rest') {
@@ -72,14 +73,22 @@ test('Grab/Throw/orbit/ladder and airborne states suppress sleeping expression',
   }
 });
 
-test('no generated Zzz or decoration is added with effects ON or OFF; sleeping pose persists', () => {
-  quiet('kirby_sleepy');
-  evaluate(`globalThis.visualCalls=[];globalThis.visualCtx=new Proxy({}, {get:(_,key)=>(...args)=>visualCalls.push([key,...args])});p.draw(visualCtx)`);
-  assert.ok(evaluate("!visualCalls.some(c=>c[0]==='fillText')"));
+test('sleep z appears only during quiet Sleep with effects on; pose survives effects off', () => {
+  quiet('kirby_sleepy', 'sleep');
+  sandbox.drawingCalls.length = 0;
+  evaluate('p.draw(ctx);drawSleepEffect(p)');
+  assert.ok(sandbox.drawingCalls.some(call => call[0] === 'fillText' && call[1] === 'z'));
   const clip=evaluate('JSON.stringify(p.spriteClip())');
-  evaluate('auxiliaryEffectsEnabled=false;visualCalls=[];p.draw(visualCtx)');
-  assert.ok(evaluate("!visualCalls.some(c=>c[0]==='fillText') && visualCalls.some(c=>c[0]==='drawImage')"));
+  sandbox.drawingCalls.length = 0;
+  evaluate('auxiliaryEffectsEnabled=false;p.draw(ctx);drawSleepEffect(p)');
+  assert.ok(!sandbox.drawingCalls.some(call => call[0] === 'fillText' && call[1] === 'z'));
+  assert.ok(sandbox.drawingCalls.some(call => call[0] === 'drawImage'));
   assert.equal(evaluate('JSON.stringify(p.spriteClip())'),clip);
+  sandbox.drawingCalls.length = 0;
+  evaluate('auxiliaryEffectsEnabled=true;p.enterAutonomy("rest");drawSleepEffect(p)');
+  assert.ok(!sandbox.drawingCalls.some(call => call[0] === 'fillText' && call[1] === 'z'));
+  evaluate('p.enterAutonomy("sleep");p.isDragging=true;drawSleepEffect(p)');
+  assert.ok(!sandbox.drawingCalls.some(call => call[0] === 'fillText' && call[1] === 'z'));
 });
 
 test('effects flag does not alter Bomb impulse or Throw movement', () => {
@@ -101,17 +110,24 @@ test('quiet expressions create no persistent particles or effects for many pets'
   assert.ok(evaluate('particles.length===0 && rings.length===0 && impacts.length===0 && petInstances.length===41'));
 });
 
-test('all nine profiles resolve explicit frames; forbidden Face and Salary frames remain excluded', () => {
-  const ids=['cat_brown','cat_face','cat_sleepy','salary-cat','doge','puddle','kirby','kirby_sleepy','usagi'];
-  for(const id of ids) {
+test('all registered profiles stay within their sheet and resolve every runtime state', () => {
+  const profiles = require('../animation/profiles.v1.json').profiles;
+  for(const { id, rows } of bundledLocalPets) {
+    assert.equal(profiles[id]?.rows, rows, id);
+    assertProfile(profiles[id]);
+    for(const state of Object.keys(STATES)) {
+      const { clip } = resolveClip(profiles[id], state);
+      assert.ok(clip.row >= 0 && clip.row < rows && clip.frames.every(frame => frame >= 0 && frame < 8), `${id}/${state}`);
+    }
     pet(id);
     assert.ok(evaluate(`(()=>{const profile=spriteProfiles['${id}'];return Object.values(profile.clips).every(c=>
-      c.frames.length>0 && c.frames.every(f=>Number.isInteger(f)&&f>=0&&f<8) && c.row<profile.rows && c.frameMs>0 &&
-      c.center>0&&c.center<1&&c.foot>0&&c.foot<=1)})()`));
+      c.frames.length>0 && c.frames.every(f=>Number.isInteger(f)&&f>=0&&f<8) && c.row>=0 && c.row<profile.rows && c.frameMs>0 &&
+      c.center>0&&c.center<1&&(profile.origin==='center'?c.centerY>=0&&c.centerY<=1:c.foot>0&&c.foot<=1))})()`), id);
   }
   assert.ok(evaluate("Object.values(spriteProfiles.cat_face.clips).every(c=>c.row!==8 || !c.frames.some(f=>f===2||f===3))"));
   assert.ok(evaluate("spriteProfiles.puddle.clips.walkRight.row===1 && spriteProfiles.puddle.clips.walkLeft.row===2 && spriteProfiles.puddle.clips.walkRight.frames.length===8"));
-  assert.ok(evaluate("Object.entries(spriteProfiles['salary-cat'].clips).every(([name,c])=>name.startsWith('walk')? [1,2].includes(c.row)&&!c.sourceCrop&&c.frames.every(f=>f<7):![0,1,2,3,7].includes(c.row))"));
+  assert.ok(evaluate("Object.entries(spriteProfiles['salary-cat'].clips).filter(([name])=>name.startsWith('walk')).every(([,c])=>[1,2].includes(c.row)&&!c.sourceCrop&&c.frames.every(f=>f<7))"));
+  assert.ok(evaluate("spriteProfiles['salary-cat'].clips.sleep.row===0 && JSON.stringify(spriteProfiles['salary-cat'].clips.sleep.frames)==='[0]' && spriteProfiles['salary-cat'].clips.sleep.foot===188/208"));
 });
 
 test('air clip does not flicker to idle at the autonomous apex and holds its final frame', () => {

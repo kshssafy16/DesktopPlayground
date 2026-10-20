@@ -4,9 +4,11 @@ const fs = require('node:fs');
 const crypto = require('node:crypto');
 const path = require('node:path');
 const {assertProfile, createPlayer, resolveClip} = require('../animation/pet-animation.cjs');
+const {loadLocalPets} = require('../local-pets');
 
 const root = path.resolve(__dirname, '..');
 const catalog = require('../animation/profiles.v1.json');
+const localPets = loadLocalPets(path.join(root, 'assets', 'pets'));
 const snapshot = require('../docs/v1.1/qa/sprite-final/after-profiles.json');
 const hashes = {cat_brown:'a12f1e408377',cat_face:'95f9d38500fa',
   cat_sleepy:'276cd3263e70','salary-cat':'69c485341384',doge:'e2c7216e564f',
@@ -27,7 +29,7 @@ for(const [id,states] of Object.entries({'salary-cat':['rest','sleep'],doge:['re
   }
 }
 assert.deepEqual(unchanged, snapshot.profiles);
-assert.equal(Object.keys(catalog.profiles).length, 11);
+assert.deepEqual(Object.keys(catalog.profiles).sort(), localPets.map(pet => pet.id).sort());
 
 for (const [id, profile] of Object.entries(catalog.profiles)) {
   assertProfile(profile);
@@ -36,7 +38,7 @@ for (const [id, profile] of Object.entries(catalog.profiles)) {
   const webp = fs.readFileSync(path.join(root, 'assets/pets', id, 'spritesheet.webp'));
   assert.equal(webp.subarray(0, 4).toString(), 'RIFF');
   assert.equal(webp.subarray(8, 12).toString(), 'WEBP');
-  assert.equal(crypto.createHash('sha256').update(webp).digest('hex').slice(0,12), hashes[id]);
+  if (hashes[id]) assert.equal(crypto.createHash('sha256').update(webp).digest('hex').slice(0,12), hashes[id]);
   for (const state of ['idle','walkRight','walkLeft','jumpRise','jumpApex','fall','land',
     'grabStart','held','release','thrown','bounce','hit','rest','sleep','wake']) {
     const selected = resolveClip(profile, state);
@@ -109,7 +111,7 @@ for (const hz of [30,60,144]) {
 }
 assert.throws(() => createPlayer({rows:9,origin:'feet',clips:{idle:{row:9,frames:[0],frameMs:100}}}));
 assert.throws(() => createPlayer(catalog.profiles.doge).update({}, -1));
-console.log('animation-platform: 11 profiles, state transitions, clip safety, timing PASS');
+console.log(`animation-platform: ${localPets.length} profiles, state transitions, clip safety, timing PASS`);
 const priority = createPlayer(catalog.profiles.doge);
 assert.equal(priority.update({orbit:true,held:true},0).state,'held');
 assert.equal(priority.update({held:true,event:'grabStart'},20).state,'grabStart');

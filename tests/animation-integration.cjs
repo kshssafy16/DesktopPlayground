@@ -1,16 +1,23 @@
 'use strict';
 const assert = require('node:assert/strict');
 const catalog = require('../animation/profiles.v1.json');
-const { evaluate, pet, event, tick, test, sandbox } = require('./grab-throw.cjs');
-require('./autonomy.cjs'); // Register the same nine local-package fixtures as expression QA.
-const ids = Object.keys(catalog.profiles);
+const { evaluate, pet, event, tick, test, sandbox, bundledLocalPets } = require('./grab-throw.cjs');
+require('./autonomy.cjs'); // Registers the validated local packages in the renderer harness.
+const ids = bundledLocalPets.map(({ id }) => id);
 function state(expected) { assert.equal(evaluate('p.animationVisualState'), expected); }
 
-test('runtime uses the nine canonical profiles without duplicated inline mappings', () => {
+test('every registered local package has a canonical runtime profile and real renderer definition', () => {
+  assert.deepEqual([...ids].sort(), Object.keys(catalog.profiles).sort());
   assert.deepEqual(JSON.parse(evaluate('JSON.stringify(PlaygroundPetProfiles.profiles)')), catalog.profiles);
   assert.deepEqual(JSON.parse(evaluate('JSON.stringify(Object.fromEntries(Object.entries(spriteProfiles).filter(([id])=>PlaygroundPetProfiles.profiles[id])))')), catalog.profiles);
+  for (const { id, rows, asset } of bundledLocalPets) {
+    const definition = JSON.parse(evaluate(`JSON.stringify((({id,rows,renderKind,asset,animation})=>({id,rows,renderKind,assetSrc:asset.src,hasAnimation:!!animation}))(petDefinitions.get(${JSON.stringify(id)})))`));
+    assert.deepEqual(definition, { id, rows, renderKind: 'sprite', assetSrc: asset, hasAnimation: true });
+    assert.equal(catalog.profiles[id].rows, rows, id);
+    assert.equal(evaluate(`petDefinitions.get(${JSON.stringify(id)}).asset.naturalHeight`), rows * catalog.sprite.cellHeight, id);
+  }
 });
-test('nine real Grab/hold/stationary-release events play once and return without physics changes', () => {
+test('all registered local pets play Grab/held/stationary release without physics changes', () => {
   for (const id of ids) {
     evaluate(`clearPlayground('all')`); pet(id);
     event('canvas:mousedown', 520, 400, 0); evaluate('p.draw(ctx)'); state('grabStart');
@@ -20,6 +27,22 @@ test('nine real Grab/hold/stationary-release events play once and return without
     event('window:mouseup',520,400,200); evaluate('p.advanceAnimation(0)'); state('release');
     assert.equal(evaluate('p.vx'),0);
     evaluate('p.advanceAnimation(120)'); state('thrown');
+  }
+});
+test('new animal packages walk in both directions using real 9-row image geometry', () => {
+  for (const id of ['call_duck', 'baby_harp_seal']) {
+    pet(id);
+    for (const [speed, state] of [[2, 'walkRight'], [-2, 'walkLeft']]) {
+      evaluate(`p.vx=${speed};p.facingRight=${speed > 0};p.advanceAnimation(0)`);
+      assert.equal(evaluate('p.animationVisualState'), state, id);
+      sandbox.drawingCalls.length = 0;
+      evaluate('p.draw(ctx)');
+      const draw = sandbox.drawingCalls.find(call => call[0] === 'drawImage');
+      assert.ok(draw, `${id}/${state}: sprite drawn`);
+      assert.equal(draw[4], catalog.sprite.cellWidth, `${id}/${state}: cell width`);
+      assert.equal(draw[5], catalog.sprite.cellHeight, `${id}/${state}: cell height`);
+      assert.equal(evaluate('p.spriteClip().clip.flip === true'), speed < 0, `${id}/${state}: mirror`);
+    }
   }
 });
 test('a quick release interrupts GrabStart immediately and preserves fast Throw', () => {
@@ -103,7 +126,7 @@ test('instance removal clears visual references without deleting profile or othe
   pet('doge');evaluate('p.advanceAnimation(0);spawnPet("doge",700,400);p.remove();petInstances=petInstances.filter(q=>q!==p)');
   assert.ok(evaluate('!p.animationPlayer && !p.animationEvent && petInstances.length===1 && spriteProfiles.doge.clips'));
 });
-test('all nine Held loops replay ordered expressions for over three seconds across 30/60/144Hz without moving physics',()=>{
+test('all registered local pets replay Held loops across 30/60/144Hz without moving physics',()=>{
   for(const id of ids)for(const hz of [30,60,144]) {
     pet(id);evaluate('p.isDragging=true;p.advanceAnimation(120)');state('held');
     const start=evaluate('JSON.stringify([p.x,p.y,p.size,p.vx,p.vy])');
@@ -135,4 +158,4 @@ test('Salary original full-cell gait keeps visible bounds and physical size in b
     }
   }
 });
-console.log('PASS: 14 animation integration cases plus 67 Grab/Throw/autonomy regressions');
+console.log(`PASS: 15 animation integration cases for ${ids.length} local pets plus Grab/Throw/autonomy regressions`);

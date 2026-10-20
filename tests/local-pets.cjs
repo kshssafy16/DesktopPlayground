@@ -2,11 +2,20 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { loadLocalPets, webpSize } = require('../local-pets');
+const { LOCAL_PETS, loadLocalPets, webpSize } = require('../local-pets');
 
 const project = path.resolve(__dirname, '..');
 const bundled = loadLocalPets(path.join(project, 'assets', 'pets'));
-assert.equal(bundled.length, 11);
+assert.equal(new Set(LOCAL_PETS.map(pet => pet.id)).size, LOCAL_PETS.length, 'duplicate app IDs');
+assert.deepEqual(bundled.map(pet => pet.id), LOCAL_PETS.map(pet => pet.id), 'registered packages must load');
+for (const pet of bundled) {
+  const source = LOCAL_PETS.find(entry => entry.id === pet.id);
+  const metadata = JSON.parse(fs.readFileSync(path.join(project, 'assets', 'pets', pet.id, 'pet.json')));
+  assert.equal(metadata.id, source.sourceId, `${pet.id}: source ID`);
+  assert.equal(metadata.spritesheetPath, 'spritesheet.webp', `${pet.id}: sheet path`);
+  assert.deepEqual(webpSize(path.join(project, 'assets', 'pets', pet.id, 'spritesheet.webp')),
+    { width: pet.columns * 192, height: pet.rows * 208 }, `${pet.id}: sheet dimensions`);
+}
 assert.deepEqual(bundled.filter(pet => pet.category === 'cat').map(pet => [pet.id, pet.label]), [
   ['cat_brown', '황색냥'], ['cat_face', '얼굴냥'], ['cat_sleepy', '실눈냥'], ['salary-cat', '영업냥']
 ]);

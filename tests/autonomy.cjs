@@ -1,8 +1,9 @@
 const assert = require('node:assert/strict');
-const { evaluate, pet, event, tick, test, sandbox, passed } = require('./grab-throw.cjs');
+const { evaluate, pet, event, tick, test, sandbox, bundledLocalPets, passed } = require('./grab-throw.cjs');
 const previous = passed();
 const ids = ['cat_brown','cat_face','cat_sleepy','salary-cat','doge','puddle','usagi','kirby','kirby_sleepy','blob'];
-evaluate(`applyPetDefinitions({defaultPets:{},customPets:[],localPets:${JSON.stringify(ids.filter(id => id !== 'blob').map(id => ({id,name:id,category:id.startsWith('cat_')||id==='salary-cat'?'cat':['doge','puddle'].includes(id)?'dog':'character',rows:['cat_brown','cat_face','puddle'].includes(id)?11:9,asset:'fixture.webp'})))}})`);
+// Use the same validated package entries that main.js publishes to the renderer.
+evaluate(`applyPetDefinitions({defaultPets:{},customPets:[],localPets:${JSON.stringify(bundledLocalPets)}})`);
 
 test('profile mapping and category/common fallbacks are data driven', () => {
   const expected=['calm','normal','sleepy','calm','active','normal','veryActive','lively','sleepy','normal'];
