@@ -25,6 +25,8 @@ let currentState = {
 let petSnapshot = { defaultPets: {}, localPets: [], customPets: [] };
 let petInstancesSnapshot = [];
 let petInstancesRevision = -1;
+let petScaleSlider;
+let petScaleValue;
 let managePage = 0;
 const managePageSize = 3;
 let panelKind = null;
@@ -175,6 +177,36 @@ function addPetChoice(parent, pet) {
 }
 function buildPetPanel() {
   petPanel.replaceChildren();
+  const sizeArea = document.createElement('div');
+  sizeArea.className = 'pet-size-area';
+  const sizeHeading = document.createElement('label');
+  sizeHeading.htmlFor = 'pet-size-slider';
+  sizeHeading.textContent = '생성 크기';
+  petScaleValue = document.createElement('output');
+  petScaleValue.id = 'pet-size-value';
+  petScaleValue.htmlFor = 'pet-size-slider';
+  petScaleSlider = document.createElement('input');
+  petScaleSlider.id = 'pet-size-slider';
+  petScaleSlider.type = 'range';
+  petScaleSlider.min = '50'; petScaleSlider.max = '1000'; petScaleSlider.step = '10';
+  petScaleSlider.value = String(currentState.petScalePercent || 100);
+  petScaleSlider.setAttribute('aria-label', '생성 크기');
+  petScaleSlider.addEventListener('input', () => {
+    petScaleValue.textContent = `${petScaleSlider.value}%`;
+    api.setPetScalePercent(Number(petScaleSlider.value));
+  });
+  const quickSizes = document.createElement('div');
+  quickSizes.className = 'pet-size-quick';
+  for (const [percent, label] of [[100, '기본'], [200, '2배'], [500, '5배'], [1000, '10배']]) {
+    const choice = button(label, `${percent}% 크기`, () => api.setPetScalePercent(percent), 'pet-size-choice');
+    choice.dataset.percent = String(percent);
+    quickSizes.appendChild(choice);
+  }
+  const sizeLine = document.createElement('div');
+  sizeLine.className = 'pet-size-line';
+  sizeLine.append(sizeHeading, petScaleSlider, petScaleValue);
+  sizeArea.append(sizeLine, quickSizes);
+  petPanel.appendChild(sizeArea);
   for (const category of categories) {
     const choices = [
       ...category.builtin,
@@ -367,6 +399,12 @@ function updateSelection() {
   controls.miniVisibility.setAttribute('aria-label', controls.miniVisibility.title);
   for (const choice of petPanel.querySelectorAll('[data-pet-id]'))
     choice.classList.toggle('selected', currentState.mode === 'spawn' && choice.dataset.petId === currentState.petId);
+  if (petScaleSlider && document.activeElement !== petScaleSlider)
+    petScaleSlider.value = String(currentState.petScalePercent || 100);
+  if (petScaleValue) petScaleValue.textContent = `${document.activeElement === petScaleSlider
+    ? petScaleSlider.value : currentState.petScalePercent || 100}%`;
+  for (const choice of petPanel.querySelectorAll('[data-percent]'))
+    choice.classList.toggle('selected', Number(choice.dataset.percent) === currentState.petScalePercent);
   for (const choice of drawPanel.querySelectorAll('[data-shape]'))
     choice.classList.toggle('selected', choice.dataset.shape === currentState.drawShape && !currentState.eraser);
   for (const choice of drawPanel.querySelectorAll('[data-color]'))

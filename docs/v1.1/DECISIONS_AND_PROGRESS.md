@@ -606,6 +606,21 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 
 ## 변경 기록 템플릿
 
+### 2026-10-20 / feature/v1.3 / 펫 생성 크기 선택
+
+- 사용자 요청에 따라 펫 선택 메뉴에 50~1000%, 10% 간격 슬라이더와 100/200/500/1000% 빠른 선택을 추가했다. 기존 펫 종류와 생성 개수 정책은 유지한다.
+- 마지막 생성 배율은 기존 `ui-state.json`의 `controls.petScalePercent`에 저장한다. 필드가 없는 설정은 100%로 시작하고, UI와 main IPC에서 정수·범위·간격을 검증한다. 생성 시점의 배율만 새 Pet 인스턴스에 적용하므로 기존 펫은 변하지 않는다.
+- 공통 `Pet.size`를 배율화하여 스프라이트/슬라임/Canvas 기본 펫의 렌더와 물리·Grab·Throw·Draw/구조물·총/망치 판정을 따른다. 사용자 이미지의 CSS 표시 배율은 `size/defaultSize`로 맞춘다. 폭이 화면보다 큰 펫은 일부 클리핑을 허용하고 중심을 화면 좌우 안에 제한하여 벽 양쪽의 반복 반사를 막는다. Bomb/Black Hole은 기본 크기에서 기존 범위를 유지하면서 큰 펫의 가장자리를 반영한다. 보스 배율은 종별 기본 크기의 최대 10배다.
+- `tests/pet-size.cjs`에 배율별 생성, 독립 인스턴스, 비정상 값, 화면 경계/바닥, Grab/Throw/Hit, 이미지·Canvas·스프라이트, Bomb/Black Hole, 보스 상한을 검증한다. Electron smoke에 UI/IPC 배율 선택·잘못된 IPC 입력과 스크롤 메뉴 검사를 추가했다.
+- 자동 단위 회귀 10개 파일과 신규 배율 테스트는 통과했다. 최초 Electron smoke는 신규 UI/IPC와 실제 렌더러의 200% 스프라이트 alpha Hit 확인을 지난 후 기존 스프라이트 감사에서 콜덕·하프물범의 `walkLeft` 16개 빈 셀로 실패했다. 이 문제는 아래 후속 작업에서 테스트 매핑을 정비했다. `window-order`는 12개 native 순서/입력 검사를 통과했으나 외부 창 foreground 획득이 거부되어 exit 2(환경 제한)였다. `taskbar-watch-stderr`는 통과했다. 원본 에셋과 애니메이션 프로필은 변경하지 않았다. 실제 Windows 마우스/투명 오버레이, DPI, 극대 크기의 사용감은 사용자 GUI 검수 대상으로 남긴다. 빌드·commit·push·release는 수행하지 않았다.
+
+### 2026-10-20 / feature/v1.3 / 애니메이션 인계 확인과 smoke 감사 정비
+
+- `feature/v1.2-animation`의 보존 기록(5d97c5d)과 v1.2 인계·프로필 규격·각 완성 패키지의 `FRAME_MAPPING.md`, 현재 `resolveClip()`을 대조했다. 콜덕·아기 하프물범의 WalkLeft는 1행 WalkRight를 반전하며 2행은 투명 예약 행이다. 앱 WebP와 완성 패키지 WebP의 SHA-256은 각각 일치하고, 1행 8셀은 알파가 있으며 2행 8셀은 비어 있음을 확인했다.
+- `tests/smoke.cjs` 첫 감사가 실제 런타임 대신 모든 펫에 레거시 `d.clips.walkLeft` 2행을 적용한 것이 16개 실패의 원인이었다. 프로필이 있는 펫은 `assertProfile`·`resolveClip`·`Pet.spriteClip`과 선택 셀 알파를 검사하고, 반전 참조·원본·출력도 확인하도록 변경했다. Cat/Magpie 레거시 검사는 유지한다. 검사 집계는 레거시 2장+로컬 11장, 5상태씩 13시트·65클립·414프레임 방문이다.
+- 기존 9종 특수 자세 감사는 9종 범위로 유지했다. 영업냥의 승인된 Sleep 0행 0열을 허용하고, Sleep alpha 바닥과 작성된 foot의 최대 5px 차이는 6px 이내 검사로 다뤘다. 별도 실제 렌더 기준점 검사는 유지한다. 공통 플랫폼 17상태×3시점 검사는 현재 11종의 561샘플을 확인한다.
+- `node tests/smoke.cjs` 전체 PASS. `pet-size`, `animation-platform`, `animation-integration`, `autonomy`, `grab-throw`, `jump-landing`, `pet-expression`, `hit-sleep`, `gun`, `local-pets`, `screen-effects`, `taskbar-watch-stderr`의 헤드리스 테스트를 각각 재실행해 모두 PASS. `node animation/write-browser-profiles.cjs --check`, 변경 JS 구문 검사, `git diff --check`도 PASS. 원본 이미지·프로필·조립 스크립트·제품 코드는 이번 후속에서 바꾸지 않았다. 최신 규칙은 `docs/v1.3/ANIMATION_NOTES.md`에 간단히 정리했다. 크기 조절 변경은 보존했고 실제 Windows 마우스·DPI QA는 남아 있다. 빌드·커밋·푸시·병합·릴리스는 하지 않았다.
+
 ### 2026-10-13 / 독립 애니메이션 플랫폼 Electron 선택 통합
 
 - 시작 기준 앱 `feature/v1.1`=`50d2fb7`, 별도 `feature/pet-animation`=`feceb20`, 양쪽 clean 확인. 앱 담당에서 player/9종JSON/프리뷰·생성기/테스트/설계 문서만 선택적으로 가져왔다. 별도 worktree와 branch는 수정하지 않았다. 전체 merge/cherry-pick은 수행하지 않았다.
@@ -666,3 +681,10 @@ ID→profile→category fallback(cat=calm, dog=normal)→normal 공통 설정 �
 - Electron [BrowserWindow API](https://www.electronjs.org/docs/latest/api/browser-window)는 `floating`과 `pop-up-menu` 레벨, 포커스 없는 `moveTop()`/`showInactive()`, `setIgnoreMouseEvents()`의 하위 창 입력 전달을 명시한다. Windows [SetWindowPos](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setwindowpos)는 topmost 창의 일반 창 위 순서와 비활성화 후 유지를 설명한다.
 - `tests/window-order.cjs`는 TEMP appData/복사본 Electron과 일반 창 probe, Win32 z-order/WS_EX_TOPMOST/WindowFromPoint를 검사한다. 수정 후 기본 시나리오 3회 연속 PASS, Pet/Draw/Toy/native hit target/비포커스 추가 검사 PASS. `node tests/smoke.cjs` PASS, `node --check main.js`, `git diff --check` PASS. 테스트는 native hit target을 확인하며 실제 좌·우클릭/휠 전송은 수동 QA로 남긴다.
 - `node tests/window-order.cjs --real-apps`: 현재 실행 중인 Chrome을 foreground로 전환한 뒤 오버레이·툴바의 native 순서 PASS. Code/ChatGPT 자동 foreground 전환은 Windows에서 거부됐고 탐색기 별도 파일 창은 탐지되지 않아 해당 실제 앱 검사는 미완료. Alt+Tab, F11 전체 화면, 관리자 권한 창/보안 데스크톱도 직접 조작하지 않았다. 일반 창 위 표시가 대상이며 F11/타 topmost/시스템 UI의 우선순위는 보장하지 않는다. 애니메이션·물리·효과·설정 경로와 원본 에셋은 수정하지 않았다. 빌드/commit/push 없음.
+
+## 2026-10-23 / PC 이전 통합 기준
+
+- 원본 6개 Git worktree와 D 드라이브의 별도 builds/incoming 폴더를 먼저 복사하고 Git bundle을 검증했다. 원본 브랜치·worktree는 수정하지 않았다.
+- main e3069d1에는 v1.2 기능과 애니메이션 브랜치 5d97c5d의 내용이 이미 들어 있다. 별도 복제의 codex/migration-2026-10-23에서 로컬 feature/v1.3의 미커밋 펫 크기 작업 및 테스트만 적용했다. 중복 커밋이나 미검증 신규 원화는 앱에 추가하지 않았다.
+- 펫 생성 크기 50~1000%와 기존 펫 크기 유지, 설정 호환성을 해당 브랜치의 기존 테스트로 검증했다. window-order.cjs 작업 표시줄 입력 단계는 통합본과 원본 main 양쪽에서 현재 데스크톱 환경에 따라 실패했으므로 수동 Windows QA가 남는다.
+- Git/코드/백업/자산별 현황과 새 PC 복원법은 이전 폴더의 Documentation/PROJECT_STATUS.md, PC_MIGRATION_GUIDE.md, BACKUP_MANIFEST.md를 기준으로 한다. 앱의 실제 사용자 데이터는 공개 소스와 분리한다.

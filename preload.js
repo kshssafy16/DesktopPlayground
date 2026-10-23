@@ -29,6 +29,10 @@ contextBridge.exposeInMainWorld('playground', Object.freeze({
   selectPet: id => {
     if (typeof id === 'string') ipcRenderer.send('app:select-pet', id);
   },
+  setPetScalePercent: value => {
+    if (Number.isInteger(value) && value >= 50 && value <= 1000 && value % 10 === 0)
+      ipcRenderer.send('app:set-pet-scale-percent', value);
+  },
   removePetInstance: instanceId => {
     if (Number.isSafeInteger(instanceId) && instanceId > 0)
       ipcRenderer.send('app:remove-pet-instance', instanceId);

@@ -77,12 +77,13 @@ let state = {
   mode: 'pc',
   gunWeapon: 'ak47',
   petId: null,
+  petScalePercent: 100,
   drawColor: '#30384c',
   drawSize: 7,
   drawShape: 'freehand',
   eraser: false
 };
-const controlsUiState = { x: null, y: null, collapsed: false };
+const controlsUiState = { x: null, y: null, collapsed: false, petScalePercent: 100 };
 const CONTROLS_EXPANDED = { width: 440, height: 56 };
 const CONTROLS_COLLAPSED = { width: 152, height: 52 };
 const CONTROLS_PANEL_HEIGHT = 340;
@@ -444,6 +445,10 @@ async function loadUiState() {
     if (Number.isFinite(controls.x) && Math.abs(controls.x) < 100000) controlsUiState.x = Math.round(controls.x);
     if (Number.isFinite(controls.y) && Math.abs(controls.y) < 100000) controlsUiState.y = Math.round(controls.y);
     if (typeof controls.collapsed === 'boolean') controlsUiState.collapsed = controls.collapsed;
+    if (validPetScalePercent(controls.petScalePercent)) {
+      controlsUiState.petScalePercent = controls.petScalePercent;
+      state.petScalePercent = controls.petScalePercent;
+    }
   } catch (error) {
     if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) console.warn('Could not read controls UI state:', error);
   }
@@ -814,6 +819,17 @@ function selectPet(event, id) {
   setState({ mode: 'spawn', petId: id });
 }
 
+function validPetScalePercent(value) {
+  return Number.isInteger(value) && value >= 50 && value <= 1000 && value % 10 === 0;
+}
+
+function setPetScalePercent(event, value) {
+  if (!isTrustedSender(event, controlsWindow) || !validPetScalePercent(value)) return;
+  controlsUiState.petScalePercent = value;
+  setState({ petScalePercent: value });
+  scheduleUiStateSave();
+}
+
 function setBrush(event, changes) {
   if (!isTrustedSender(event, controlsWindow) || !changes || typeof changes !== 'object') return;
   const next = {};
@@ -904,6 +920,7 @@ function installIpcHandlers() {
   ipcMain.on('app:set-enabled', setEnabled);
   ipcMain.on('app:set-structures-enabled', setStructuresEnabled);
   ipcMain.on('app:select-pet', selectPet);
+  ipcMain.on('app:set-pet-scale-percent', setPetScalePercent);
   ipcMain.on('app:set-brush', setBrush);
   ipcMain.on('app:hide-controls', event => {
     if (isTrustedSender(event, controlsWindow)) hideControls();

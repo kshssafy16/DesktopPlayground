@@ -325,6 +325,7 @@
         let controlsPanelOpen = false;
         let controlsPanelKind = null;
         let selectedPetId = null;
+        let selectedPetScalePercent = 100;
         let drawColor = '#30384c';
         let drawSize = 7;
         let drawShape = 'freehand';
@@ -411,13 +412,13 @@
         const autonomousEvent = (chance, multiplier, dt) => Math.random() < 1 - Math.exp(-chance * multiplier * dt);
 
         class Pet {
-            constructor(x, y, definition) {
+            constructor(x, y, definition, scalePercent = 100) {
                 this.instanceId = nextPetInstanceId++;
                 this.x = x;
                 this.y = y;
                 this.definitionId = definition.id;
                 this.definition = definition;
-                this.size = definition.defaultSize;
+                this.size = definition.defaultSize * (validPetScalePercent(scalePercent) ? scalePercent : 100) / 100;
                 this.boss = null;
 
                 this.vx = definition.id === 'robot' ? (Math.random() < .5 ? -2 : 2) : (Math.random() - 0.5) * 4;
@@ -509,7 +510,8 @@
                 this.boss = { health: maxHealth, maxHealth, scale,
                     barWidth: Math.round(100 + (maxHealth - 360) * .11),
                     defeated: false, fadeRemainingMs: 0, spawnedAt: world.now() };
-                this.size *= scale;
+                this.size = Math.min(this.definition.defaultSize * 10, this.size * scale);
+                this.updateImagePosition();
             }
 
             beginBossDeath() {
@@ -759,12 +761,15 @@
                 }
 
                 // 양옆 벽 충돌
-                if (this.x - this.size <= 0) {
+                if (this.size * 2 >= width) {
+                    // Permit partial clipping; there is no center that satisfies both walls.
+                    this.x = Math.max(0, Math.min(width, this.x));
+                    if ((this.x === 0 && this.vx < 0) || (this.x === width && this.vx > 0)) this.vx = 0;
+                } else if (this.x - this.size <= 0) {
                     if (externalMotion && Math.abs(this.vx) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
                     this.x = this.size;
                     this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
-                }
-                if (this.x + this.size >= width) {
+                } else if (this.x + this.size >= width) {
                     if (externalMotion && Math.abs(this.vx) > motionPhysics.stopImpact) this.queueAnimationEvent('bounce');
                     this.x = width - this.size;
                     this.vx = externalMotion ? throwRebound(this.vx, motionPhysics.wallRestitution) : -this.vx;
@@ -942,8 +947,8 @@
                     this.imgElement.style.left = (this.x - this.definition.displayWidth / 2) + 'px';
                     this.imgElement.style.top = (this.y - this.definition.displayHeight / 2) + 'px';
                     const flip = this.facingRight ? 1 : -1;
-                    const bossScale = this.boss?.scale ?? 1;
-                    this.imgElement.style.transform = `scale(${flip * bossScale * this.squish}, ${bossScale / this.squish})`;
+                    const scale = this.size / this.definition.defaultSize;
+                    this.imgElement.style.transform = `scale(${flip * scale * this.squish}, ${scale / this.squish})`;
                 }
             }
 
@@ -1000,6 +1005,7 @@
                     }
                 } else if (['basic', 'ghost', 'star', 'cloud'].includes(this.definition.renderKind)) {
                     ctx.translate(0, this.size * (1 - 1 / this.squish));
+                    ctx.scale(this.size / this.definition.defaultSize, this.size / this.definition.defaultSize);
                     const kind = this.definition.renderKind;
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
@@ -1035,6 +1041,7 @@
                     ctx.beginPath(); ctx.arc(0, 7, 4, 0, Math.PI); ctx.stroke();
                 } else if (this.definition.renderKind === 'robot') {
                     ctx.translate(0, this.size * (1 - 1 / this.squish));
+                    ctx.scale(this.size / this.definition.defaultSize, this.size / this.definition.defaultSize);
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
                     ctx.fillStyle = '#7bd8da';
@@ -1053,6 +1060,7 @@
                     ctx.fillRect(-19, 21, 12, 7); ctx.fillRect(7, 21, 12, 7);
                 } else if (this.definition.renderKind === 'bug') {
                     ctx.translate(0, this.size * (1 - 1 / this.squish));
+                    ctx.scale(this.size / this.definition.defaultSize, this.size / this.definition.defaultSize);
                     ctx.scale(this.facingRight ? 1 : -1, 1);
                     ctx.scale(this.squish, 1 / this.squish);
                     ctx.strokeStyle = '#375c52';
@@ -1375,8 +1383,9 @@
                 if (pet.isDragging || pet.blackHoleOrbit || pet.boss?.defeated) continue;
                 const dx = pet.x - x, dy = pet.y - y;
                 const distance = Math.hypot(dx, dy);
-                if (distance >= 360) continue;
-                const force = 17 * Math.pow(1 - distance / 360, 1.25);
+                const reach = 360 + Math.max(0, pet.size - pet.definition.defaultSize);
+                if (distance >= reach) continue;
+                const force = 17 * Math.pow(1 - distance / reach, 1.25);
                 const angle = distance > 1 ? Math.atan2(dy, dx) : Math.random() * Math.PI * 2;
                 const probeY = Math.max(pet.y-pet.size*.8,Math.min(y,pet.y+pet.size*.8));
                 const head = spriteHitArea(pet,pet.x,probeY) === 'head';
@@ -1527,12 +1536,13 @@
                     ctx.fillStyle = 'rgba(194,167,245,.65)';
                     ctx.beginPath(); ctx.arc(hole.x + Math.cos(a) * r, hole.y + Math.sin(a) * r, 1.4, 0, Math.PI * 2); ctx.fill();
                 }
-                const radiusSquared = hole.radius * hole.radius;
                 for (const pet of petInstances) {
                     if (pet.isDragging || pet.absorbed || pet.boss?.defeated) continue;
                     if (pet.blackHoleOrbit && pet.blackHoleOrbit.holeId !== hole.id) continue;
                     const dx = pet.x - hole.x, dy = pet.y - hole.y;
                     const distanceSquared = dx * dx + dy * dy;
+                    const reach = hole.radius + Math.max(0, pet.size - pet.definition.defaultSize);
+                    const radiusSquared = reach * reach;
                     // Grab owns position. A rescued Pet must leave this hole before fresh capture.
                     if (pet.rescuedFromHoles.has(hole.id)) {
                         if (distanceSquared < radiusSquared) continue;
@@ -2162,10 +2172,14 @@
             return { vx: vx * scale, vy: vy * scale };
         }
 
-        function spawnPet(id, x, y, { allowBoss = false } = {}) {
+        function validPetScalePercent(value) {
+            return Number.isInteger(value) && value >= 50 && value <= 1000 && value % 10 === 0;
+        }
+
+        function spawnPet(id, x, y, { allowBoss = false, scalePercent = 100 } = {}) {
             const definition = petDefinitions.get(id);
             if (!definition || !definition.enabled) return null;
-            const pet = new Pet(x, y, definition);
+            const pet = new Pet(x, y, definition, scalePercent);
             if (allowBoss && Math.random() < bossSpawnChance) pet.becomeBoss();
             petInstances.push(pet);
             publishPetInstances();
@@ -2265,7 +2279,7 @@
             mouseX = e.clientX; mouseY = e.clientY;
 
             if (currentMode === 'spawn') {
-                spawnPet(selectedPetId, mouseX, mouseY, { allowBoss: true });
+                spawnPet(selectedPetId, mouseX, mouseY, { allowBoss: true, scalePercent: selectedPetScalePercent });
             } else if (currentMode === 'bomb') {
                 grenadeDrag = { x: mouseX, y: mouseY };
             } else if (currentMode === 'hammer') {
@@ -2509,6 +2523,7 @@
             controlsPanelKind = nextState.controlsPanelKind || null;
             if (weaponProfiles[nextState.gunWeapon]) gunWeapon = nextState.gunWeapon;
             selectedPetId = nextState.petId || null;
+            selectedPetScalePercent = validPetScalePercent(nextState.petScalePercent) ? nextState.petScalePercent : 100;
             drawShape = nextState.drawShape || drawShape;
             drawColor = nextState.drawColor || drawColor;
             drawSize = nextState.drawSize || drawSize;
